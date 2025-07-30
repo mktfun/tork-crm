@@ -1,3 +1,4 @@
+
 export interface Client {
   id: string;
   name: string;
@@ -152,6 +153,8 @@ export interface Producer {
   name: string;
   email?: string;
   phone?: string;
+  cpfCnpj?: string;
+  companyName?: string;
   brokerage_id: number;
   createdAt: string;
 }
