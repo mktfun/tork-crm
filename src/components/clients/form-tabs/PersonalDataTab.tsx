@@ -1,4 +1,3 @@
-
 import { UseFormReturn } from 'react-hook-form';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -81,8 +80,76 @@ function CalendarCaption({
   );
 }
 
+// Função para validar CPF
+const validateCPF = (cpf: string): boolean => {
+  const cleanCPF = cpf.replace(/\D/g, '');
+  
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCPF.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCPF.charAt(i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  return remainder === parseInt(cleanCPF.charAt(10));
+};
+
+// Função para validar CNPJ
+const validateCNPJ = (cnpj: string): boolean => {
+  const cleanCNPJ = cnpj.replace(/\D/g, '');
+  
+  if (cleanCNPJ.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(cleanCNPJ)) return false;
+  
+  let sum = 0;
+  let weight = 2;
+  for (let i = 11; i >= 0; i--) {
+    sum += parseInt(cleanCNPJ.charAt(i)) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  let remainder = sum % 11;
+  const digit1 = remainder < 2 ? 0 : 11 - remainder;
+  if (digit1 !== parseInt(cleanCNPJ.charAt(12))) return false;
+  
+  sum = 0;
+  weight = 2;
+  for (let i = 12; i >= 0; i--) {
+    sum += parseInt(cleanCNPJ.charAt(i)) * weight;
+    weight = weight === 9 ? 2 : weight + 1;
+  }
+  remainder = sum % 11;
+  const digit2 = remainder < 2 ? 0 : 11 - remainder;
+  return digit2 === parseInt(cleanCNPJ.charAt(13));
+};
+
+// Função para verificar se o documento é válido
+const getDocumentValidation = (value: string) => {
+  if (!value || value.trim() === '') return null;
+  
+  const clean = value.replace(/\D/g, '');
+  if (clean.length === 11) {
+    return validateCPF(value) ? 'valid' : 'invalid';
+  }
+  if (clean.length === 14) {
+    return validateCNPJ(value) ? 'valid' : 'invalid';
+  }
+  return 'invalid';
+};
+
 export function PersonalDataTab({ form }: PersonalDataTabProps) {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const cpfCnpjValue = form.watch('cpfCnpj');
+  const documentValidation = getDocumentValidation(cpfCnpjValue || '');
 
   return (
     <div className="space-y-4">
@@ -116,13 +183,36 @@ export function PersonalDataTab({ form }: PersonalDataTabProps) {
             <FormItem>
               <FormLabel className="text-white">CPF/CNPJ</FormLabel>
               <FormControl>
-                <MaskedInput
-                  {...field}
-                  mask={field.value && field.value.replace(/\D/g, '').length > 11 ? '99.999.999/9999-99' : '999.999.999-99'}
-                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                  className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
-                />
+                <div className="relative">
+                  <MaskedInput
+                    {...field}
+                    mask={field.value && field.value.replace(/\D/g, '').length > 11 ? '99.999.999/9999-99' : '999.999.999-99'}
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                    className={cn(
+                      "bg-black/20 border-white/20 text-white placeholder:text-white/50 pr-10",
+                      documentValidation === 'valid' && "border-green-500/50",
+                      documentValidation === 'invalid' && "border-red-500/50"
+                    )}
+                  />
+                  {documentValidation && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {documentValidation === 'valid' ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
               </FormControl>
+              {documentValidation === 'invalid' && cpfCnpjValue && (
+                <p className="text-sm text-red-400 mt-1">CPF ou CNPJ inválido</p>
+              )}
+              {documentValidation === 'valid' && (
+                <p className="text-sm text-green-400 mt-1">
+                  {cpfCnpjValue?.replace(/\D/g, '').length === 11 ? 'CPF válido' : 'CNPJ válido'}
+                </p>
+              )}
               <FormMessage />
             </FormItem>
           )}
