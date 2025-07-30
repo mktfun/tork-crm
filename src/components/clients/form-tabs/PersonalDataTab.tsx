@@ -167,23 +167,29 @@ export function PersonalDataTab({ form }: PersonalDataTabProps) {
 
   // Handle manual date input
   const handleDateInputChange = (value: string) => {
-    // Validate date format (DD/MM/YYYY)
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const match = value.match(dateRegex);
-    
-    if (match) {
-      const [, day, month, year] = match;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
-      // Check if it's a valid date
-      if (date.getDate() == parseInt(day) && 
-          date.getMonth() == parseInt(month) - 1 && 
-          date.getFullYear() == parseInt(year)) {
-        // Convert to ISO format for storage
-        form.setValue('birthDate', format(date, 'yyyy-MM-dd'));
-      }
-    } else if (value === '') {
+    if (value === '') {
       form.setValue('birthDate', '');
+      return;
+    }
+
+    // Remove qualquer caractere que não seja número
+    const cleanValue = value.replace(/\D/g, '');
+    
+    // Verifica se tem pelo menos 8 dígitos (DDMMYYYY)
+    if (cleanValue.length === 8) {
+      const day = parseInt(cleanValue.substr(0, 2));
+      const month = parseInt(cleanValue.substr(2, 2));
+      const year = parseInt(cleanValue.substr(4, 4));
+      
+      // Validação básica
+      if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year >= 1920 && year <= new Date().getFullYear()) {
+        const date = new Date(year, month - 1, day);
+        
+        // Verifica se a data é válida (não foi ajustada pelo JS)
+        if (date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year) {
+          form.setValue('birthDate', format(date, 'yyyy-MM-dd'));
+        }
+      }
     }
   };
 
@@ -307,10 +313,7 @@ export function PersonalDataTab({ form }: PersonalDataTabProps) {
                           field.onChange('');
                           return;
                         }
-
-                        const timezoneOffsetInMinutes = day.getTimezoneOffset();
-                        const correctedDate = new Date(day.getTime() + (timezoneOffsetInMinutes * 60000));
-                        field.onChange(format(correctedDate, 'yyyy-MM-dd'));
+                        field.onChange(format(day, 'yyyy-MM-dd'));
                       }}
                       disabled={(date) =>
                         date > new Date() || date < new Date("1900-01-01")
