@@ -110,8 +110,11 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
       if (produtoresResult.error) throw produtoresResult.error;
       if (seguradorasResult.error) throw seguradorasResult.error;
 
-      // Buscar seguradoras com nomes da tabela companies
-      const seguradoras = seguradorasResult.data || [];
+      // Garantir que seguradoras retorne array de objetos com id e name
+      const seguradoras = (seguradorasResult.data || []).map(seguradora => ({
+        id: seguradora.id,
+        name: seguradora.name
+      }));
 
       const ramos = [...new Set(
         apolicesResult.data?.map(p => p.type || 'Não especificado').filter(Boolean) || []
@@ -121,17 +124,22 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
         apolicesResult.data?.map(p => p.status).filter(Boolean) || []
       )];
 
+      const produtores = (produtoresResult.data || []).map(produtor => ({
+        id: produtor.id,
+        name: produtor.name
+      }));
+
       console.log('✅ Metadados carregados:', { 
         seguradoras: seguradoras.length, 
         ramos: ramos.length, 
-        produtores: produtoresResult.data?.length 
+        produtores: produtores.length 
       });
 
       return {
         seguradoras,
         ramosDisponiveis: ramos,
         statusDisponiveis: status,
-        produtores: produtoresResult.data || []
+        produtores
       };
     }
   });

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { AppCard } from '@/components/ui/app-card';
@@ -74,6 +75,14 @@ export function FiltrosAvancados({
                            filtros.produtorIds.length + 
                            filtros.statusIds.length;
 
+  // Debug log para verificar dados
+  console.log('🔍 FiltrosAvancados - Dados recebidos:', {
+    seguradoras: seguradoras?.length,
+    seguradorasData: seguradoras,
+    produtores: produtores?.length,
+    ramos: ramos?.length
+  });
+
   return (
     <AppCard className="p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -122,25 +131,31 @@ export function FiltrosAvancados({
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 bg-slate-900 border-slate-700">
+            <PopoverContent className="w-80 bg-slate-900 border-slate-700 z-50">
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {seguradoras.map((seguradora) => (
-                  <div key={seguradora.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`seguradora-${seguradora.id}`}
-                      checked={filtros.seguradoraIds.includes(seguradora.id)}
-                      onCheckedChange={(checked) => 
-                        handleMultiSelectChange('seguradoraIds', seguradora.id, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={`seguradora-${seguradora.id}`}
-                      className="text-sm text-white cursor-pointer flex-1"
-                    >
-                      {seguradora.name}
-                    </Label>
+                {seguradoras && seguradoras.length > 0 ? (
+                  seguradoras.map((seguradora) => (
+                    <div key={seguradora.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`seguradora-${seguradora.id}`}
+                        checked={filtros.seguradoraIds.includes(seguradora.id)}
+                        onCheckedChange={(checked) => 
+                          handleMultiSelectChange('seguradoraIds', seguradora.id, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`seguradora-${seguradora.id}`}
+                        className="text-sm text-white cursor-pointer flex-1"
+                      >
+                        {seguradora.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-400 p-2">
+                    Nenhuma seguradora encontrada
                   </div>
-                ))}
+                )}
               </div>
             </PopoverContent>
           </Popover>
@@ -159,25 +174,31 @@ export function FiltrosAvancados({
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 bg-slate-900 border-slate-700">
+            <PopoverContent className="w-80 bg-slate-900 border-slate-700 z-50">
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {ramos.map((ramo) => (
-                  <div key={ramo} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`ramo-${ramo}`}
-                      checked={filtros.ramos.includes(ramo)}
-                      onCheckedChange={(checked) => 
-                        handleMultiSelectChange('ramos', ramo, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={`ramo-${ramo}`}
-                      className="text-sm text-white cursor-pointer flex-1"
-                    >
-                      {ramo}
-                    </Label>
+                {ramos && ramos.length > 0 ? (
+                  ramos.map((ramo) => (
+                    <div key={ramo} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`ramo-${ramo}`}
+                        checked={filtros.ramos.includes(ramo)}
+                        onCheckedChange={(checked) => 
+                          handleMultiSelectChange('ramos', ramo, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`ramo-${ramo}`}
+                        className="text-sm text-white cursor-pointer flex-1"
+                      >
+                        {ramo}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-400 p-2">
+                    Nenhum ramo encontrado
                   </div>
-                ))}
+                )}
               </div>
             </PopoverContent>
           </Popover>
@@ -196,25 +217,31 @@ export function FiltrosAvancados({
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 bg-slate-900 border-slate-700">
+            <PopoverContent className="w-80 bg-slate-900 border-slate-700 z-50">
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {produtores.map((produtor) => (
-                  <div key={produtor.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`produtor-${produtor.id}`}
-                      checked={filtros.produtorIds.includes(produtor.id)}
-                      onCheckedChange={(checked) => 
-                        handleMultiSelectChange('produtorIds', produtor.id, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={`produtor-${produtor.id}`}
-                      className="text-sm text-white cursor-pointer flex-1"
-                    >
-                      {produtor.name}
-                    </Label>
+                {produtores && produtores.length > 0 ? (
+                  produtores.map((produtor) => (
+                    <div key={produtor.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`produtor-${produtor.id}`}
+                        checked={filtros.produtorIds.includes(produtor.id)}
+                        onCheckedChange={(checked) => 
+                          handleMultiSelectChange('produtorIds', produtor.id, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`produtor-${produtor.id}`}
+                        className="text-sm text-white cursor-pointer flex-1"
+                      >
+                        {produtor.name}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-400 p-2">
+                    Nenhum produtor encontrado
                   </div>
-                ))}
+                )}
               </div>
             </PopoverContent>
           </Popover>
@@ -233,25 +260,31 @@ export function FiltrosAvancados({
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 bg-slate-900 border-slate-700">
+            <PopoverContent className="w-80 bg-slate-900 border-slate-700 z-50">
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {statusDisponiveis.map((status) => (
-                  <div key={status} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`status-${status}`}
-                      checked={filtros.statusIds.includes(status)}
-                      onCheckedChange={(checked) => 
-                        handleMultiSelectChange('statusIds', status, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={`status-${status}`}
-                      className="text-sm text-white cursor-pointer flex-1"
-                    >
-                      {status}
-                    </Label>
+                {statusDisponiveis && statusDisponiveis.length > 0 ? (
+                  statusDisponiveis.map((status) => (
+                    <div key={status} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`status-${status}`}
+                        checked={filtros.statusIds.includes(status)}
+                        onCheckedChange={(checked) => 
+                          handleMultiSelectChange('statusIds', status, checked as boolean)
+                        }
+                      />
+                      <Label 
+                        htmlFor={`status-${status}`}
+                        className="text-sm text-white cursor-pointer flex-1"
+                      >
+                        {status}
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-slate-400 p-2">
+                    Nenhum status encontrado
                   </div>
-                ))}
+                )}
               </div>
             </PopoverContent>
           </Popover>
