@@ -10,15 +10,23 @@ interface VisaoGeralCarteiraProps {
 }
 
 export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraProps) {
-  // Cálculos das métricas principais
-  const valorTotalCarteira = apolices.reduce((sum, p) => sum + p.premiumValue, 0);
-  const numeroClientes = clientes.length;
-  const numeroApolices = apolices.length;
-  const ticketMedio = numeroClientes > 0 ? valorTotalCarteira / numeroClientes : 0;
-  const apolicesPorCliente = numeroClientes > 0 ? numeroApolices / numeroClientes : 0;
+  // 🎯 CORREÇÃO: Primeiro filtrar apenas apólices ativas
+  const apolicesAtivas = apolices.filter(p => p.status === 'Ativa');
+  
+  // 🎯 CORREÇÃO: Contar apenas clientes únicos que possuem apólices ativas
+  const clienteIdsComApolicesAtivas = new Set(apolicesAtivas.map(p => p.clientId));
+  const numeroClientesUnicos = clienteIdsComApolicesAtivas.size;
+  
+  // 🎯 CORREÇÃO: Usar dados das apólices ativas para cálculos
+  const valorTotalCarteira = apolicesAtivas.reduce((sum, p) => sum + p.premiumValue, 0);
+  const numeroApolicesAtivas = apolicesAtivas.length;
+  
+  // 🎯 CORREÇÃO: Divisão segura - verificar se divisor > 0
+  const ticketMedio = numeroClientesUnicos > 0 ? valorTotalCarteira / numeroClientesUnicos : 0;
+  const apolicesPorCliente = numeroClientesUnicos > 0 ? numeroApolicesAtivas / numeroClientesUnicos : 0;
 
-  // Métricas de status - usando os status corretos do tipo Policy
-  const apolicesAtivas = apolices.filter(p => p.status === 'Ativa').length;
+  // Métricas de status - usando todos os dados para comparação
+  const totalApolices = apolices.length;
   const apolicesAguardando = apolices.filter(p => p.status === 'Aguardando Apólice').length;
 
   const metrics = [
@@ -27,18 +35,18 @@ export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraPro
       value: formatCurrency(valorTotalCarteira),
       icon: TrendingUp,
       bgColor: "bg-emerald-600",
-      description: "Prêmio total de todas as apólices"
+      description: "Prêmio total de apólices ativas"
     },
     {
       title: "Total de Clientes",
-      value: numeroClientes.toLocaleString(),
+      value: numeroClientesUnicos.toLocaleString(),
       icon: Users,
       bgColor: "bg-blue-600",
-      description: "Clientes únicos na carteira"
+      description: "Clientes únicos com apólices ativas"
     },
     {
       title: "Total de Apólices",
-      value: numeroApolices.toLocaleString(),
+      value: totalApolices.toLocaleString(),
       icon: FileText,
       bgColor: "bg-purple-600",
       description: "Apólices registradas no período"
@@ -48,7 +56,7 @@ export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraPro
       value: formatCurrency(ticketMedio),
       icon: Target,
       bgColor: "bg-orange-600",
-      description: "Valor médio por cliente"
+      description: "Valor médio por cliente ativo"
     }
   ];
 
@@ -86,10 +94,10 @@ export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraPro
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-400">Apólices Ativas</p>
-              <p className="text-xl font-bold text-green-400">{apolicesAtivas}</p>
+              <p className="text-xl font-bold text-green-400">{numeroApolicesAtivas}</p>
             </div>
             <div className="text-2xl">
-              {numeroApolices > 0 ? `${((apolicesAtivas / numeroApolices) * 100).toFixed(1)}%` : '0%'}
+              {totalApolices > 0 ? `${((numeroApolicesAtivas / totalApolices) * 100).toFixed(1)}%` : '0%'}
             </div>
           </div>
         </div>
@@ -101,7 +109,7 @@ export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraPro
               <p className="text-xl font-bold text-yellow-400">{apolicesAguardando}</p>
             </div>
             <div className="text-2xl">
-              {numeroApolices > 0 ? `${((apolicesAguardando / numeroApolices) * 100).toFixed(1)}%` : '0%'}
+              {totalApolices > 0 ? `${((apolicesAguardando / totalApolices) * 100).toFixed(1)}%` : '0%'}
             </div>
           </div>
         </div>
@@ -113,13 +121,13 @@ export function VisaoGeralCarteira({ clientes, apolices }: VisaoGeralCarteiraPro
           <div className="p-4 rounded-lg bg-slate-800">
             <p className="text-sm text-slate-400 mb-2">Apólices por Cliente</p>
             <p className="text-2xl font-bold text-white">{apolicesPorCliente.toFixed(2)}</p>
-            <p className="text-xs text-slate-500">Média de produtos por cliente</p>
+            <p className="text-xs text-slate-500">Média de produtos por cliente ativo</p>
           </div>
           
           <div className="p-4 rounded-lg bg-slate-800">
-            <p className="text-sm text-slate-400 mb-2">Concentração de Carteira</p>
+            <p className="text-sm text-slate-400 mb-2">Taxa de Ativação</p>
             <p className="text-2xl font-bold text-white">
-              {apolicesAtivas > 0 ? ((apolicesAtivas / numeroApolices) * 100).toFixed(1) : 0}%
+              {totalApolices > 0 ? ((numeroApolicesAtivas / totalApolices) * 100).toFixed(1) : 0}%
             </p>
             <p className="text-xs text-slate-500">Percentual de apólices ativas</p>
           </div>
