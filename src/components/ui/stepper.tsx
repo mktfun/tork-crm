@@ -24,11 +24,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               <div
                 className={cn(
                   "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-200",
-                  {
-                    "bg-blue-600 border-blue-600 text-white": isCompleted,
-                    "bg-blue-600 border-blue-600 text-white": isActive,
-                    "bg-slate-800 border-slate-600 text-slate-400": !isActive && !isCompleted,
-                  }
+                  (isCompleted || isActive) ? "bg-blue-600 border-blue-600 text-white" : "bg-slate-800 border-slate-600 text-slate-400"
                 )}
               >
                 {isCompleted ? (
@@ -42,10 +38,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               <span
                 className={cn(
                   "mt-2 text-xs font-medium transition-colors duration-200",
-                  {
-                    "text-blue-400": isActive || isCompleted,
-                    "text-slate-400": !isActive && !isCompleted,
-                  }
+                  (isActive || isCompleted) ? "text-blue-400" : "text-slate-400"
                 )}
               >
                 {step}

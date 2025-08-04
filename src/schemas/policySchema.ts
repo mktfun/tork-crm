@@ -15,7 +15,7 @@ export const policyFormSchema = z.object({
   brokerageId: z.string().optional(), // ✅ Corrigido: string para compatibilidade com Select
   status: z.enum(['Orçamento', 'Ativa', 'Cancelada', 'Renovada']), // ✅ Adicionado 'Renovada'
   isBudget: z.boolean().optional(),
-  automaticRenewal: z.boolean().default(true), // ✅ Corrigido: obrigatório com default
+  automaticRenewal: z.boolean(), // ✅ CORRIGIDO: Obrigatório, sem .optional()
 }).superRefine((data, ctx) => {
   // 🎯 LÓGICA CONDICIONAL: Se não é orçamento (isBudget é false) e status não é "Orçamento", 
   // então seguradora e ramo se tornam obrigatórios

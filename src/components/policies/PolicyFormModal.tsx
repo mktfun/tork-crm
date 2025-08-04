@@ -61,7 +61,7 @@ export function PolicyFormModal({ onClose, onPolicyAdded }: PolicyFormModalProps
       status: 'Orçamento',
       commissionRate: 20,
       insuredAsset: '',
-      automaticRenewal: true,
+      automaticRenewal: true, // ✅ CORRIGIDO: Valor default explícito
     }
   });
 
