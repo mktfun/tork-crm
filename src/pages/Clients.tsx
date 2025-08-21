@@ -12,6 +12,7 @@ import { ClientListView } from '@/components/clients/ClientListView';
 import { ClientDeduplicationModal } from '@/components/clients/ClientDeduplicationModal';
 import { DuplicateAlert } from '@/components/clients/DuplicateAlert';
 import { DeduplicationStats } from '@/components/clients/DeduplicationStats';
+import { DuplicateReportExport } from '@/components/clients/DuplicateReportExport';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useClientDuplication } from '@/hooks/useClientDuplication';
 import { SettingsPanel } from '@/components/settings/SettingsPanel';
