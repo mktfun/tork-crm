@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,8 +11,15 @@ import { toast } from 'sonner';
 interface DuplicateGroup {
   id: string;
   clients: Client[];
-  reason: string;
+  reasons: string[];
   confidence: 'high' | 'medium' | 'low';
+  score: number;
+  similarityDetails: Array<{
+    client1: Client;
+    client2: Client;
+    score: number;
+    reasons: string[];
+  }>;
 }
 
 interface ClientDeduplicationModalProps {
@@ -29,7 +35,144 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const [isProcessing, setIsProcessing] = useState(false);
   const { updateClient, deleteClient } = useSupabaseClients();
 
-  // Detectar duplicatas
+  // Funções auxiliares melhoradas
+  const normalizeName = (name: string): string => {
+    return name.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/\b(da|de|do|dos|das)\b/g, '') // Remove preposições
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, ' ') // Normaliza espaços
+      .trim();
+  };
+
+  const normalizePhone = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('55') && cleaned.length === 13) {
+      return cleaned.substring(2);
+    }
+    return cleaned;
+  };
+
+  const normalizeDocument = (doc: string): string => {
+    return doc.replace(/\D/g, '');
+  };
+
+  const normalizeEmail = (email: string): string => {
+    return email.toLowerCase().trim();
+  };
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = [];
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[str2.length][str1.length];
+  };
+
+  const calculateNameSimilarity = (name1: string, name2: string): number => {
+    const norm1 = normalizeName(name1);
+    const norm2 = normalizeName(name2);
+
+    if (norm1 === norm2) return 1.0;
+
+    const distance = levenshteinDistance(norm1, norm2);
+    const maxLength = Math.max(norm1.length, norm2.length);
+    return 1 - (distance / maxLength);
+  };
+
+  const calculateDetailedSimilarity = (client1: Client, client2: Client) => {
+    let score = 0;
+    const reasons: string[] = [];
+    let maxScore = 0;
+
+    // CPF/CNPJ exato (peso 40)
+    if (client1.cpfCnpj && client2.cpfCnpj) {
+      maxScore += 40;
+      if (normalizeDocument(client1.cpfCnpj) === normalizeDocument(client2.cpfCnpj)) {
+        score += 40;
+        reasons.push('CPF/CNPJ idêntico');
+      }
+    }
+
+    // Email exato (peso 35)
+    if (client1.email && client2.email) {
+      maxScore += 35;
+      if (normalizeEmail(client1.email) === normalizeEmail(client2.email)) {
+        score += 35;
+        reasons.push('Email idêntico');
+      }
+    }
+
+    // Telefone (peso 25)
+    if (client1.phone && client2.phone) {
+      maxScore += 25;
+      const phone1 = normalizePhone(client1.phone);
+      const phone2 = normalizePhone(client2.phone);
+      if (phone1 === phone2) {
+        score += 25;
+        reasons.push('Telefone idêntico');
+      } else if (phone1.length >= 8 && phone2.length >= 8) {
+        const lastDigits1 = phone1.slice(-8);
+        const lastDigits2 = phone2.slice(-8);
+        if (lastDigits1 === lastDigits2) {
+          score += 15;
+          reasons.push('Número similar (mesmo número, DDD diferente)');
+        }
+      }
+    }
+
+    // Nome (peso 20)
+    maxScore += 20;
+    const nameSimilarity = calculateNameSimilarity(client1.name, client2.name);
+    if (nameSimilarity >= 0.9) {
+      score += 20;
+      reasons.push('Nome muito similar');
+    } else if (nameSimilarity >= 0.7) {
+      score += 10;
+      reasons.push('Nome similar');
+    }
+
+    // Data de nascimento (peso 10)
+    if (client1.birthDate && client2.birthDate) {
+      maxScore += 10;
+      if (client1.birthDate === client2.birthDate) {
+        score += 10;
+        reasons.push('Data de nascimento idêntica');
+      }
+    }
+
+    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+
+    let confidence: 'high' | 'medium' | 'low';
+    if (percentage >= 70 || score >= 60) {
+      confidence = 'high';
+    } else if (percentage >= 40 || score >= 30) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
+
+    return { score: percentage, reasons, confidence };
+  };
+
+  // Detectar duplicatas com algoritmo melhorado
   const detectDuplicates = () => {
     const groups: DuplicateGroup[] = [];
     const processed = new Set<string>();
@@ -37,75 +180,62 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     clients.forEach(client => {
       if (processed.has(client.id)) return;
 
-      const duplicates = clients.filter(other => {
-        if (other.id === client.id || processed.has(other.id)) return false;
+      const duplicates: Array<{ client: Client; similarity: any }> = [];
 
-        // Verificar nome similar (normalizado)
-        const nameMatch = normalizeName(client.name) === normalizeName(other.name);
-        
-        // Verificar email exato
-        const emailMatch = client.email && other.email && client.email.toLowerCase() === other.email.toLowerCase();
-        
-        // Verificar telefone (apenas números)
-        const phoneMatch = client.phone && other.phone && normalizePhone(client.phone) === normalizePhone(other.phone);
-        
-        // Verificar CPF/CNPJ
-        const docMatch = client.cpfCnpj && other.cpfCnpj && normalizeDocument(client.cpfCnpj) === normalizeDocument(other.cpfCnpj);
+      clients.forEach(other => {
+        if (other.id === client.id || processed.has(other.id)) return;
 
-        return nameMatch || emailMatch || phoneMatch || docMatch;
+        const similarity = calculateDetailedSimilarity(client, other);
+
+        const shouldInclude =
+          (similarity.confidence === 'high' && similarity.score >= 60) ||
+          (similarity.confidence === 'medium' && similarity.score >= 40) ||
+          (similarity.confidence === 'low' && similarity.score >= 30);
+
+        if (shouldInclude) {
+          duplicates.push({ client: other, similarity });
+        }
       });
 
       if (duplicates.length > 0) {
-        const allClients = [client, ...duplicates];
+        const allClients = [client, ...duplicates.map(d => d.client)];
         allClients.forEach(c => processed.add(c.id));
 
-        // Determinar a razão da duplicata
-        let reason = '';
-        let confidence: 'high' | 'medium' | 'low' = 'low';
+        const bestSimilarity = duplicates.reduce((best, current) =>
+          current.similarity.score > best.score ? current.similarity : best,
+          { score: 0, confidence: 'low' as const, reasons: [] }
+        );
 
-        if (allClients.some(c => c.cpfCnpj) && allClients.filter(c => c.cpfCnpj).length > 1) {
-          reason = 'Mesmo CPF/CNPJ';
-          confidence = 'high';
-        } else if (allClients.some(c => c.email) && allClients.filter(c => c.email).length > 1) {
-          reason = 'Mesmo email';
-          confidence = 'high';
-        } else if (allClients.some(c => c.phone) && allClients.filter(c => c.phone).length > 1) {
-          reason = 'Mesmo telefone';
-          confidence = 'medium';
-        } else {
-          reason = 'Nome similar';
-          confidence = 'low';
-        }
+        const similarityDetails = duplicates.map(d => ({
+          client1: client,
+          client2: d.client,
+          score: d.similarity.score,
+          reasons: d.similarity.reasons
+        }));
 
         groups.push({
           id: `group-${groups.length}`,
           clients: allClients,
-          reason,
-          confidence
+          reasons: bestSimilarity.reasons,
+          confidence: bestSimilarity.confidence,
+          score: bestSimilarity.score,
+          similarityDetails
         });
       }
+    });
+
+    // Ordenar grupos por confiança e score
+    groups.sort((a, b) => {
+      const confidenceOrder = { high: 3, medium: 2, low: 1 };
+      if (confidenceOrder[a.confidence] !== confidenceOrder[b.confidence]) {
+        return confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
+      }
+      return b.score - a.score;
     });
 
     setDuplicateGroups(groups);
   };
 
-  // Funções de normalização
-  const normalizeName = (name: string): string => {
-    return name.toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
-
-  const normalizePhone = (phone: string): string => {
-    return phone.replace(/\D/g, '');
-  };
-
-  const normalizeDocument = (doc: string): string => {
-    return doc.replace(/\D/g, '');
-  };
 
   // Mesclar clientes
   const handleMergeClients = async () => {
@@ -115,7 +245,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     try {
       const secondaryClients = selectedGroup.clients.filter(c => c.id !== primaryClient.id);
       
-      // Mesclar dados do cliente principal com dados dos secundários
+      // Lógica inteligente de mesclagem
       const mergedData: Partial<Client> = {
         name: primaryClient.name,
         email: primaryClient.email || secondaryClients.find(c => c.email)?.email,
@@ -134,8 +264,15 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
         observations: [
           primaryClient.observations,
           ...secondaryClients.map(c => c.observations).filter(Boolean)
-        ].filter(Boolean).join('\n\n--- MESCLADO ---\n\n')
+        ].filter(Boolean).join('\n\n=== MESCLADO AUTOMATICAMENTE ===\n\n')
       };
+
+      // Log da mescla para auditoria
+      console.log('Mesclando clientes:', {
+        principal: primaryClient.name,
+        secundarios: secondaryClients.map(c => c.name),
+        dadosMesclados: mergedData
+      });
 
       // Atualizar o cliente principal
       await updateClient(primaryClient.id, mergedData);
@@ -150,7 +287,9 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       setSelectedGroup(null);
       setPrimaryClient(null);
       
-      toast.success(`${secondaryClients.length + 1} clientes mesclados com sucesso!`);
+      toast.success(`${secondaryClients.length + 1} clientes mesclados com sucesso!`, {
+        description: `Cliente principal: ${primaryClient.name}. ${secondaryClients.length} duplicatas removidas.`
+      });
       onDeduplicationComplete();
     } catch (error) {
       console.error('Erro ao mesclar clientes:', error);
@@ -229,14 +368,40 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2">
-                        <p className="text-sm text-white/60">Razão: {group.reason}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {group.clients.map(client => (
-                            <Badge key={client.id} variant="outline" className="text-xs">
-                              {client.name}
-                            </Badge>
-                          ))}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white/80">
+                            Score: {group.score.toFixed(0)}%
+                          </span>
+                          <div className="h-2 bg-white/10 rounded-full flex-1 max-w-[100px]">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                group.confidence === 'high' ? 'bg-red-400' :
+                                group.confidence === 'medium' ? 'bg-yellow-400' : 'bg-blue-400'
+                              }`}
+                              style={{ width: `${Math.min(group.score, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-white/60">Razões da similaridade:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {group.reasons.map((reason, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {reason}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-white/60">Clientes envolvidos:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {group.clients.map(client => (
+                              <Badge key={client.id} variant="secondary" className="text-xs">
+                                {client.name}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -259,9 +424,32 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                   </h3>
                 </div>
 
-                <p className="text-white/80 mb-4">
-                  Selecione o cliente principal que será mantido. Os dados dos outros clientes serão mesclados nele:
-                </p>
+                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-400/20 rounded-lg">
+                  <h4 className="text-white font-medium mb-2">Como funciona a mescla:</h4>
+                  <ul className="text-sm text-white/80 space-y-1">
+                    <li>• O cliente selecionado será mantido como principal</li>
+                    <li>• Dados em branco serão preenchidos com informações dos outros clientes</li>
+                    <li>• Observações serão combinadas</li>
+                    <li>• Os clientes duplicados serão removidos</li>
+                  </ul>
+                </div>
+
+                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-400/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle size={16} className="text-yellow-400" />
+                    <span className="text-yellow-200 font-medium">Detalhes da Similaridade</span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {selectedGroup.similarityDetails.map((detail, idx) => (
+                      <div key={idx} className="text-white/70">
+                        <span className="font-medium">{detail.client1.name}</span> ↔ <span className="font-medium">{detail.client2.name}</span>
+                        <div className="ml-4 text-xs text-white/60">
+                          Score: {detail.score.toFixed(0)}% | {detail.reasons.join(', ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedGroup.clients.map((client) => (
@@ -293,6 +481,11 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                         <div className="text-white/60">
                           <strong>Criado em:</strong> {new Date(client.createdAt).toLocaleDateString('pt-BR')}
                         </div>
+                        {client.observations && (
+                          <div className="text-white/60">
+                            <strong>Observações:</strong> {client.observations.slice(0, 50)}{client.observations.length > 50 ? '...' : ''}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
