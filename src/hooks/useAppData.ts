@@ -24,20 +24,15 @@ export function useClients() {
 }
 
 export function usePolicies() {
-  const { 
-    policies, 
-    loading,
-    isLoading,
-    isUpdatingPolicy,
-    addPolicy, 
-    updatePolicy, 
-    deletePolicy, 
-    ativarEAnexarPdf 
-  } = useSupabasePolicies();
-  
+  const supabasePolicies = useSupabasePolicies();
+
+  // Fallback para caso de erro
+  const policies = supabasePolicies.policies || [];
+  const loading = supabasePolicies.loading || false;
+
   return {
     policies,
-    addPolicy,
+    addPolicy: supabasePolicies.addPolicy,
     updatePolicy,
     deletePolicy,
     ativarEAnexarPdf,
