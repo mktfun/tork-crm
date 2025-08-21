@@ -181,6 +181,7 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['all-clients'] });
       toast.success('Cliente criado com sucesso!');
     },
     onError: (error) => {
@@ -224,6 +225,7 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['all-clients'] });
       toast.success('Cliente atualizado com sucesso!');
     },
     onError: (error) => {
@@ -250,6 +252,7 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSu
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['all-clients'] });
       toast.success('Cliente removido com sucesso!');
     },
     onError: (error) => {
@@ -268,6 +271,9 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSu
     updateClient: (id: string, updates: Partial<Client>) => 
       updateClientMutation.mutateAsync({ id, updates }),
     deleteClient: deleteClientMutation.mutateAsync,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['all-clients'] });
+    },
   };
 }
