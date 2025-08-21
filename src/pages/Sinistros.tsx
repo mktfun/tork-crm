@@ -418,10 +418,12 @@ export default function Sinistros() {
                 : 'Carregue mais dados ou verifique sua conexão.'}
           </p>
           {sinistros.length === 0 && (
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Primeiro Sinistro
-            </Button>
+            <SinistroFormModal onSuccess={() => refetch()}>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Registrar Primeiro Sinistro
+              </Button>
+            </SinistroFormModal>
           )}
           {sinistros.length > 0 && filteredSinistros.length === 0 && (
             <Button
