@@ -110,11 +110,21 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
       };
 
       await createSinistro.mutateAsync(submitData);
-      
-      form.reset();
-      setPolicySearch(''); // Limpar busca também
+
+      // Reset em ordem correta para evitar problemas
+      setPolicySearch('');
+      form.reset({
+        occurrence_date: new Date().toISOString().split('T')[0],
+        priority: 'Média',
+        claim_amount: '',
+        deductible_amount: '',
+      });
       setOpen(false);
-      onSuccess?.();
+
+      // Chamar onSuccess após um pequeno delay para garantir que o modal fechou
+      setTimeout(() => {
+        onSuccess?.();
+      }, 100);
     } catch (error) {
       console.error('Erro ao criar sinistro:', error);
     }
@@ -441,7 +451,7 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
                 />
               </div>
 
-              {/* Informaç��es da Apólice Selecionada */}
+              {/* Informações da Apólice Selecionada */}
               {selectedPolicy && (
                 <div className="md:col-span-2 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-4">
                   <h4 className="font-medium text-blue-400 mb-3 flex items-center gap-2">
