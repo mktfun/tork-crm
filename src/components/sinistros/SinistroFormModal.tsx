@@ -17,7 +17,7 @@ const sinistroSchema = z.object({
   policy_id: z.string().optional(), // Agora opcional
   client_id: z.string().optional(),
   occurrence_date: z.string().min(1, 'Data da ocorrência é obrigatória'),
-  claim_type: z.string().min(1, 'Tipo do sinistro é obrigat��rio'),
+  claim_type: z.string().min(1, 'Tipo do sinistro é obrigatório'),
   description: z.string().min(10, 'Descrição deve ter pelo menos 10 caracteres'),
   location_occurrence: z.string().optional(),
   circumstances: z.string().optional(),
@@ -94,7 +94,6 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
       await createSinistro.mutateAsync(submitData);
 
       // Reset em ordem correta para evitar problemas
-      setPolicySearch('');
       form.reset({
         occurrence_date: new Date().toISOString().split('T')[0],
         priority: 'Média',
