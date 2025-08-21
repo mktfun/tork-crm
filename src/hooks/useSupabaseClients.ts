@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +17,7 @@ interface SortConfig {
 interface UseSupabaseClientsParams {
   pagination?: PaginationConfig;
   sortConfig?: SortConfig;
+  searchTerm?: string;
 }
 
 interface ClientsResponse {
@@ -26,13 +26,13 @@ interface ClientsResponse {
   totalPages: number;
 }
 
-export function useSupabaseClients({ pagination, sortConfig }: UseSupabaseClientsParams = {}) {
+export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSupabaseClientsParams = {}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 🚀 **PAGINAÇÃO E ORDENAÇÃO BACKEND** - Query principal com .range() e .order()
+  // 🚀 **PAGINAÇÃO, ORDENAÇÃO E BUSCA BACKEND** - Query principal com .range(), .order() e .ilike()
   const { data, isLoading: loading, error } = useQuery({
-    queryKey: ['clients', user?.id, pagination, sortConfig],
+    queryKey: ['clients', user?.id, pagination, sortConfig, searchTerm],
     queryFn: async (): Promise<ClientsResponse> => {
       if (!user) return { clients: [], totalCount: 0, totalPages: 0 };
 
@@ -40,6 +40,12 @@ export function useSupabaseClients({ pagination, sortConfig }: UseSupabaseClient
       let query = supabase
         .from('clientes')
         .select('*', { count: 'exact' });
+
+      // Aplicar busca se configurada
+      if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.trim();
+        query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+      }
 
       // Aplicar ordenação se configurada
       if (sortConfig?.key) {
