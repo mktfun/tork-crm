@@ -75,8 +75,6 @@ export default function Clients() {
     return () => clearTimeout(timer);
   }, [termoBusca]);
 
-  // 🚀 **HOOK DE DEDUPLICAÇÃO** (usando TODOS os clientes)
-  const { duplicateAlert } = useClientDuplication(allClients);
 
   const getClientPoliciesCount = (clientId: string) => {
     return policies.filter(p => p.clientId === clientId && p.status === 'Ativa').length;
