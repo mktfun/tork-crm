@@ -40,6 +40,7 @@ export interface Sinistro {
   insurance_company?: string;
   producer_name?: string;
   brokerage_name?: string;
+  company_name?: string;
 }
 
 export interface CreateSinistroData {
