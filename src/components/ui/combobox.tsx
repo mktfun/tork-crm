@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
 
@@ -76,9 +75,13 @@ export function Combobox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
+                  value={option.label}
+                  keywords={[option.label, option.value]}
                   onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                    // Encontrar a opção pelo label selecionado
+                    const selectedOption = options.find(opt => opt.label.toLowerCase() === currentValue.toLowerCase())
+                    const valueToSet = selectedOption ? selectedOption.value : currentValue
+                    onValueChange(valueToSet === value ? "" : valueToSet)
                     setOpen(false)
                   }}
                   className="text-slate-50 hover:bg-slate-800/50 data-[selected]:bg-slate-800/50"
