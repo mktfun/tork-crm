@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSinistros } from '@/hooks/useSinistros';
 import { SinistroFormModal } from '@/components/sinistros/SinistroFormModal';
+import { SinistroDetailsModal } from '@/components/sinistros/SinistroDetailsModal';
 import {
   ShieldAlert,
   Plus,
