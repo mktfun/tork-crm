@@ -292,7 +292,7 @@ export function SinistroDetailsModal({ sinistro, open, onOpenChange, onSuccess }
                 </div>
               </div>
 
-              <Separator />
+              <div className="border-t border-white/10 my-6" />
 
               {/* Formulário de Edição ou Visualização */}
               <Form {...form}>
