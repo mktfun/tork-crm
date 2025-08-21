@@ -12,7 +12,6 @@ import { ClientListView } from '@/components/clients/ClientListView';
 import { DeduplicationSection } from '@/components/clients/DeduplicationSection';
 import { ClientDeduplicationModal } from '@/components/clients/ClientDeduplicationModal';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useClientDuplication } from '@/hooks/useClientDuplication';
 import { SettingsPanel } from '@/components/settings/SettingsPanel';
 import {
   Select,
