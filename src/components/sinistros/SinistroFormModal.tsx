@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Plus, Calendar, AlertTriangle, MapPin } from 'lucide-react';
+import { Loader2, Plus, Calendar, AlertTriangle, MapPin, Search, User, FileText } from 'lucide-react';
 import { useCreateSinistro } from '@/hooks/useSinistros';
 import { useClients, usePolicies } from '@/hooks/useAppData';
 import { format } from 'date-fns';
@@ -57,6 +57,7 @@ interface SinistroFormModalProps {
 
 export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProps) {
   const [open, setOpen] = useState(false);
+  const [policySearch, setPolicySearch] = useState('');
   const createSinistro = useCreateSinistro();
   const { clients = [] } = useClients();
   const { policies = [] } = usePolicies();
@@ -73,6 +74,24 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
 
   const selectedPolicyId = form.watch('policy_id');
   const selectedPolicy = policies.find(p => p.id === selectedPolicyId);
+
+  // Filtrar e buscar apólices
+  const filteredPolicies = useMemo(() => {
+    if (!policySearch) return policies;
+
+    const search = policySearch.toLowerCase();
+    return policies.filter(policy => {
+      const policyNumber = policy.policyNumber?.toLowerCase() || '';
+      const clientName = policy.client?.name?.toLowerCase() || '';
+      const insuranceCompany = policy.insuranceCompany?.toLowerCase() || '';
+      const type = policy.type?.toLowerCase() || '';
+
+      return policyNumber.includes(search) ||
+             clientName.includes(search) ||
+             insuranceCompany.includes(search) ||
+             type.includes(search);
+    });
+  }, [policies, policySearch]);
 
   // Auto-preenche o cliente quando uma apólice é selecionada
   const handlePolicyChange = (policyId: string) => {
@@ -93,8 +112,9 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
       await createSinistro.mutateAsync(submitData);
       
       form.reset();
-      setOpen(false);
-      onSuccess?.();
+    setPolicySearch(''); // Limpar busca também
+    setOpen(false);
+    onSuccess?.();
     } catch (error) {
       console.error('Erro ao criar sinistro:', error);
     }
@@ -122,33 +142,71 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Apólice */}
+              {/* Apólice com busca */}
               <FormField
                 control={form.control}
                 name="policy_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Apólice *</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        handlePolicyChange(value);
-                      }} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma apólice" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {policies.map((policy) => (
-                          <SelectItem key={policy.id} value={policy.id}>
-                            {policy.policy_number} - {policy.insurance_company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Apólice *
+                    </FormLabel>
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                        <Input
+                          placeholder="Buscar por número da apólice, cliente ou seguradora..."
+                          value={policySearch}
+                          onChange={(e) => setPolicySearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handlePolicyChange(value);
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma apólice" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          {filteredPolicies.length === 0 ? (
+                            <div className="p-4 text-center text-muted-foreground">
+                              {policySearch ? 'Nenhuma apólice encontrada' : 'Nenhuma apólice disponível'}
+                            </div>
+                          ) : (
+                            filteredPolicies.map((policy) => (
+                              <SelectItem key={policy.id} value={policy.id}>
+                                <div className="flex flex-col items-start py-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {policy.policyNumber || `Orçamento #${policy.id.slice(-4)}`}
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                                      {policy.status}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {policy.client?.name || 'Cliente não informado'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {policy.insuranceCompany} • {policy.type}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -368,26 +426,56 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
             {/* Informações da Apólice Selecionada */}
             {selectedPolicy && (
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                <h4 className="font-medium text-blue-400 mb-2">Informações da Apólice</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-white/60">Número:</span>
-                    <span className="text-white ml-2">{selectedPolicy.policy_number}</span>
+                <h4 className="font-medium text-blue-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Informações da Apólice
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-white/60 text-sm">Número:</span>
+                      <p className="text-white font-medium">
+                        {selectedPolicy.policyNumber || `Orçamento #${selectedPolicy.id.slice(-4)}`}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-white/60 text-sm">Seguradora:</span>
+                      <p className="text-white">{selectedPolicy.insuranceCompany}</p>
+                    </div>
+                    <div>
+                      <span className="text-white/60 text-sm">Tipo:</span>
+                      <p className="text-white">{selectedPolicy.type}</p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-white/60">Seguradora:</span>
-                    <span className="text-white ml-2">{selectedPolicy.insurance_company}</span>
-                  </div>
-                  <div>
-                    <span className="text-white/60">Tipo:</span>
-                    <span className="text-white ml-2">{selectedPolicy.type}</span>
-                  </div>
-                  <div>
-                    <span className="text-white/60">Vigência:</span>
-                    <span className="text-white ml-2">
-                      {selectedPolicy.expiration_date && 
-                        new Date(selectedPolicy.expiration_date).toLocaleDateString('pt-BR')}
-                    </span>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-white/60 text-sm flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        Cliente:
+                      </span>
+                      <p className="text-white font-medium">{selectedPolicy.client?.name}</p>
+                      {selectedPolicy.client?.phone && (
+                        <p className="text-white/80 text-sm">{selectedPolicy.client.phone}</p>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-white/60 text-sm">Vigência:</span>
+                      <p className="text-white">
+                        {selectedPolicy.expirationDate &&
+                          new Date(selectedPolicy.expirationDate).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-white/60 text-sm">Status:</span>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium ml-2 ${
+                        selectedPolicy.status === 'Ativa' ? 'bg-green-500/20 text-green-400' :
+                        selectedPolicy.status === 'Orçamento' ? 'bg-orange-500/20 text-orange-400' :
+                        selectedPolicy.status === 'Aguardando Apólice' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {selectedPolicy.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
