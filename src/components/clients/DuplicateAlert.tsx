@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, Users, Target } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, Target, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface DuplicateAlertProps {
   count: number;
