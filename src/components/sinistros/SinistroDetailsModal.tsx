@@ -31,6 +31,8 @@ import {
   Paperclip
 } from 'lucide-react';
 import { useUpdateSinistro, useSinistroActivities, useSinistroDocuments, type Sinistro } from '@/hooks/useSinistros';
+import { SinistroDocumentUpload } from './SinistroDocumentUpload';
+import { SinistroTimeline } from './SinistroTimeline';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -428,71 +430,59 @@ export function SinistroDetailsModal({ sinistro, open, onOpenChange, onSuccess }
             </TabsContent>
 
             <TabsContent value="timeline" className="space-y-4 p-1">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <History className="w-5 h-5" />
-                Histórico de Atividades
-              </h3>
-              
-              {activities.length === 0 ? (
-                <Alert>
-                  <Clock className="h-4 w-4" />
-                  <AlertDescription>
-                    Nenhuma atividade registrada ainda.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-3">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="bg-white/5 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="outline">{activity.activity_type}</Badge>
-                        <span className="text-xs text-white/60">
-                          {formatDateTime(activity.created_at)}
-                        </span>
-                      </div>
-                      <p className="text-white/80 text-sm">{activity.description}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <SinistroTimeline
+                sinistroId={sinistro.id}
+                currentStatus={sinistro.status}
+                activities={activities}
+                onRefresh={onSuccess}
+              />
             </TabsContent>
 
             <TabsContent value="documents" className="space-y-4 p-1">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Paperclip className="w-5 h-5" />
-                Documentos Anexados
-              </h3>
-              
-              {documents.length === 0 ? (
-                <Alert>
-                  <FileText className="h-4 w-4" />
-                  <AlertDescription>
-                    Nenhum documento anexado ainda.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="grid gap-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="bg-white/5 rounded-lg p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-blue-400" />
-                        <div>
-                          <p className="text-white font-medium">{doc.file_name}</p>
-                          <p className="text-xs text-white/60">{doc.document_type}</p>
+              <div className="space-y-6">
+                <SinistroDocumentUpload
+                  sinistroId={sinistro.id}
+                  onSuccess={onSuccess}
+                />
+
+                <div className="border-t border-white/10 pt-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                    <Paperclip className="w-5 h-5" />
+                    Documentos Anexados
+                  </h3>
+
+                  {documents.length === 0 ? (
+                    <Alert>
+                      <FileText className="h-4 w-4" />
+                      <AlertDescription>
+                        Nenhum documento anexado ainda.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <div className="grid gap-3">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="bg-white/5 rounded-lg p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-blue-400" />
+                            <div>
+                              <p className="text-white font-medium">{doc.file_name}</p>
+                              <p className="text-xs text-white/60">{doc.document_type}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {doc.is_validated && (
+                              <Badge className="bg-green-500">Validado</Badge>
+                            )}
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {doc.is_validated && (
-                          <Badge className="bg-green-500">Validado</Badge>
-                        )}
-                        <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
+              </div>
             </TabsContent>
 
             <TabsContent value="financeiro" className="space-y-4 p-1">
