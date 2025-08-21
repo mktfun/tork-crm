@@ -394,11 +394,22 @@ export default function Sinistros() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewSinistro(sinistro)}
+                  >
                     <Eye className="w-4 h-4 mr-1" />
                     Visualizar
                   </Button>
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      handleViewSinistro(sinistro);
+                      // Vai abrir na aba de documentos
+                    }}
+                  >
                     <FileText className="w-4 h-4 mr-1" />
                     Documentos
                   </Button>
