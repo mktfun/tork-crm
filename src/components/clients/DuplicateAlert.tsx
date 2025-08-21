@@ -13,6 +13,8 @@ interface DuplicateAlertProps {
 }
 
 export function DuplicateAlert({ count, highConfidence, mediumConfidence, lowConfidence, totalClients }: DuplicateAlertProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (count === 0) return null;
 
   const duplicatePercentage = totalClients ? ((count / totalClients) * 100).toFixed(1) : 0;
