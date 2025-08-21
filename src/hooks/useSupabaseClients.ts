@@ -44,7 +44,8 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm }: UseSu
       // Aplicar busca se configurada
       if (searchTerm && searchTerm.trim()) {
         const term = searchTerm.trim();
-        query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+        // Busca em múltiplos campos com operador OR
+        query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%,cpf_cnpj.ilike.%${term}%`);
       }
 
       // Aplicar ordenação se configurada
