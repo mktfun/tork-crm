@@ -33,6 +33,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<DuplicateGroup | null>(null);
   const [primaryClient, setPrimaryClient] = useState<Client | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { updateClient, deleteClient } = useSupabaseClients();
 
