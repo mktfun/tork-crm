@@ -169,8 +169,8 @@ export default function Clients() {
           >
             Importar Planilha
           </Button>
-          <ClientDeduplicationModal 
-            clients={clients} 
+          <ClientDeduplicationModal
+            clients={allClients}
             onDeduplicationComplete={refetch}
           />
           <NewClientModal />
