@@ -20,6 +20,7 @@ interface DuplicateGroup {
 
 export function DuplicateReportExport({ clients }: DuplicateReportExportProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Reutilizar a lógica de detecção de duplicatas
   const detectDuplicatesForReport = (): DuplicateGroup[] => {
