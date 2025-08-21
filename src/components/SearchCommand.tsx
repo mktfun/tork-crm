@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useClients, usePolicies } from "@/hooks/useAppData";
@@ -28,8 +27,10 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
         
         <CommandGroup heading="Clientes">
           {clients.slice(0, 5).map(client => (
-            <CommandItem 
-              key={client.id} 
+            <CommandItem
+              key={client.id}
+              value={`${client.name} ${client.email || ''} ${client.phone || ''}`}
+              keywords={[client.name, client.email || '', client.phone || '', 'cliente', 'funcionario']}
               onSelect={() => runCommand(() => navigate(`/clients/${client.id}`))}
               className="flex items-center gap-2"
             >
@@ -44,8 +45,10 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
           {policies.slice(0, 5).map(policy => {
             const client = clients.find(c => c.id === policy.clientId);
             return (
-              <CommandItem 
-                key={policy.id} 
+              <CommandItem
+                key={policy.id}
+                value={`${policy.policyNumber || ''} ${policy.type || ''} ${client?.name || ''}`}
+                keywords={[policy.policyNumber || '', policy.type || '', client?.name || '', 'apolice', 'seguro']}
                 onSelect={() => runCommand(() => navigate(`/policies/${policy.id}`))}
                 className="flex items-center gap-2"
               >
