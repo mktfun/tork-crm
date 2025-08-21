@@ -35,7 +35,7 @@ type ViewMode = 'cards' | 'list';
 
 export default function Clients() {
   usePageTitle('Clientes');
-  
+
   // 🚀 **ESTADO DE PAGINAÇÃO E ORDENAÇÃO**
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
@@ -44,10 +44,14 @@ export default function Clients() {
   });
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const pageSize = 15;
-  
+
   // 🔥 **ESTADO PARA CONTROLAR O MODAL DE IMPORTAÇÃO**
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  
+
+  // Estado para a busca GLOBAL (aplicada no backend em todos os clientes)
+  const [termoBusca, setTermoBusca] = useState('');
+  const [searchDebounce, setSearchDebounce] = useState('');
+
   // 🚀 **HOOK COM PAGINAÇÃO, ORDENAÇÃO E BUSCA** (para exibição)
   const { clients, loading, totalCount, totalPages, refetch } = useSupabaseClients({
     pagination: { page: currentPage, pageSize },
@@ -59,10 +63,6 @@ export default function Clients() {
   const { allClients, loading: loadingAll } = useAllClients();
 
   const { policies } = usePolicies();
-
-  // Estado para a busca GLOBAL (aplicada no backend em todos os clientes)
-  const [termoBusca, setTermoBusca] = useState('');
-  const [searchDebounce, setSearchDebounce] = useState('');
 
   // Debounce da busca para evitar muitas requisições
   React.useEffect(() => {
