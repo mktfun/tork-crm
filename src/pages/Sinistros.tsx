@@ -142,7 +142,7 @@ export default function Sinistros() {
           </h1>
           <p className="text-white/60">Gerencie ocorrências e processos de sinistro</p>
         </div>
-        <SinistroOnboarding onSuccess={() => refetch()} />
+        <SinistroFormModal onSuccess={() => refetch()} />
       </div>
 
       {/* Estatísticas */}
