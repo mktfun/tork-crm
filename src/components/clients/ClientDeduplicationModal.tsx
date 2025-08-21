@@ -288,6 +288,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       setDuplicateGroups(prev => prev.filter(g => g.id !== selectedGroup.id));
       setSelectedGroup(null);
       setPrimaryClient(null);
+      setShowPreview(false);
       
       toast.success(`${secondaryClients.length + 1} clientes mesclados com sucesso!`, {
         description: `Cliente principal: ${primaryClient.name}. ${secondaryClients.length} duplicatas removidas.`
@@ -419,7 +420,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                     size="sm"
                     onClick={() => setSelectedGroup(null)}
                   >
-                    ← Voltar
+                    ��� Voltar
                   </Button>
                   <h3 className="text-lg font-medium text-white">
                     Mesclar Clientes Duplicados
