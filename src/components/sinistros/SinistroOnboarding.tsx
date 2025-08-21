@@ -190,9 +190,15 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
 
       await createSinistro.mutateAsync(submitData);
       
-      form.reset();
+      // Reset em ordem correta
       setCurrentStep(1);
       setCompletedSteps([]);
+      form.reset({
+        occurrence_date: new Date().toISOString().split('T')[0],
+        priority: 'Média',
+        claim_amount: '',
+        deductible_amount: '',
+      });
       setOpen(false);
       onSuccess?.();
     } catch (error) {
