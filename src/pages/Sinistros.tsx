@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useSinistros } from '@/hooks/useSinistros';
+import { SinistroFormModal } from '@/components/sinistros/SinistroFormModal';
 import {
   ShieldAlert,
   Plus,
