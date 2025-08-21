@@ -22,6 +22,8 @@ const menuSections = [
     title: 'Visão Geral',
     items: [
       { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/reports' },
+      { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/faturamento' },
     ]
   },
   {
@@ -33,13 +35,6 @@ const menuSections = [
       { id: 'tasks', name: 'Tarefas', icon: ListTodo, path: '/tasks' },
       { id: 'renovacoes', name: 'Renovações', icon: RefreshCw, path: '/renovacoes' },
       { id: 'sinistros', name: 'Sinistros', icon: ShieldAlert, path: '/sinistros' },
-    ]
-  },
-  {
-    title: 'Gestão',
-    items: [
-      { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/reports' },
-      { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/faturamento' },
     ]
   },
   {
