@@ -47,7 +47,7 @@ export function DuplicateAlert({ count, highConfidence, mediumConfidence, lowCon
               )}
             </div>
 
-            {totalClients && (
+            {!isExpanded && totalClients && (
               <div className="text-sm text-white/60 flex items-center gap-1">
                 <Users size={14} />
                 Análise de {totalClients} clientes total
@@ -55,43 +55,74 @@ export function DuplicateAlert({ count, highConfidence, mediumConfidence, lowCon
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {priorityCount > 0 && (
+          <div className="flex items-center gap-2">
+            {priorityCount > 0 && !isExpanded && (
               <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-md">
                 <Target size={14} className="text-white/60" />
                 <span className="text-xs text-white/80">{priorityCount} prioritários</span>
               </div>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-6 px-2 text-white/60 hover:text-white"
+            >
+              {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </Button>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {highConfidence > 0 && (
-            <Badge variant="destructive" className="text-xs flex items-center gap-1">
-              <AlertTriangle size={12} />
-              {highConfidence} alta confiança
-            </Badge>
-          )}
-          {mediumConfidence > 0 && (
-            <Badge variant="default" className="text-xs bg-yellow-600 hover:bg-yellow-700 flex items-center gap-1">
-              <TrendingUp size={12} />
-              {mediumConfidence} média confiança
-            </Badge>
-          )}
-          {lowConfidence > 0 && (
-            <Badge variant="secondary" className="text-xs flex items-center gap-1">
-              <Users size={12} />
-              {lowConfidence} baixa confiança
-            </Badge>
-          )}
-        </div>
+        {/* Conteúdo expandido */}
+        {isExpanded && (
+          <>
+            {totalClients && (
+              <div className="text-sm text-white/60 flex items-center gap-1 pb-2 border-b border-white/10">
+                <Users size={14} />
+                Análise detalhada de {totalClients} clientes total
+              </div>
+            )}
 
-        {priorityCount > 0 && (
-          <div className="mt-2 p-2 bg-white/5 rounded-md border border-white/10">
-            <div className="text-xs text-white/70">
-              💡 <strong>Dica:</strong> Comece pelos casos de alta confiança para obter melhores resultados na limpeza da base.
+            <div className="flex flex-wrap gap-2">
+              {highConfidence > 0 && (
+                <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                  <AlertTriangle size={12} />
+                  {highConfidence} alta confiança
+                </Badge>
+              )}
+              {mediumConfidence > 0 && (
+                <Badge variant="default" className="text-xs bg-yellow-600 hover:bg-yellow-700 flex items-center gap-1">
+                  <TrendingUp size={12} />
+                  {mediumConfidence} média confiança
+                </Badge>
+              )}
+              {lowConfidence > 0 && (
+                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Users size={12} />
+                  {lowConfidence} baixa confiança
+                </Badge>
+              )}
             </div>
-          </div>
+
+            {priorityCount > 0 && (
+              <div className="p-3 bg-white/5 rounded-md border border-white/10">
+                <div className="flex items-start gap-2">
+                  <Info size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <div className="text-sm text-white/90 font-medium">
+                      Recomendações de Limpeza:
+                    </div>
+                    <ul className="text-xs text-white/70 space-y-1">
+                      <li>• Comece pelos {highConfidence} casos de alta confiança</li>
+                      <li>• Use o preview de mesclagem para validar antes de confirmar</li>
+                      <li>• Exporte um relatório antes de fazer alterações em massa</li>
+                      <li>• Revise manualmente casos de baixa confiança</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </AlertDescription>
     </Alert>
