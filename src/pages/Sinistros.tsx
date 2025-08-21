@@ -65,8 +65,15 @@ export default function Sinistros() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('Todos');
   const [selectedType, setSelectedType] = useState('Todos');
+  const [selectedSinistro, setSelectedSinistro] = useState<any>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   const { data: sinistros = [], isLoading, error, refetch } = useSinistros();
+
+  const handleViewSinistro = (sinistro: any) => {
+    setSelectedSinistro(sinistro);
+    setDetailsModalOpen(true);
+  };
 
   // Filtros aplicados
   const filteredSinistros = sinistros.filter(sinistro => {
