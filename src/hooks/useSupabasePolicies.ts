@@ -48,18 +48,7 @@ export function useSupabasePolicies() {
         userId: policy.user_id,
         isBudget: policy.status === 'Orçamento',
         bonus_class: policy.bonus_class,
-        automaticRenewal: policy.automatic_renewal,
-        companies: policy.companies ? {
-          id: policy.companies.id,
-          name: policy.companies.name
-        } : undefined,
-        client: policy.clients ? {
-          id: policy.clients.id,
-          name: policy.clients.name,
-          phone: policy.clients.phone,
-          email: policy.clients.email,
-          cpfCnpj: policy.clients.cpf_cnpj
-        } : undefined
+        automaticRenewal: policy.automatic_renewal
       })) || [];
 
       console.log('✅ Apólices carregadas:', formattedPolicies.length);
