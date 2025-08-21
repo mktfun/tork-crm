@@ -56,6 +56,13 @@ export function useSupabasePolicies() {
     },
     enabled: !!user,
     staleTime: 3 * 60 * 1000,
+    retry: (failureCount, error) => {
+      console.log(`Tentativa ${failureCount} falhada:`, error);
+      return failureCount < 3;
+    },
+    onError: (error) => {
+      console.error('❌ Erro persistente ao buscar apólices:', error);
+    }
   });
 
   const addPolicyMutation = useMutation({
