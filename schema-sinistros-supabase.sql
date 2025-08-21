@@ -1,5 +1,5 @@
 -- =====================================================
--- SCHEMA SQL COMPLETO PARA MÓDULO DE SINISTROS
+-- SCHEMA SQL PARA MÓDULO DE SINISTROS - APENAS NOVAS TABELAS
 -- Sistema: SGC Pro - Supabase
 -- Executar manualmente no Supabase SQL Editor
 -- =====================================================
@@ -334,16 +334,7 @@ CREATE INDEX idx_sinistro_documents_sinistro_id ON public.sinistro_documents(sin
 CREATE INDEX idx_sinistro_documents_type ON public.sinistro_documents(document_type);
 
 -- =====================================================
--- HABILITAR REALTIME (OPCIONAL)
--- =====================================================
-
--- Descomentar se quiser notificações em tempo real
--- ALTER TABLE public.sinistros REPLICA IDENTITY FULL;
--- ALTER TABLE public.sinistro_activities REPLICA IDENTITY FULL;
--- ALTER TABLE public.sinistro_documents REPLICA IDENTITY FULL;
-
--- =====================================================
--- VIEWS ÚTEIS (OPCIONAL)
+-- VIEW ÚTIL PARA CONSULTAS
 -- =====================================================
 
 -- View para sinistros com dados relacionados
@@ -366,22 +357,15 @@ LEFT JOIN public.brokerages b ON s.brokerage_id = b.id;
 -- COMENTÁRIOS PARA DOCUMENTAÇÃO
 -- =====================================================
 
-COMMENT ON TABLE public.sinistros IS 'Tabela principal para gestão de sinistros/ocorrências';
+COMMENT ON TABLE public.sinistros IS 'Gestão de sinistros/ocorrências - vinculado às tabelas existentes';
 COMMENT ON TABLE public.sinistro_activities IS 'Histórico de atividades e mudanças nos sinistros';
 COMMENT ON TABLE public.sinistro_documents IS 'Documentos anexados aos sinistros';
 
-COMMENT ON COLUMN public.sinistros.claim_number IS 'Número único do protocolo (gerado automaticamente)';
-COMMENT ON COLUMN public.sinistros.occurrence_date IS 'Data em que ocorreu o sinistro';
-COMMENT ON COLUMN public.sinistros.report_date IS 'Data em que o sinistro foi reportado/registrado';
-COMMENT ON COLUMN public.sinistros.documents_checklist IS 'JSON com checklist de documentos necessários';
-
 -- =====================================================
--- FIM DO SCHEMA
+-- FIM DO SCHEMA CORRIGIDO
 -- =====================================================
 
--- INSTRUÇÕES DE USO:
--- 1. Copie todo este código
--- 2. Acesse o Supabase Dashboard > SQL Editor
--- 3. Cole o código e execute
--- 4. Após a execução, regenere os types TypeScript:
+-- INSTRUÇÕES:
+-- 1. Execute este SQL no Supabase SQL Editor
+-- 2. Após execução, regenere os types:
 --    npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/integrations/supabase/types.ts
