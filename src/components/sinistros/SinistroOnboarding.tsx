@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { useCreateSinistro } from '@/hooks/useSinistros';
 import { useClients, usePolicies, useCompanies } from '@/hooks/useAppData';
-import { format } from 'date-fns';
 
 const steps = [
   {
