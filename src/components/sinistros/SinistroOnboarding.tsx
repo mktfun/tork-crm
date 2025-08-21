@@ -207,32 +207,71 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <FileText className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">Vincular Apólice</h3>
-              <p className="text-white/60">Opcional: Escolha a apólice relacionada ao sinistro</p>
+              <AlertTriangle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Informações Básicas</h3>
+              <p className="text-white/60">Quando e que tipo de sinistro aconteceu?</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="occurrence_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Data da Ocorrência *
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="claim_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo do Sinistro *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {claimTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <FormField
               control={form.control}
-              name="policy_id"
+              name="priority"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Apólice (Opcional)</FormLabel>
+                  <FormLabel>Prioridade</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma apólice (opcional)" />
+                        <SelectValue placeholder="Selecione a prioridade" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {policies.map((policy) => (
-                        <SelectItem key={policy.id} value={policy.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{policy.policy_number}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {policy.insurance_company} - {policy.type}
-                            </span>
-                          </div>
+                      {priorities.map((priority) => (
+                        <SelectItem key={priority.value} value={priority.value}>
+                          <span className={priority.color}>{priority.label}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -242,36 +281,66 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
               )}
             />
 
-            {selectedPolicy && (
-              <Card className="bg-blue-500/10 border-blue-500/20">
-                <CardContent className="p-4">
-                  <h4 className="font-medium text-blue-400 mb-3">Dados da Apólice Selecionada</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-white/60">Cliente:</span>
-                      <p className="text-white font-medium">
-                        {clients.find(c => c.id === selectedPolicy.client_id)?.name || 'N/A'}
-                      </p>
+            {/* Seção de Vinculação Opcional */}
+            <div className="border-t border-white/10 pt-4">
+              <h4 className="text-sm font-medium text-white/80 mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Vincular Apólice (Opcional)
+              </h4>
+              <p className="text-xs text-white/60 mb-3">
+                Você pode vincular este sinistro a uma apólice específica ou fazer isso posteriormente.
+              </p>
+
+              <FormField
+                control={form.control}
+                name="policy_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Apólice</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma apólice (opcional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {policies.map((policy) => (
+                          <SelectItem key={policy.id} value={policy.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{policy.policy_number}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {policy.insurance_company} - {policy.type}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {selectedPolicy && (
+                <Card className="bg-blue-500/10 border-blue-500/20 mt-3">
+                  <CardContent className="p-3">
+                    <h4 className="font-medium text-blue-400 mb-2 text-sm">Apólice Selecionada</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-white/60">Cliente:</span>
+                        <p className="text-white font-medium">
+                          {clients.find(c => c.id === selectedPolicy.client_id)?.name || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-white/60">Seguradora:</span>
+                        <p className="text-white font-medium">{selectedPolicy.insurance_company}</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-white/60">Seguradora:</span>
-                      <p className="text-white font-medium">{selectedPolicy.insurance_company}</p>
-                    </div>
-                    <div>
-                      <span className="text-white/60">Tipo:</span>
-                      <p className="text-white font-medium">{selectedPolicy.type}</p>
-                    </div>
-                    <div>
-                      <span className="text-white/60">Vigência:</span>
-                      <p className="text-white font-medium">
-                        {selectedPolicy.expiration_date && 
-                          new Date(selectedPolicy.expiration_date).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         );
 
