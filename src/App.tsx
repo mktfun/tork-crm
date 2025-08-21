@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,7 @@ import Appointments from "./pages/Appointments";
 import Faturamento from "./pages/Faturamento";
 import Tasks from "./pages/Tasks";
 import Renovacoes from "./pages/Renovacoes";
+import Sinistros from "./pages/Sinistros";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
