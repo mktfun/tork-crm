@@ -126,7 +126,7 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
     resolver: zodResolver(sinistroSchema),
     defaultValues: {
       occurrence_date: format(new Date(), 'yyyy-MM-dd'),
-      priority: 'M��dia',
+      priority: 'Média',
       claim_amount: '',
       deductible_amount: '',
     },
@@ -169,9 +169,9 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
     
     switch (currentStep) {
       case 1:
-        return true; // Apólice agora é opcional
+        return !!values.occurrence_date && !!values.claim_type; // Data e tipo são obrigatórios
       case 2:
-        return !!values.occurrence_date && !!values.claim_type && values.description.length >= 10;
+        return values.description.length >= 10; // Descrição obrigatória
       case 3:
         return true; // Passo opcional
       case 4:
