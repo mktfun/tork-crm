@@ -238,52 +238,85 @@ export function DuplicateReportExport({ clients }: DuplicateReportExportProps) {
   return (
     <Card className="bg-white/5 border-white/10">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-white flex items-center gap-2">
-          <FileText size={16} className="text-blue-400" />
-          Relatório de Duplicatas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="text-center">
-            <div className="text-lg font-bold text-white">{duplicateGroups.length}</div>
-            <div className="text-white/60">Grupos</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-white">{totalDuplicates}</div>
-            <div className="text-white/60">Clientes</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-red-400">
-              {duplicateGroups.filter(g => g.confidence === 'high').length}
-            </div>
-            <div className="text-white/60">Alta Prioridade</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-white">
-              {((totalDuplicates / clients.length) * 100).toFixed(1)}%
-            </div>
-            <div className="text-white/60">da Base</div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <Calendar size={12} />
-            Gerado em {new Date().toLocaleDateString('pt-BR')}
-          </div>
-          
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium text-white flex items-center gap-2">
+            <FileText size={16} className="text-blue-400" />
+            Relatório de Duplicatas
+          </CardTitle>
           <Button
-            onClick={generateCSVReport}
-            disabled={isGenerating}
+            variant="ghost"
             size="sm"
-            className="gap-2"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="h-6 px-2 text-white/60 hover:text-white"
           >
-            <Download size={14} />
-            {isGenerating ? 'Gerando...' : 'Exportar CSV'}
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </Button>
         </div>
-      </CardContent>
+
+        {/* Versão resumida */}
+        {!isExpanded && (
+          <div className="pt-2 flex items-center justify-between">
+            <div className="text-xs text-white/60">
+              {duplicateGroups.length} grupos • {totalDuplicates} clientes afetados
+            </div>
+            <Button
+              onClick={generateCSVReport}
+              disabled={isGenerating}
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs gap-1"
+            >
+              <Download size={12} />
+              {isGenerating ? 'Gerando...' : 'CSV'}
+            </Button>
+          </div>
+        )}
+      </CardHeader>
+
+      {/* Conteúdo expandido */}
+      {isExpanded && (
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{duplicateGroups.length}</div>
+              <div className="text-white/60">Grupos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{totalDuplicates}</div>
+              <div className="text-white/60">Clientes</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-red-400">
+                {duplicateGroups.filter(g => g.confidence === 'high').length}
+              </div>
+              <div className="text-white/60">Alta Prioridade</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">
+                {((totalDuplicates / clients.length) * 100).toFixed(1)}%
+              </div>
+              <div className="text-white/60">da Base</div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <Calendar size={12} />
+              Gerado em {new Date().toLocaleDateString('pt-BR')}
+            </div>
+
+            <Button
+              onClick={generateCSVReport}
+              disabled={isGenerating}
+              size="sm"
+              className="gap-2"
+            >
+              <Download size={14} />
+              {isGenerating ? 'Gerando...' : 'Exportar CSV'}
+            </Button>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }
