@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
 import { useClients, usePolicies } from '@/hooks/useAppData';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
@@ -171,27 +172,42 @@ export function AppointmentModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date" className="text-slate-300">Data *</Label>
-                <Input 
-                  id="date" 
-                  type="date" 
-                  value={formData.date} 
-                  onChange={e => handleInputChange('date', e.target.value)} 
-                  className="bg-slate-800 border-slate-600 text-white" 
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={e => handleInputChange('date', e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="time" className="text-slate-300">Horário *</Label>
-                <Input 
-                  id="time" 
-                  type="time" 
-                  value={formData.time} 
-                  onChange={e => handleInputChange('time', e.target.value)} 
-                  className="bg-slate-800 border-slate-600 text-white" 
+                <Input
+                  id="time"
+                  type="time"
+                  value={formData.time}
+                  onChange={e => handleInputChange('time', e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority" className="text-slate-300">Prioridade</Label>
+                <Select value={formData.priority} onValueChange={value => handleInputChange('priority', value)}>
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                    <SelectValue placeholder="Selecione a prioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Baixa">Baixa</SelectItem>
+                    <SelectItem value="Normal">Normal</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
