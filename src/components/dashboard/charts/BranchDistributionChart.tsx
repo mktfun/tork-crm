@@ -8,6 +8,7 @@ import { PieChart as PieChartIcon } from 'lucide-react';
 interface BranchDistributionData {
   ramo: string;
   total: number;
+  valor: number;
 }
 
 interface BranchDistributionChartProps {
@@ -27,7 +28,8 @@ const COLORS = [
 
 export function BranchDistributionChart({ data, dateRange, insight }: BranchDistributionChartProps) {
   // Calcular total para porcentagens
-  const total = data.reduce((sum, item) => sum + item.total, 0);
+  const totalPolicies = data.reduce((sum, item) => sum + item.total, 0);
+  const totalValue = data.reduce((sum, item) => sum + item.valor, 0);
 
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     if (percent < 0.05) return null; // Não mostrar labels para fatias menores que 5%
@@ -53,37 +55,43 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
     );
   };
 
-  // Tooltip customizado com melhor contraste
+  // Tooltip customizado com melhor contraste e informações ricas
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0];
-      const percentage = total > 0 ? ((data.value / total) * 100).toFixed(1) : 0;
+      const item = payload[0].payload;
+      const valuePercentage = totalValue > 0 ? ((item.valor / totalValue) * 100).toFixed(1) : 0;
+      const policyPercentage = totalPolicies > 0 ? ((item.total / totalPolicies) * 100).toFixed(1) : 0;
       
       return (
         <div className="bg-gray-900/95 backdrop-blur-sm p-3 border border-gray-700 rounded-lg shadow-lg">
-          <p className="font-semibold text-white">{data.payload.ramo}</p>
-          <p className="text-sm text-gray-200">
-            <span className="font-medium">{data.value}</span> apólices ({percentage}%)
-          </p>
+          <p className="font-semibold text-white mb-2">{item.ramo}</p>
+          <div className="space-y-1 text-sm text-gray-200">
+            <p>
+              <span className="font-medium">Faturamento:</span> R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({valuePercentage}%)
+            </p>
+            <p>
+              <span className="font-medium">Apólices:</span> {item.total} ({policyPercentage}%)
+            </p>
+          </div>
         </div>
       );
     }
     return null;
   };
 
-  // Legenda customizada com melhor legibilidade
+  // Legenda customizada compacta baseada em valor
   const CustomLegend = ({ payload }: any) => {
     return (
-      <div className="flex flex-wrap justify-center gap-4 mt-4">
+      <div className="flex flex-wrap justify-center gap-3 mt-4 max-w-full">
         {payload.map((entry: any, index: number) => {
-          const percentage = total > 0 ? ((entry.payload.total / total) * 100).toFixed(0) : 0;
+          const percentage = totalValue > 0 ? ((entry.payload.valor / totalValue) * 100).toFixed(0) : 0;
           return (
-            <div key={`legend-${index}`} className="flex items-center gap-2">
+            <div key={`legend-${index}`} className="flex items-center gap-2 min-w-0">
               <div 
-                className="w-3 h-3 rounded-full" 
+                className="w-3 h-3 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-sm text-white/90 font-medium">
+              <span className="text-xs text-white/90 font-medium truncate">
                 {entry.payload.ramo} - {percentage}%
               </span>
             </div>
@@ -96,7 +104,7 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
   return (
     <AppCard className="p-6">
       <h3 className="text-lg font-semibold text-white mb-4">
-        Distribuição de Apólices por Ramo
+        Ramos × Produção
       </h3>
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
@@ -109,7 +117,7 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
               label={renderCustomizedLabel}
               outerRadius={80}
               fill="#8884d8"
-              dataKey="total"
+              dataKey="valor"
             >
               {data.map((entry, index) => (
                 <Cell 

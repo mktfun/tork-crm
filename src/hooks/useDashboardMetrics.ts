@@ -268,21 +268,49 @@ export function useDashboardMetrics() {
   const branchDistributionData = useMemo(() => {
     if (policiesLoading) return [];
     
-    const branchCounts: { [key: string]: number } = {};
+    const branchData: { [key: string]: { count: number; value: number } } = {};
     
     policies
       .filter(policy => policy.status === 'Ativa')
       .forEach(policy => {
         const branch = policy.type || 'Não informado';
-        branchCounts[branch] = (branchCounts[branch] || 0) + 1;
+        const value = policy.premiumValue || 0;
+        
+        if (!branchData[branch]) {
+          branchData[branch] = { count: 0, value: 0 };
+        }
+        branchData[branch].count += 1;
+        branchData[branch].value += value;
       });
 
-    const distribution = Object.entries(branchCounts).map(([ramo, total]) => ({
+    // Converter para array e ordenar por valor
+    let distribution = Object.entries(branchData).map(([ramo, data]) => ({
       ramo,
-      total
-    }));
+      total: data.count,
+      valor: data.value
+    })).sort((a, b) => b.valor - a.valor);
+
+    // Agrupar itens pequenos (menos de 5% do total de valor) em "Outros"
+    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+    const threshold = totalValue * 0.05;
     
-    console.log('📊 Distribuição por ramos:', distribution);
+    const mainItems = distribution.filter(item => item.valor >= threshold);
+    const smallItems = distribution.filter(item => item.valor < threshold);
+    
+    if (smallItems.length > 0 && mainItems.length > 0) {
+      const othersData = smallItems.reduce(
+        (acc, item) => ({
+          ramo: 'Outros',
+          total: acc.total + item.total,
+          valor: acc.valor + item.valor
+        }),
+        { ramo: 'Outros', total: 0, valor: 0 }
+      );
+      
+      distribution = [...mainItems.slice(0, 7), othersData];
+    }
+    
+    console.log('📊 Distribuição por ramos (por valor):', distribution);
     return distribution;
   }, [policies, policiesLoading]);
 
@@ -290,21 +318,49 @@ export function useDashboardMetrics() {
   const companyDistributionData = useMemo(() => {
     if (policiesLoading) return [];
     
-    const companyCounts: { [key: string]: number } = {};
+    const companyData: { [key: string]: { count: number; value: number } } = {};
     
     policies
       .filter(policy => policy.status === 'Ativa')
       .forEach(policy => {
         const companyId = policy.insuranceCompany || 'Não informado';
-        companyCounts[companyId] = (companyCounts[companyId] || 0) + 1;
+        const value = policy.premiumValue || 0;
+        
+        if (!companyData[companyId]) {
+          companyData[companyId] = { count: 0, value: 0 };
+        }
+        companyData[companyId].count += 1;
+        companyData[companyId].value += value;
       });
 
-    const distribution = Object.entries(companyCounts).map(([companyId, total]) => ({
+    // Converter para array e ordenar por valor
+    let distribution = Object.entries(companyData).map(([companyId, data]) => ({
       seguradora: companyId === 'Não informado' ? 'Não informado' : getCompanyName(companyId),
-      total
-    }));
+      total: data.count,
+      valor: data.value
+    })).sort((a, b) => b.valor - a.valor);
+
+    // Agrupar itens pequenos (menos de 5% do total de valor) em "Outros"
+    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+    const threshold = totalValue * 0.05;
     
-    console.log('📊 Distribuição por seguradoras:', distribution);
+    const mainItems = distribution.filter(item => item.valor >= threshold);
+    const smallItems = distribution.filter(item => item.valor < threshold);
+    
+    if (smallItems.length > 0 && mainItems.length > 0) {
+      const othersData = smallItems.reduce(
+        (acc, item) => ({
+          seguradora: 'Outros',
+          total: acc.total + item.total,
+          valor: acc.valor + item.valor
+        }),
+        { seguradora: 'Outros', total: 0, valor: 0 }
+      );
+      
+      distribution = [...mainItems.slice(0, 7), othersData];
+    }
+    
+    console.log('📊 Distribuição por seguradoras (por valor):', distribution);
     return distribution;
   }, [policies, policiesLoading, getCompanyName]);
 
@@ -314,23 +370,23 @@ export function useDashboardMetrics() {
       return 'Carregando análise de ramos...';
     }
     
-    const total = branchDistributionData.reduce((sum, item) => sum + item.total, 0);
+    const totalValue = branchDistributionData.reduce((sum, item) => sum + item.valor, 0);
     const principal = branchDistributionData.reduce((prev, current) => 
-      current.total > prev.total ? current : prev
+      current.valor > prev.valor ? current : prev
     );
     
-    if (total === 0) {
-      return 'Sem dados de apólices para análise.';
+    if (totalValue === 0) {
+      return 'Sem dados de produção para análise.';
     }
     
-    const percentage = Math.round((principal.total / total) * 100);
+    const percentage = Math.round((principal.valor / totalValue) * 100);
     
     if (percentage >= 60) {
-      return `O ramo "${principal.ramo}" domina sua carteira com ${percentage}% das apólices. Considere diversificar para reduzir riscos.`;
+      return `O ramo "${principal.ramo}" domina sua produção com ${percentage}% do faturamento. Considere diversificar para reduzir riscos.`;
     } else if (percentage >= 40) {
-      return `O ramo "${principal.ramo}" é o carro-chefe, representando ${percentage}% da sua carteira ativa.`;
+      return `O ramo "${principal.ramo}" é o carro-chefe, representando ${percentage}% da sua produção total.`;
     } else {
-      return `Carteira bem diversificada! O ramo líder "${principal.ramo}" representa apenas ${percentage}% do total.`;
+      return `Produção bem diversificada! O ramo líder "${principal.ramo}" representa apenas ${percentage}% do faturamento.`;
     }
   }, [branchDistributionData, policiesLoading]);
 
@@ -339,23 +395,23 @@ export function useDashboardMetrics() {
       return 'Carregando análise de seguradoras...';
     }
     
-    const total = companyDistributionData.reduce((sum, item) => sum + item.total, 0);
+    const totalValue = companyDistributionData.reduce((sum, item) => sum + item.valor, 0);
     const principal = companyDistributionData.reduce((prev, current) => 
-      current.total > prev.total ? current : prev
+      current.valor > prev.valor ? current : prev
     );
     
-    if (total === 0) {
-      return 'Sem dados de seguradoras para análise.';
+    if (totalValue === 0) {
+      return 'Sem dados de faturamento para análise.';
     }
     
-    const percentage = Math.round((principal.total / total) * 100);
+    const percentage = Math.round((principal.valor / totalValue) * 100);
     
     if (percentage >= 70) {
-      return `Concentração alta: ${principal.seguradora} representa ${percentage}% das apólices. Diversifique para reduzir dependência.`;
+      return `Concentração alta: ${principal.seguradora} representa ${percentage}% do faturamento. Diversifique para reduzir dependência.`;
     } else if (percentage >= 50) {
-      return `${principal.seguradora} é sua parceira principal com ${percentage}% das apólices ativas.`;
+      return `${principal.seguradora} é sua parceira principal com ${percentage}% do faturamento total.`;
     } else {
-      return `Boa distribuição entre seguradoras. ${principal.seguradora} lidera com ${percentage}% das apólices.`;
+      return `Boa distribuição entre seguradoras. ${principal.seguradora} lidera com ${percentage}% do faturamento.`;
     }
   }, [companyDistributionData, policiesLoading]);
 
