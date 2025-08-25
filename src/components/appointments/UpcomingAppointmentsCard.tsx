@@ -15,6 +15,7 @@ interface UpcomingAppointment {
   date: string;
   time: string;
   status: string;
+  priority?: string;
   client_id?: string;
   notes?: string;
   client?: {

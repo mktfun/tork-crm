@@ -78,8 +78,8 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
   // Auto-preenche o cliente quando uma apólice é selecionada
   const handlePolicyChange = useCallback((policyId: string) => {
     const policy = policies.find(p => p.id === policyId);
-    if (policy?.client_id) {
-      form.setValue('client_id', policy.client_id);
+    if (policy?.clientId) {
+      form.setValue('client_id', policy.clientId);
     }
   }, [policies, form]);
 

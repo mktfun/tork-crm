@@ -131,6 +131,7 @@ export type Database = {
           notes: string | null
           parent_appointment_id: string | null
           policy_id: string | null
+          priority: string | null
           recurrence_rule: string | null
           status: string
           time: string
@@ -147,6 +148,7 @@ export type Database = {
           notes?: string | null
           parent_appointment_id?: string | null
           policy_id?: string | null
+          priority?: string | null
           recurrence_rule?: string | null
           status?: string
           time: string
@@ -163,6 +165,7 @@ export type Database = {
           notes?: string | null
           parent_appointment_id?: string | null
           policy_id?: string | null
+          priority?: string | null
           recurrence_rule?: string | null
           status?: string
           time?: string

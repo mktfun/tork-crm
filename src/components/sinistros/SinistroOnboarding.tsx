@@ -137,11 +137,11 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
   // Auto-preenche o cliente e seguradora quando uma apólice é selecionada
   useEffect(() => {
     if (selectedPolicy) {
-      if (selectedPolicy.client_id) {
-        form.setValue('client_id', selectedPolicy.client_id);
+      if (selectedPolicy.clientId) {
+        form.setValue('client_id', selectedPolicy.clientId);
       }
       // Buscar a seguradora baseada na apólice se disponível
-      const company = companies.find(c => c.name === selectedPolicy.insurance_company);
+      const company = companies.find(c => c.name === selectedPolicy.insuranceCompany);
       if (company) {
         form.setValue('company_id', company.id);
       }
@@ -312,9 +312,9 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
                         {policies.map((policy) => (
                           <SelectItem key={policy.id} value={policy.id}>
                             <div className="flex flex-col">
-                              <span className="font-medium">{policy.policy_number}</span>
+                              <span className="font-medium">{policy.policyNumber}</span>
                               <span className="text-sm text-muted-foreground">
-                                {policy.insurance_company} - {policy.type}
+                                {policy.insuranceCompany} - {policy.type}
                               </span>
                             </div>
                           </SelectItem>
@@ -334,12 +334,12 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
                       <div>
                         <span className="text-white/60">Cliente:</span>
                         <p className="text-white font-medium">
-                          {clients.find(c => c.id === selectedPolicy.client_id)?.name || 'N/A'}
+                          {clients.find(c => c.id === selectedPolicy.clientId)?.name || 'N/A'}
                         </p>
                       </div>
                       <div>
                         <span className="text-white/60">Seguradora:</span>
-                        <p className="text-white font-medium">{selectedPolicy.insurance_company}</p>
+                        <p className="text-white font-medium">{selectedPolicy.insuranceCompany}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -534,7 +534,7 @@ export function SinistroOnboarding({ children, onSuccess }: SinistroOnboardingPr
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-white/60">Apólice:</span>
-                      <p className="text-white">{selectedPolicy?.policy_number}</p>
+                      <p className="text-white">{selectedPolicy?.policyNumber}</p>
                     </div>
                     <div>
                       <span className="text-white/60">Cliente:</span>
