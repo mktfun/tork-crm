@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -103,6 +103,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apolices_insurance_company_fkey"
+            columns: ["insurance_company"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -511,6 +518,236 @@ export type Database = {
         }
         Relationships: []
       }
+      sinistro_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          sinistro_id: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          sinistro_id: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          sinistro_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sinistro_activities_sinistro_id_fkey"
+            columns: ["sinistro_id"]
+            isOneToOne: false
+            referencedRelation: "sinistros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistro_activities_sinistro_id_fkey"
+            columns: ["sinistro_id"]
+            isOneToOne: false
+            referencedRelation: "sinistros_complete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sinistro_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_required: boolean | null
+          is_validated: boolean | null
+          mime_type: string | null
+          sinistro_id: string
+          user_id: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_required?: boolean | null
+          is_validated?: boolean | null
+          mime_type?: string | null
+          sinistro_id: string
+          user_id: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_required?: boolean | null
+          is_validated?: boolean | null
+          mime_type?: string | null
+          sinistro_id?: string
+          user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sinistro_documents_sinistro_id_fkey"
+            columns: ["sinistro_id"]
+            isOneToOne: false
+            referencedRelation: "sinistros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistro_documents_sinistro_id_fkey"
+            columns: ["sinistro_id"]
+            isOneToOne: false
+            referencedRelation: "sinistros_complete"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sinistros: {
+        Row: {
+          analysis_deadline: string | null
+          approved_amount: number | null
+          assigned_to: string | null
+          brokerage_id: number | null
+          circumstances: string | null
+          claim_amount: number | null
+          claim_number: string | null
+          claim_type: string
+          client_id: string | null
+          created_at: string
+          deductible_amount: number | null
+          description: string
+          documents_checklist: Json | null
+          evidence_urls: string[] | null
+          id: string
+          location_occurrence: string | null
+          occurrence_date: string
+          payment_date: string | null
+          police_report_number: string | null
+          policy_id: string | null
+          priority: string | null
+          producer_id: string | null
+          report_date: string
+          resolution_date: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_deadline?: string | null
+          approved_amount?: number | null
+          assigned_to?: string | null
+          brokerage_id?: number | null
+          circumstances?: string | null
+          claim_amount?: number | null
+          claim_number?: string | null
+          claim_type: string
+          client_id?: string | null
+          created_at?: string
+          deductible_amount?: number | null
+          description: string
+          documents_checklist?: Json | null
+          evidence_urls?: string[] | null
+          id?: string
+          location_occurrence?: string | null
+          occurrence_date: string
+          payment_date?: string | null
+          police_report_number?: string | null
+          policy_id?: string | null
+          priority?: string | null
+          producer_id?: string | null
+          report_date?: string
+          resolution_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_deadline?: string | null
+          approved_amount?: number | null
+          assigned_to?: string | null
+          brokerage_id?: number | null
+          circumstances?: string | null
+          claim_amount?: number | null
+          claim_number?: string | null
+          claim_type?: string
+          client_id?: string | null
+          created_at?: string
+          deductible_amount?: number | null
+          description?: string
+          documents_checklist?: Json | null
+          evidence_urls?: string[] | null
+          id?: string
+          location_occurrence?: string | null
+          occurrence_date?: string
+          payment_date?: string | null
+          police_report_number?: string | null
+          policy_id?: string | null
+          priority?: string | null
+          producer_id?: string | null
+          report_date?: string
+          resolution_date?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sinistros_brokerage_id_fkey"
+            columns: ["brokerage_id"]
+            isOneToOne: false
+            referencedRelation: "brokerages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "apolices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           client_id: string | null
@@ -730,12 +967,99 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      sinistros_complete: {
+        Row: {
+          analysis_deadline: string | null
+          approved_amount: number | null
+          assigned_to: string | null
+          brokerage_id: number | null
+          brokerage_name: string | null
+          circumstances: string | null
+          claim_amount: number | null
+          claim_number: string | null
+          claim_type: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string | null
+          deductible_amount: number | null
+          description: string | null
+          documents_checklist: Json | null
+          evidence_urls: string[] | null
+          id: string | null
+          insurance_company: string | null
+          location_occurrence: string | null
+          occurrence_date: string | null
+          payment_date: string | null
+          police_report_number: string | null
+          policy_id: string | null
+          policy_number: string | null
+          priority: string | null
+          producer_id: string | null
+          producer_name: string | null
+          report_date: string | null
+          resolution_date: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apolices_insurance_company_fkey"
+            columns: ["insurance_company"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_brokerage_id_fkey"
+            columns: ["brokerage_id"]
+            isOneToOne: false
+            referencedRelation: "brokerages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "apolices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sinistros_producer_id_fkey"
+            columns: ["producer_id"]
+            isOneToOne: false
+            referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_upcoming_appointments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_empresas_com_metricas: {
+        Args: { p_corretora_id: string }
+        Returns: {
+          custo_mensal_total: number
+          email: string
+          id: string
+          nome: string
+          responsavel: string
+          telefone: string
+          total_cnpjs: number
+          total_funcionarios: number
+          total_funcionarios_ativos: number
+        }[]
       }
       get_user_role: {
         Args: { user_id: string }
