@@ -3,7 +3,9 @@ import { AppCard } from '@/components/ui/app-card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { ChartInsight } from './ChartInsight';
-import { PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart as PieChartIcon, Percent, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 interface BranchDistributionData {
   ramo: string;
@@ -26,12 +28,26 @@ const COLORS = [
   '#06b6d4'  // cyan-500
 ];
 
+type ViewMode = 'percentage' | 'currency';
+type DataType = 'premio' | 'comissao';
+
 export function BranchDistributionChart({ data, dateRange, insight }: BranchDistributionChartProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('percentage');
+  const [dataType, setDataType] = useState<DataType>('premio');
+
   // Calcular total para porcentagens
   const totalPolicies = data.reduce((sum, item) => sum + item.total, 0);
   const totalValue = data.reduce((sum, item) => sum + item.valor, 0);
+  // Para comissão, assumindo 10% do valor do prêmio (pode ser ajustado conforme regra de negócio)
+  const totalCommission = totalValue * 0.1;
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  // Preparar dados conforme o tipo selecionado
+  const chartData = data.map(item => ({
+    ...item,
+    displayValue: dataType === 'premio' ? item.valor : item.valor * 0.1 // 10% de comissão
+  }));
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, payload }: any) => {
     if (percent < 0.05) return null; // Não mostrar labels para fatias menores que 5%
     
     const RADIAN = Math.PI / 180;
@@ -39,20 +55,43 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={12}
-        fontWeight="bold"
-        style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
+    if (viewMode === 'percentage') {
+      return (
+        <text 
+          x={x} 
+          y={y} 
+          fill="white" 
+          textAnchor={x > cx ? 'start' : 'end'} 
+          dominantBaseline="central"
+          fontSize={12}
+          fontWeight="bold"
+          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+        >
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      );
+    } else {
+      // Mostrar valor em R$
+      const value = payload.displayValue;
+      const formattedValue = value >= 1000 
+        ? `R$ ${(value / 1000).toFixed(0)}k`
+        : `R$ ${value.toFixed(0)}`;
+      
+      return (
+        <text 
+          x={x} 
+          y={y} 
+          fill="white" 
+          textAnchor={x > cx ? 'start' : 'end'} 
+          dominantBaseline="central"
+          fontSize={11}
+          fontWeight="bold"
+          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+        >
+          {formattedValue}
+        </text>
+      );
+    }
   };
 
   // Tooltip customizado com melhor contraste e informações ricas
@@ -60,6 +99,7 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
     if (active && payload && payload.length) {
       const item = payload[0].payload;
       const valuePercentage = totalValue > 0 ? ((item.valor / totalValue) * 100).toFixed(1) : 0;
+      const commissionPercentage = totalCommission > 0 ? (((item.valor * 0.1) / totalCommission) * 100).toFixed(1) : 0;
       const policyPercentage = totalPolicies > 0 ? ((item.total / totalPolicies) * 100).toFixed(1) : 0;
       
       return (
@@ -67,7 +107,10 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
           <p className="font-semibold text-white mb-2">{item.ramo}</p>
           <div className="space-y-1 text-sm text-gray-200">
             <p>
-              <span className="font-medium">Faturamento:</span> R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({valuePercentage}%)
+              <span className="font-medium">Prêmio:</span> R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({valuePercentage}%)
+            </p>
+            <p>
+              <span className="font-medium">Comissão:</span> R$ {(item.valor * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commissionPercentage}%)
             </p>
             <p>
               <span className="font-medium">Apólices:</span> {item.total} ({policyPercentage}%)
@@ -79,12 +122,14 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
     return null;
   };
 
-  // Legenda customizada compacta baseada em valor
+  // Legenda customizada compacta
   const CustomLegend = ({ payload }: any) => {
+    const total = dataType === 'premio' ? totalValue : totalCommission;
+    
     return (
       <div className="flex flex-wrap justify-center gap-3 mt-4 max-w-full">
         {payload.map((entry: any, index: number) => {
-          const percentage = totalValue > 0 ? ((entry.payload.valor / totalValue) * 100).toFixed(0) : 0;
+          const percentage = total > 0 ? ((entry.payload.displayValue / total) * 100).toFixed(0) : 0;
           return (
             <div key={`legend-${index}`} className="flex items-center gap-2 min-w-0">
               <div 
@@ -103,23 +148,71 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
 
   return (
     <AppCard className="p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">
-        Ramos × Produção
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-white">
+          Ramos × Produção
+        </h3>
+        
+        {/* Controles de visualização */}
+        <div className="flex items-center gap-2">
+          {/* Toggle % / R$ */}
+          <div className="flex rounded-lg border border-gray-600 overflow-hidden">
+            <Button
+              variant={viewMode === 'percentage' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('percentage')}
+              className="px-3 py-1 rounded-none text-xs"
+            >
+              <Percent className="w-3 h-3 mr-1" />
+              %
+            </Button>
+            <Button
+              variant={viewMode === 'currency' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('currency')}
+              className="px-3 py-1 rounded-none text-xs"
+            >
+              <DollarSign className="w-3 h-3 mr-1" />
+              R$
+            </Button>
+          </div>
+
+          {/* Toggle Prêmio / Comissão */}
+          <div className="flex rounded-lg border border-gray-600 overflow-hidden">
+            <Button
+              variant={dataType === 'premio' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDataType('premio')}
+              className="px-3 py-1 rounded-none text-xs"
+            >
+              Prêmio
+            </Button>
+            <Button
+              variant={dataType === 'comissao' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDataType('comissao')}
+              className="px-3 py-1 rounded-none text-xs"
+            >
+              Comissão
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="45%"
               labelLine={false}
               label={renderCustomizedLabel}
               outerRadius={80}
               fill="#8884d8"
-              dataKey="valor"
+              dataKey="displayValue"
             >
-              {data.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
                   fill={COLORS[index % COLORS.length]}
