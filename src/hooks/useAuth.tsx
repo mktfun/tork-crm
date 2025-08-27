@@ -101,9 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, nomeCompleto: string) => {
     try {
-      setLoading(true);
       const redirectUrl = `${window.location.origin}/`;
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -129,8 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Erro no signUp:', error);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
