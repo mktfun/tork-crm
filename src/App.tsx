@@ -46,12 +46,12 @@ function App() {
           <TooltipProvider>
             <div className="min-h-screen">
               <Routes>
-                {/* Rotas públicas */}
-                <Route path="/landing" element={<Landing />} />
+                {/* Rota principal - Landing page para não autenticados */}
+                <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
-                
-                {/* Todas as outras rotas são protegidas */}
-                <Route path="/" element={
+
+                {/* Todas as rotas do sistema são protegidas */}
+                <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <RootLayout />
                   </ProtectedRoute>
