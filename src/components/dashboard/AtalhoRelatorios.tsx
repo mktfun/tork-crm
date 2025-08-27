@@ -1,11 +1,10 @@
-
 import { BarChart3, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 
 export function AtalhoRelatorios() {
   return (
-    <Link to="/reports" className="block">
+    <Link to="/dashboard/reports" className="block">
       <Card className="p-6 hover:shadow-lg transition-all duration-200 hover:scale-[1.02] cursor-pointer bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
