@@ -22,41 +22,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Configurar listener de mudanças de autenticação PRIMEIRO
+    let isMounted = true;
+
+    // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        if (!isMounted) return;
+
         console.log('Auth state changed:', event, session?.user?.email);
+
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // *** AQUI ESTÁ A TRAVA DE SEGURANÇA ***
-        // A gente SÓ vai rodar o setup inicial se o evento for EXATAMENTE 'SIGNED_IN'.
-        if (event === 'SIGNED_IN') {
-          console.log('EVENTO DE SIGNED_IN DETECTADO. Rodando setup inicial UMA VEZ.');
-          if (session?.user) {
-            ensureDefaultTransactionTypes(session.user.id).catch(error => {
-              console.error('Error ensuring default transaction types:', error);
-            });
+
+        // Setup inicial apenas para SIGNED_IN
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            await ensureDefaultTransactionTypes(session.user.id);
+          } catch (error) {
+            console.error('Error ensuring default transaction types:', error);
           }
         }
-        
-        // A gente pode até logar o refresh pra ver que ele não faz mais nada de perigoso.
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token foi só atualizado em segundo plano. Nenhuma ação de setup necessária.');
+
+        // Finalizar loading apenas após processamento completo
+        if (isMounted) {
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
-    // DEPOIS verificar sessão existente - SEM duplicar o setup
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Verificar sessão existente
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
