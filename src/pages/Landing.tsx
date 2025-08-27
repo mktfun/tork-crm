@@ -23,7 +23,7 @@ function Landing() {
     }
 
     return <HeroGeometric
-        badge="Corretora Control"
+        badge="SGC Sistema Gestor de Corretor"
         title1="Nunca Mais Perca"
         title2="Uma Renovação"
         description="Sistema completo de gestão para corretoras de seguros. Gerencie clientes, apólices, renovações e comissões em uma única plataforma inteligente."
