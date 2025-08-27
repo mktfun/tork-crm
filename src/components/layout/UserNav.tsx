@@ -1,4 +1,3 @@
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -22,11 +21,11 @@ export function UserNav() {
   };
 
   const handleProfile = () => {
-    navigate('/settings/profile');
+    navigate('/dashboard/settings/profile');
   };
 
   const handleSettings = () => {
-    navigate('/settings');
+    navigate('/dashboard/settings');
   };
 
   const handleLogout = async () => {
