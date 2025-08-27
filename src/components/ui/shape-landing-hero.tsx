@@ -195,7 +195,7 @@ function HeroGeometric({
                 </div>
             </div>
 
-            <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-[#030303]/80 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-slate-900/80 pointer-events-none" />
         </div>
     );
 }
