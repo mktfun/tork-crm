@@ -46,11 +46,14 @@ function App() {
           <TooltipProvider>
             <div className="min-h-screen">
               <Routes>
+                {/* Rota pública da landing page */}
+                <Route path="/" element={<Index />} />
+
                 {/* Rota pública de autenticação */}
                 <Route path="/auth" element={<Auth />} />
-                
-                {/* Todas as outras rotas são protegidas */}
-                <Route path="/" element={
+
+                {/* Todas as rotas do sistema são protegidas */}
+                <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <RootLayout />
                   </ProtectedRoute>
@@ -66,10 +69,10 @@ function App() {
                   <Route path="renovacoes" element={<Renovacoes />} />
                   <Route path="sinistros" element={<Sinistros />} />
                   <Route path="reports" element={<Reports />} />
-                  
+
                   {/* Rotas de configurações com layout próprio */}
                   <Route path="settings" element={<SettingsLayout />}>
-                    <Route index element={<Navigate to="/settings/profile" replace />} />
+                    <Route index element={<Navigate to="/dashboard/settings/profile" replace />} />
                     <Route path="profile" element={<ProfileSettings />} />
                     <Route path="brokerages" element={<BrokerageSettings />} />
                     <Route path="producers" element={<ProducerSettings />} />
@@ -77,7 +80,7 @@ function App() {
                     <Route path="transactions" element={<TransactionSettings />} />
                   </Route>
                 </Route>
-                
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
