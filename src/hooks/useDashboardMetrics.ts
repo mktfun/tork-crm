@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { isBirthdayToday, isWithinDays, isInMonth, isToday } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { format, differenceInDays, eachDayOfInterval, parseISO, isWithinInterval, isSameMonth, isSameYear } from 'date-fns';
+import { format, differenceInDays, eachDayOfInterval, parseISO, isWithinInterval, isSameMonth, isSameYear, startOfDay, endOfDay, isAfter, isBefore } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 
 interface UseDashboardMetricsProps {
@@ -33,7 +33,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (!dateRange?.from || !dateRange?.to) return true;
     
     const checkDate = typeof date === 'string' ? new Date(date) : date;
-    return isWithinInterval(checkDate, { start: dateRange.from, end: dateRange.to });
+    return isWithinInterval(checkDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
   };
 
   // 🎂 NOVA QUERY: Buscar saudações já enviadas este ano
@@ -252,7 +252,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     return months;
   }, [transactions, transactionsLoading, dateRange]);
 
-  // 🆕 GRÁFICO DE CRESCIMENTO COM FILTRO DE DATA
+  // 🆕 GRÁFICO DE CRESCIMENTO COM DADOS REAIS PROCESSADOS POR DIA OU MÊS
   const monthlyGrowthData = useMemo(() => {
     if (policiesLoading) return [];
     
@@ -263,41 +263,86 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.createdAt));
     }
     
-    const months = [];
-    const today = new Date();
-    
-    // Sempre gerar dados mensais - a granularidade será ajustada no componente
-    for (let i = 5; i >= 0; i--) {
-      const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-      
-      const novas = filteredPolicies.filter(policy => {
-        const createdDate = new Date(policy.createdAt);
-        const sameMonth = createdDate.getMonth() === month.getMonth();
-        const sameYear = createdDate.getFullYear() === month.getFullYear();
-        const isAtiva = policy.status === 'Ativa';
-        
-        return sameMonth && sameYear && isAtiva;
-      }).length;
-      
-      const renovadas = filteredPolicies.filter(policy => {
-        const renewalDate = new Date(policy.createdAt);
-        const sameMonth = renewalDate.getMonth() === month.getMonth();
-        const sameYear = renewalDate.getFullYear() === month.getFullYear();
-        const isRenovada = policy.renewalStatus === 'Renovada';
-        
-        return sameMonth && sameYear && isRenovada;
-      }).length;
+    console.log('��� Processando dados de crescimento...');
+    console.log('📈 Apólices filtradas:', filteredPolicies.length);
+    console.log('📈 DateRange:', dateRange);
 
-      months.push({
-        month: monthStr,
-        novas,
-        renovadas
-      });
+    // Determinar granularidade baseada no período
+    let granularidade: 'dia' | 'mes' = 'mes';
+    if (dateRange?.from && dateRange?.to) {
+      const diasDiferenca = differenceInDays(dateRange.to, dateRange.from);
+      if (diasDiferenca <= 90) { // Se for 90 dias ou menos, usar granularidade diária
+        granularidade = 'dia';
+      }
     }
-    
-    console.log('📈 Dados de crescimento mensal com filtro:', months);
-    return months;
+
+    console.log('📈 Granularidade:', granularidade);
+
+    if (granularidade === 'dia' && dateRange?.from && dateRange?.to) {
+      // PROCESSAR DADOS POR DIA COM DADOS REAIS
+      const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
+      
+      return days.map(day => {
+        const dayStr = format(day, 'dd/MM');
+        
+        const novas = filteredPolicies.filter(policy => {
+          const createdDate = new Date(policy.createdAt);
+          const sameDay = format(createdDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          const isAtiva = policy.status === 'Ativa';
+          
+          return sameDay && isAtiva;
+        }).length;
+        
+        const renovadas = filteredPolicies.filter(policy => {
+          const renewalDate = new Date(policy.createdAt);
+          const sameDay = format(renewalDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          const isRenovada = policy.renewalStatus === 'Renovada';
+          
+          return sameDay && isRenovada;
+        }).length;
+
+        return {
+          month: dayStr,
+          novas,
+          renovadas
+        };
+      });
+    } else {
+      // PROCESSAR DADOS POR MÊS
+      const months = [];
+      const today = new Date();
+      
+      for (let i = 5; i >= 0; i--) {
+        const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+        
+        const novas = filteredPolicies.filter(policy => {
+          const createdDate = new Date(policy.createdAt);
+          const sameMonth = createdDate.getMonth() === month.getMonth();
+          const sameYear = createdDate.getFullYear() === month.getFullYear();
+          const isAtiva = policy.status === 'Ativa';
+          
+          return sameMonth && sameYear && isAtiva;
+        }).length;
+        
+        const renovadas = filteredPolicies.filter(policy => {
+          const renewalDate = new Date(policy.createdAt);
+          const sameMonth = renewalDate.getMonth() === month.getMonth();
+          const sameYear = renewalDate.getFullYear() === month.getFullYear();
+          const isRenovada = policy.renewalStatus === 'Renovada';
+          
+          return sameMonth && sameYear && isRenovada;
+        }).length;
+
+        months.push({
+          month: monthStr,
+          novas,
+          renovadas
+        });
+      }
+      
+      return months;
+    }
   }, [policies, policiesLoading, dateRange]);
 
   // GRÁFICOS DE PIZZA COM FILTRO DE DATA
@@ -489,11 +534,11 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     const periodText = dateRange?.from && dateRange?.to ? 'no período filtrado' : '';
     
     if (totalUltimoMes > totalPenultimoMes) {
-      return `Tendência positiva ${periodText}! ${ultimoMes.month} teve ${totalUltimoMes} apólices vs. ${totalPenultimoMes} no mês anterior.`;
+      return `Tendência positiva ${periodText}! ${ultimoMes.month} teve ${totalUltimoMes} apólices vs. ${totalPenultimoMes} no período anterior.`;
     } else if (totalUltimoMes < totalPenultimoMes) {
       return `Atenção ${periodText}: queda de ${totalPenultimoMes} para ${totalUltimoMes} apólices entre ${penultimoMes.month} e ${ultimoMes.month}.`;
     } else {
-      return `${mesComMaisNovas.month} foi seu melhor mês ${periodText} com ${mesComMaisNovas.novas} novas apólices. Mantenha o ritmo!`;
+      return `${mesComMaisNovas.month} foi seu melhor período ${periodText} com ${mesComMaisNovas.novas} novas apólices. Mantenha o ritmo!`;
     }
   }, [monthlyGrowthData, policiesLoading, dateRange]);
 
@@ -551,6 +596,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     todaysAppointments,
     aniversariantesHoje: aniversariantesHoje.length,
     dateRange,
+    monthlyGrowthDataLength: monthlyGrowthData.length,
     isLoading
   });
 
