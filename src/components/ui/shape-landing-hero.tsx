@@ -195,6 +195,56 @@ function HeroGeometric({
                             {description}
                         </p>
                     </motion.div>
+
+                    {showActions && (
+                        <motion.div
+                            custom={3}
+                            variants={fadeUpVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
+                        >
+                            <a
+                                href="/auth"
+                                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                            >
+                                <span className="flex items-center gap-2">
+                                    Acessar Sistema
+                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                </span>
+                            </a>
+
+                            <a
+                                href="/auth"
+                                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all duration-300 backdrop-blur-sm border border-white/20 hover:border-white/40"
+                            >
+                                Criar Conta Grátis
+                            </a>
+                        </motion.div>
+                    )}
+
+                    {showActions && (
+                        <motion.div
+                            custom={4}
+                            variants={fadeUpVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="flex flex-wrap justify-center gap-8 text-white/60"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-blue-400" />
+                                <span className="text-sm font-medium">Gestão de Apólices</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-emerald-400" />
+                                <span className="text-sm font-medium">Controle de Renovações</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Users className="w-5 h-5 text-purple-400" />
+                                <span className="text-sm font-medium">Gestão de Clientes</span>
+                            </div>
+                        </motion.div>
+                    )}
                 </div>
             </div>
 
