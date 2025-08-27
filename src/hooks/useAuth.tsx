@@ -20,7 +20,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const getErrorMessage = (error: any): string => {
   if (!error) return 'Erro desconhecido';
   
-  // Map common Supabase errors to user-friendly messages
   const errorMessages: Record<string, string> = {
     'Invalid login credentials': 'Email ou senha incorretos',
     'Email not confirmed': 'Por favor, confirme seu email antes de fazer login',
@@ -39,39 +38,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Configurar listener de mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        // Log only non-sensitive info in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Auth event:', event);
+    let mounted = true;
+
+    // Get initial session immediately
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
         }
-        
+      } catch (error) {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Setup auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Setup inicial apenas para novos logins
+        // Setup inicial apenas para novos logins - executar em background
         if (event === 'SIGNED_IN' && session?.user) {
-          ensureDefaultTransactionTypes(session.user.id).catch(error => {
-            if (process.env.NODE_ENV === 'development') {
-              console.error('Error ensuring default transaction types:', error);
-            }
+          // Don't await - run in background to not block UI
+          ensureDefaultTransactionTypes(session.user.id).catch(() => {
+            // Silent fail - user experience is not affected
           });
         }
         
-        setLoading(false);
+        // Only set loading to false after initial load
+        if (loading) {
+          setLoading(false);
+        }
       }
     );
 
-    // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Get initial session
+    getInitialSession();
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loading]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -154,7 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       toast.success('Logout realizado com sucesso!');
-      // Force page reload para garantir limpeza completa
       window.location.href = '/auth';
     } catch (error) {
       toast.error('Erro de conexão ao fazer logout.');
