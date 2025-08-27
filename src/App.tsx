@@ -46,7 +46,8 @@ function App() {
           <TooltipProvider>
             <div className="min-h-screen">
               <Routes>
-                {/* Rota pública de autenticação */}
+                {/* Rotas públicas */}
+                <Route path="/landing" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 
                 {/* Todas as outras rotas são protegidas */}
