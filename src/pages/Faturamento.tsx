@@ -250,7 +250,7 @@ export default function Faturamento() {
                               <span>Associado a:</span>
                               {client && (
                                 <Link 
-                                  to={`/clients/${client.id}`} 
+                                  to={`/dashboard/clients/${client.id}`} 
                                   className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -260,7 +260,7 @@ export default function Faturamento() {
                               )}
                               {policy && (
                                 <Link 
-                                  to={`/policies/${policy.id}`} 
+                                  to={`/dashboard/policies/${policy.id}`} 
                                   className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
