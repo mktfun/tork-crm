@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -26,7 +25,7 @@ export function GlassSidebar() {
   const sidebarRef = useGlassEffect<HTMLDivElement>();
 
   const menuItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'policies', name: 'Apólices', icon: FileText, path: '/policies' },
     { id: 'clients', name: 'Clientes', icon: Users, path: '/clients' },
     { id: 'appointments', name: 'Agendamentos', icon: Calendar, path: '/appointments' },
