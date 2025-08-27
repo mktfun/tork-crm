@@ -1,4 +1,3 @@
-
 import { Clock, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -19,7 +18,7 @@ export function CardAgendamentoResumo({
   status 
 }: CardAgendamentoResumoProps) {
   return (
-    <Link to={`/appointments/${id}`} className="block">
+    <Link to={`/dashboard/appointments/${id}`} className="block">
       <Card className="p-4 hover:shadow-md transition-all duration-200 hover:scale-[1.02] cursor-pointer border-l-4 border-l-blue-500">
         <div className="flex items-center justify-between">
           <div className="flex-1">
