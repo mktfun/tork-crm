@@ -23,9 +23,9 @@ function Landing() {
     }
 
     return <HeroGeometric
-        badge="Kokonut UI"
-        title1="Elevate Your"
-        title2="Digital Vision"
+        badge="Corretora Control"
+        title1="Nunca Mais Perca"
+        title2="Uma Renovação"
     />;
 }
 
