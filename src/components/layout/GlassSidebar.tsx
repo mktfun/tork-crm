@@ -21,7 +21,7 @@ const menuSections = [
   {
     title: 'Visão Geral',
     items: [
-      { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/reports' },
       { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/faturamento' },
     ]
