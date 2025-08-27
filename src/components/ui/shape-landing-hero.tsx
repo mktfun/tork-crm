@@ -76,10 +76,14 @@ function HeroGeometric({
     badge = "Design Collective",
     title1 = "Elevate Your Digital Vision",
     title2 = "Crafting Exceptional Websites",
+    description = "Crafting exceptional digital experiences through innovative design and cutting-edge technology.",
+    showActions = false,
 }: {
     badge?: string;
     title1?: string;
     title2?: string;
+    description?: string;
+    showActions?: boolean;
 }) {
     const fadeUpVariants = {
         hidden: { opacity: 0, y: 30 },
