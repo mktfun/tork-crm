@@ -20,6 +20,7 @@ import Sinistros from "./pages/Sinistros";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import ProfileSettings from "./pages/settings/ProfileSettings";
 import BrokerageSettings from "./pages/settings/BrokerageSettings";
