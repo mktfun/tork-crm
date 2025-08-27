@@ -26,6 +26,7 @@ import BrokerageSettings from "./pages/settings/BrokerageSettings";
 import ProducerSettings from "./pages/settings/ProducerSettings";
 import CompanySettings from "./pages/settings/CompanySettings";
 import TransactionSettings from "./pages/settings/TransactionSettings";
+import Index from "./pages/Index";
 
 // Create query client with default options
 const queryClient = new QueryClient({
