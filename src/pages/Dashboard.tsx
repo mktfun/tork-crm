@@ -74,8 +74,8 @@ const dashboardSteps: OnboardingStep[] = [
 export default function Dashboard() {
   usePageTitle('Dashboard');
 
-  // 🛡️ SISTEMA DE PROTEÇÃO ATIVO - Monitora integridade do Glass System
-  useGlassSystemProtection();
+  // 🛡️ SISTEMA DE PROTEÇÃO DISPONÍVEL - Ative quando necessário para debug
+  // useGlassSystemProtection(); // Desabilitado para reduzir logs
 
   // Para os KPIs principais e insights globais, usar dados do mês atual (sem filtro)
   const metrics = useDashboardMetrics();
