@@ -185,7 +185,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (clientsLoading || greetingsLoading) return [];
     
     console.log('🎂 Buscando aniversariantes de hoje...');
-    console.log('🎂 Saudações j�� enviadas este ano:', sentGreetings);
+    console.log('🎂 Saudações já enviadas este ano:', sentGreetings);
     
     // 1. Filtrar clientes que fazem aniversário hoje
     const birthdayClientsToday = clients.filter(client => 
@@ -431,19 +431,22 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.createdAt));
     }
     
-    const companyData: { [key: string]: { count: number; value: number } } = {};
+    const companyData: { [key: string]: { count: number; value: number; commission: number; totalPolicies: any[] } } = {};
     
     filteredPolicies
       .filter(policy => policy.status === 'Ativa')
       .forEach(policy => {
         const companyId = policy.insuranceCompany || 'Não informado';
         const value = policy.premiumValue || 0;
-        
+        const commission = calculateCommissionValue(value, policy.type || '');
+
         if (!companyData[companyId]) {
-          companyData[companyId] = { count: 0, value: 0 };
+          companyData[companyId] = { count: 0, value: 0, commission: 0, totalPolicies: [] };
         }
         companyData[companyId].count += 1;
         companyData[companyId].value += value;
+        companyData[companyId].commission += commission;
+        companyData[companyId].totalPolicies.push(policy);
       });
 
     // Converter para array e ordenar por valor
