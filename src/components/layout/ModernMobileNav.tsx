@@ -95,7 +95,7 @@ export function EnhancedMobileFloatingNav() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50">
-      <GlassCard className="p-3">
+      <GlassCard className="p-3 transition-all duration-300 hover:bg-white/15 hover:shadow-xl">
         <InteractiveMenu
           items={navigationItems}
           accentColor="hsl(var(--chart-1))"
@@ -140,7 +140,7 @@ export function CompactMobileNav() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50">
       <div className="max-w-xs mx-auto">
-        <GlassCard className="p-2">
+        <GlassCard className="p-2 transition-all duration-300 hover:bg-white/15 hover:shadow-xl">
           <InteractiveMenu
             items={compactItems}
             accentColor="hsl(var(--chart-1))"
