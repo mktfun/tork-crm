@@ -12,9 +12,9 @@ import { MobileWorkspaceModal } from './MobileWorkspaceModal';
 
 const quickNavItems = [
   { icon: LayoutDashboard, path: '/dashboard', label: 'Home' },
-  { icon: FileText, path: '/policies', label: 'Apólices' },
-  { icon: Users, path: '/clients', label: 'Clientes' },
-  { icon: Calendar, path: '/appointments', label: 'Agenda' },
+  { icon: FileText, path: '/dashboard/policies', label: 'Apólices' },
+  { icon: Users, path: '/dashboard/clients', label: 'Clientes' },
+  { icon: Calendar, path: '/dashboard/appointments', label: 'Agenda' },
 ];
 
 export function MobileFloatingNav() {

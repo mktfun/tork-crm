@@ -1,4 +1,3 @@
-
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +26,7 @@ export function NotificationPanel() {
 
     // Redirecionar para agendamentos se houver appointment_id
     if (notification.appointment_id) {
-      navigate('/appointments');
+      navigate(`/dashboard/appointments?highlight=${notification.appointment_id}`);
     }
   };
 
