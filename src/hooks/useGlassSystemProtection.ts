@@ -32,7 +32,7 @@ export function useGlassSystemProtection() {
       return hasBackdropFilter && hasBackground;
     };
 
-    // 🔍 Verificar se hook useGlassEffect está funcionando
+    // �� Verificar se hook useGlassEffect está funcionando
     const checkGlassEffect = () => {
       const glassElements = document.querySelectorAll('.glass-component');
 
@@ -43,7 +43,6 @@ export function useGlassSystemProtection() {
 
       // ✅ Se encontrou elementos glass, considera que está funcionando
       // As variáveis --x e --y só aparecem quando o mouse se move sobre eles
-      console.log(`✅ Encontrados ${glassElements.length} elementos glass-component`);
 
       // 🧪 Teste opcional: simular movimento do mouse no primeiro elemento
       const firstElement = glassElements[0] as HTMLElement;
