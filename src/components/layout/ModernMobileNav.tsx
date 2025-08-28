@@ -30,7 +30,7 @@ const pathMapping: Record<string, string> = {
 export function ModernMobileNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   // Don't render on desktop
   if (!isMobile) {
