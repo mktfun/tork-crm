@@ -1,9 +1,9 @@
-
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserNav } from './UserNav';
 import { NotificationPanel } from './NotificationPanel';
 import { QuickActions } from './QuickActions';
+import { MobileExtraScreensModal } from './MobileExtraScreensModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface HeaderProps {
