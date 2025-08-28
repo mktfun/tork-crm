@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { InteractiveMenu, type InteractiveMenuItem } from '@/components/ui/modern-mobile-menu';
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Users, 
+import { GlassCard } from '@/components/ui/glass-card';
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
   Calendar,
   BarChart3
 } from 'lucide-react';
@@ -15,7 +16,7 @@ const navigationItems: InteractiveMenuItem[] = [
   { label: 'Apólices', icon: FileText },
   { label: 'Clientes', icon: Users },
   { label: 'Agenda', icon: Calendar },
-  { label: 'Relatórios', icon: BarChart3 },
+  { label: 'Relat��rios', icon: BarChart3 },
 ];
 
 // Path mapping for navigation
