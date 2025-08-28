@@ -16,11 +16,9 @@ export function Header({ onSearchClick }: HeaderProps) {
   return (
     <header className="h-16 bg-slate-900/50 backdrop-blur-lg border-b border-white/10">
       <div className="flex items-center justify-between h-full px-4 md:px-6">
-        {/* Logo/Title - apenas no mobile */}
+        {/* Menu Button - apenas no mobile */}
         {isMobile && (
-          <div className="text-white font-semibold text-lg">
-            SegurApp
-          </div>
+          <MobileExtraScreensModal />
         )}
 
         {/* Área central - busca e ações rápidas */}
