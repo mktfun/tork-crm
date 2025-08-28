@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { ReactNode, HTMLAttributes } from "react";
 import { useGlassEffect } from "@/hooks/useGlassEffect";
@@ -46,5 +45,3 @@ export function AppCard({ className, children, ...props }: AppCardProps) {
     </div>
   );
 }
-
-

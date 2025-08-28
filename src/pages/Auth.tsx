@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, useLocation } from 'react-router-dom';
@@ -14,7 +13,7 @@ import { toast } from 'sonner';
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const location = useLocation();
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -48,16 +47,6 @@ export default function Auth() {
 
     setIsLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
-    
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        toast.error('Email ou senha incorretos');
-      } else if (error.message.includes('Email not confirmed')) {
-        toast.error('Por favor, confirme seu email antes de fazer login');
-      } else {
-        toast.error('Erro no login. Tente novamente.');
-      }
-    }
     setIsLoading(false);
   };
 
@@ -80,14 +69,6 @@ export default function Auth() {
 
     setIsLoading(true);
     const { error } = await signUp(signupEmail, signupPassword, nomeCompleto);
-    
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        toast.error('Este email já está cadastrado');
-      } else {
-        toast.error('Erro no cadastro. Tente novamente.');
-      }
-    }
     setIsLoading(false);
   };
 
@@ -101,32 +82,39 @@ export default function Auth() {
     setIsLoading(true);
     const { error } = await resetPassword(resetEmail);
     
-    if (error) {
-      toast.error('Erro ao enviar email de recuperação');
-    } else {
+    if (!error) {
       setShowResetForm(false);
       setResetEmail('');
     }
     setIsLoading(false);
   };
 
+  // Improved loading state - less blocking
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900">
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <FileText className="h-8 w-8 text-blue-400" />
+            <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+          </div>
+          <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto" />
+          <p className="text-white/80 text-sm">Carregando...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900">
-      {/* Background Image Overlay */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
-        style={{ 
-          backgroundImage: 'url(/background.jpg)'
-        }}
-      />
+      {/* Animated background pattern - lightweight */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -inset-10 opacity-10">
+          <div className="absolute top-0 -left-4 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+          <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+        </div>
+      </div>
       
       <div className="relative z-10 w-full max-w-md">
         <AppCard className="bg-black/20 backdrop-blur-lg border-white/10 shadow-2xl">
@@ -217,6 +205,7 @@ export default function Auth() {
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         placeholder="seu@email.com"
                         required
+                        autoComplete="email"
                       />
                     </div>
                     
@@ -231,6 +220,7 @@ export default function Auth() {
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-10"
                           placeholder="••••••••"
                           required
+                          autoComplete="current-password"
                         />
                         <Button
                           type="button"
@@ -286,6 +276,7 @@ export default function Auth() {
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         placeholder="Seu nome completo"
                         required
+                        autoComplete="name"
                       />
                     </div>
 
@@ -299,6 +290,7 @@ export default function Auth() {
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         placeholder="seu@email.com"
                         required
+                        autoComplete="email"
                       />
                     </div>
                     
@@ -313,6 +305,7 @@ export default function Auth() {
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-10"
                           placeholder="••••••••"
                           required
+                          autoComplete="new-password"
                         />
                         <Button
                           type="button"
@@ -341,6 +334,7 @@ export default function Auth() {
                           className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-10"
                           placeholder="••••••••"
                           required
+                          autoComplete="new-password"
                         />
                         <Button
                           type="button"

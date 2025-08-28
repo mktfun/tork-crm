@@ -1,4 +1,3 @@
-
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +24,7 @@ export function QuickActions() {
   };
 
   const handleNewAppointment = () => {
-    navigate('/appointments');
+    navigate('/dashboard/appointments');
     console.log('Abrir modal de novo agendamento');
   };
 

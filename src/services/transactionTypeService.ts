@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const DEFAULT_TRANSACTION_TYPES = {
@@ -8,57 +7,61 @@ export const DEFAULT_TRANSACTION_TYPES = {
 };
 
 export async function ensureDefaultTransactionTypes(userId: string) {
-  console.log('🔧 Ensuring default transaction types for user:', userId);
-  
-  // Check if default commission type exists
-  const { data: existingCommission } = await supabase
-    .from('transaction_types')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Comissão')
-    .eq('nature', 'GANHO')
-    .maybeSingle(); // ✅ CORREÇÃO: Mudou de .single() para .maybeSingle()
+  try {
+    // Run both checks in parallel for better performance
+    const [commissionResult, expenseResult] = await Promise.all([
+      supabase
+        .from('transaction_types')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', 'Comissão')
+        .eq('nature', 'GANHO')
+        .maybeSingle(),
+      
+      supabase
+        .from('transaction_types')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', 'Despesa')
+        .eq('nature', 'PERDA')
+        .maybeSingle()
+    ]);
 
-  if (!existingCommission) {
-    console.log('📝 Creating default commission transaction type');
-    const { error } = await supabase
-      .from('transaction_types')
-      .insert({
-        user_id: userId,
-        name: 'Comissão',
-        nature: 'GANHO'
-      });
+    const insertPromises = [];
 
-    if (error) {
-      console.error('Error creating default commission type:', error);
-    } else {
-      console.log('✅ Default commission type created');
+    // Prepare inserts to run in parallel
+    if (!commissionResult.data) {
+      insertPromises.push(
+        supabase
+          .from('transaction_types')
+          .insert({
+            user_id: userId,
+            name: 'Comissão',
+            nature: 'GANHO'
+          })
+      );
     }
-  }
 
-  // Check if default expense type exists
-  const { data: existingExpense } = await supabase
-    .from('transaction_types')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Despesa')
-    .eq('nature', 'PERDA')
-    .maybeSingle(); // ✅ CORREÇÃO: Mudou de .single() para .maybeSingle()
+    if (!expenseResult.data) {
+      insertPromises.push(
+        supabase
+          .from('transaction_types')
+          .insert({
+            user_id: userId,
+            name: 'Despesa',
+            nature: 'PERDA'
+          })
+      );
+    }
 
-  if (!existingExpense) {
-    console.log('📝 Creating default expense transaction type');
-    const { error } = await supabase
-      .from('transaction_types')
-      .insert({
-        user_id: userId,
-        name: 'Despesa',
-        nature: 'PERDA'
-      });
-
-    if (error) {
-      console.error('Error creating default expense type:', error);
-    } else {
-      console.log('✅ Default expense type created');
+    // Execute all inserts in parallel
+    if (insertPromises.length > 0) {
+      await Promise.allSettled(insertPromises);
+    }
+  } catch (error) {
+    // Silent fail - don't block the auth process
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error ensuring default transaction types:', error);
     }
   }
 }

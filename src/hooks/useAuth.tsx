@@ -16,48 +16,77 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to get user-friendly error messages
+const getErrorMessage = (error: any): string => {
+  if (!error) return 'Erro desconhecido';
+  
+  const errorMessages: Record<string, string> = {
+    'Invalid login credentials': 'Email ou senha incorretos',
+    'Email not confirmed': 'Por favor, confirme seu email antes de fazer login',
+    'User already registered': 'Este email já está cadastrado',
+    'Password should be at least 6 characters': 'A senha deve ter pelo menos 6 caracteres',
+    'Invalid email': 'Email inválido',
+    'Too many requests': 'Muitas tentativas. Tente novamente em alguns minutos',
+  };
+
+  return errorMessages[error.message] || 'Erro no sistema. Tente novamente.';
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Configurar listener de mudanças de autenticação PRIMEIRO
+    let mounted = true;
+
+    // Get initial session immediately
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Setup auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+      async (event, session) => {
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         
-        // *** AQUI ESTÁ A TRAVA DE SEGURANÇA ***
-        // A gente SÓ vai rodar o setup inicial se o evento for EXATAMENTE 'SIGNED_IN'.
-        if (event === 'SIGNED_IN') {
-          console.log('EVENTO DE SIGNED_IN DETECTADO. Rodando setup inicial UMA VEZ.');
-          if (session?.user) {
-            ensureDefaultTransactionTypes(session.user.id).catch(error => {
-              console.error('Error ensuring default transaction types:', error);
-            });
-          }
+        // Setup inicial apenas para novos logins - executar em background
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Don't await - run in background to not block UI
+          ensureDefaultTransactionTypes(session.user.id).catch(() => {
+            // Silent fail - user experience is not affected
+          });
         }
         
-        // A gente pode até logar o refresh pra ver que ele não faz mais nada de perigoso.
-        if (event === 'TOKEN_REFRESHED') {
-          console.log('Token foi só atualizado em segundo plano. Nenhuma ação de setup necessária.');
+        // Only set loading to false after initial load
+        if (loading) {
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
-    // DEPOIS verificar sessão existente - SEM duplicar o setup
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Get initial session
+    getInitialSession();
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loading]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -68,8 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error('Erro no login:', error);
-        return { error };
+        const friendlyMessage = getErrorMessage(error);
+        toast.error(friendlyMessage);
+        return { error: new Error(friendlyMessage) };
       }
 
       if (data.user) {
@@ -77,10 +107,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null };
       }
 
-      return { error: new Error('Erro desconhecido no login') };
+      const defaultError = 'Erro desconhecido no login';
+      toast.error(defaultError);
+      return { error: new Error(defaultError) };
     } catch (error) {
-      console.error('Erro no signIn:', error);
-      return { error };
+      const friendlyMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      toast.error(friendlyMessage);
+      return { error: new Error(friendlyMessage) };
     } finally {
       setLoading(false);
     }
@@ -103,8 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error('Erro no cadastro:', error);
-        return { error };
+        const friendlyMessage = getErrorMessage(error);
+        toast.error(friendlyMessage);
+        return { error: new Error(friendlyMessage) };
       }
 
       if (data.user) {
@@ -112,10 +146,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null };
       }
 
-      return { error: new Error('Erro desconhecido no cadastro') };
+      const defaultError = 'Erro desconhecido no cadastro';
+      toast.error(defaultError);
+      return { error: new Error(defaultError) };
     } catch (error) {
-      console.error('Erro no signUp:', error);
-      return { error };
+      const friendlyMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      toast.error(friendlyMessage);
+      return { error: new Error(friendlyMessage) };
     } finally {
       setLoading(false);
     }
@@ -125,17 +162,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
-        console.error('Erro no logout:', error);
-        toast.error('Erro ao fazer logout');
-      } else {
-        toast.success('Logout realizado com sucesso!');
-        // Force page reload para garantir limpeza completa
-        window.location.href = '/auth';
+        toast.error('Erro ao fazer logout. Tente novamente.');
+        return;
       }
+      
+      toast.success('Logout realizado com sucesso!');
+      window.location.href = '/auth';
     } catch (error) {
-      console.error('Erro no signOut:', error);
-      toast.error('Erro ao fazer logout');
+      toast.error('Erro de conexão ao fazer logout.');
     } finally {
       setLoading(false);
     }
@@ -149,15 +185,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error('Erro ao resetar senha:', error);
-        return { error };
+        const friendlyMessage = getErrorMessage(error);
+        toast.error(friendlyMessage);
+        return { error: new Error(friendlyMessage) };
       }
 
       toast.success('Email de recuperação enviado!');
       return { error: null };
     } catch (error) {
-      console.error('Erro no resetPassword:', error);
-      return { error };
+      const friendlyMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      toast.error(friendlyMessage);
+      return { error: new Error(friendlyMessage) };
     }
   };
 

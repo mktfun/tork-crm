@@ -1,4 +1,3 @@
-
 import { AppCard } from '@/components/ui/app-card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { DateRange } from 'react-day-picker';
@@ -11,6 +10,8 @@ interface BranchDistributionData {
   ramo: string;
   total: number;
   valor: number;
+  valorComissao: number;
+  taxaMediaComissao: number;
 }
 
 interface BranchDistributionChartProps {
@@ -38,13 +39,13 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
   // Calcular total para porcentagens
   const totalPolicies = data.reduce((sum, item) => sum + item.total, 0);
   const totalValue = data.reduce((sum, item) => sum + item.valor, 0);
-  // Para comissão, assumindo 10% do valor do prêmio (pode ser ajustado conforme regra de negócio)
-  const totalCommission = totalValue * 0.1;
+  // Usar comissão real calculada baseada nas taxas por tipo de apólice
+  const totalCommission = data.reduce((sum, item) => sum + (item.valorComissao || 0), 0);
 
   // Preparar dados conforme o tipo selecionado
   const chartData = data.map(item => ({
     ...item,
-    displayValue: dataType === 'premio' ? item.valor : item.valor * 0.1 // 10% de comissão
+    displayValue: dataType === 'premio' ? item.valor : (item.valorComissao || 0)
   }));
 
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, payload }: any) => {
@@ -99,7 +100,7 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
     if (active && payload && payload.length) {
       const item = payload[0].payload;
       const valuePercentage = totalValue > 0 ? ((item.valor / totalValue) * 100).toFixed(1) : 0;
-      const commissionPercentage = totalCommission > 0 ? (((item.valor * 0.1) / totalCommission) * 100).toFixed(1) : 0;
+      const commissionPercentage = totalCommission > 0 ? (((item.valorComissao || 0) / totalCommission) * 100).toFixed(1) : 0;
       const policyPercentage = totalPolicies > 0 ? ((item.total / totalPolicies) * 100).toFixed(1) : 0;
       
       return (
@@ -110,7 +111,7 @@ export function BranchDistributionChart({ data, dateRange, insight }: BranchDist
               <span className="font-medium">Prêmio:</span> R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({valuePercentage}%)
             </p>
             <p>
-              <span className="font-medium">Comissão:</span> R$ {(item.valor * 0.1).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commissionPercentage}%)
+              <span className="font-medium">Comissão:</span> R$ {(item.valorComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({commissionPercentage}%) - Taxa: {(item.taxaMediaComissao || 0).toFixed(1)}%
             </p>
             <p>
               <span className="font-medium">Apólices:</span> {item.total} ({policyPercentage}%)

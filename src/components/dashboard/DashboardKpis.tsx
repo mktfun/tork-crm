@@ -1,4 +1,3 @@
-
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +5,7 @@ import { useState } from 'react';
 import { BirthdayGreetingsModal } from '@/components/dashboard/BirthdayGreetingsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { DateRange } from 'react-day-picker';
 import { 
   Users, 
   AlertTriangle, 
@@ -15,9 +15,13 @@ import {
   Loader2
 } from 'lucide-react';
 
-export function DashboardKpis() {
+interface DashboardKpisProps {
+  dateRange?: DateRange;
+}
+
+export function DashboardKpis({ dateRange }: DashboardKpisProps) {
   const { user } = useAuth();
-  const metrics = useDashboardMetrics();
+  const metrics = useDashboardMetrics({ dateRange });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [birthdayModalOpen, setBirthdayModalOpen] = useState(false);
@@ -31,11 +35,11 @@ export function DashboardKpis() {
   };
 
   const handleRenovacoesClick = () => {
-    navigate('/renovacoes');
+    navigate('/dashboard/renovacoes');
   };
 
   const handlePropostasClick = () => {
-    navigate('/policies');
+    navigate('/dashboard/policies');
   };
 
   const handleAniversariantesClick = () => {
@@ -62,16 +66,19 @@ export function DashboardKpis() {
     );
   }
 
+  // Determinar os títulos dos KPIs baseado se há filtro de data ou não
+  const periodText = dateRange?.from && dateRange?.to ? 'Período' : 'Mês';
+  
   return (
     <>
       {/* KPIs ESTRATÉGICOS - GRID RESPONSIVO APRIMORADO */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         {/* KPI 1: Total de Clientes - DADOS CORRIGIDOS */}
         <KpiCard
-          title="Total de Clientes"
+          title={`Total de Clientes${dateRange?.from && dateRange?.to ? ' (Período)' : ''}`}
           value={metrics.activeClients.toString()}
           icon={<Users className="h-5 w-5 text-blue-400" />}
-          onClick={() => navigate('/clients')}
+          onClick={() => navigate('/dashboard/clients')}
         />
 
         {/* KPI 2: Renovações Críticas (30 dias) - DADOS CORRIGIDOS */}
@@ -83,21 +90,21 @@ export function DashboardKpis() {
           onClick={handleRenovacoesClick}
         />
 
-        {/* KPI 3: Comissão do Mês - DADOS CORRIGIDOS */}
+        {/* KPI 3: Comissão do Período/Mês - DADOS CORRIGIDOS */}
         <KpiCard
-          title="Comissão (Mês)"
+          title={`Comissão (${periodText})`}
           value={formatCurrency(metrics.comissaoMesAtual)}
-          comparison={metrics.comissaoMesAnterior > 0 ? 
+          comparison={!dateRange && metrics.comissaoMesAnterior > 0 ? 
             `${((metrics.comissaoMesAtual - metrics.comissaoMesAnterior) / metrics.comissaoMesAnterior * 100).toFixed(0)}% vs. mês anterior` : 
             undefined
           }
           icon={<DollarSign className="h-5 w-5 text-green-400" />}
-          onClick={() => navigate('/faturamento')}
+          onClick={() => navigate('/dashboard/faturamento')}
         />
 
-        {/* KPI 4: Apólices Novas do Mês - DADOS CORRIGIDOS */}
+        {/* KPI 4: Apólices Novas do Período/Mês - DADOS CORRIGIDOS */}
         <KpiCard
-          title="Apólices Novas (Mês)"
+          title={`Apólices Novas (${periodText})`}
           value={metrics.apolicesNovasMes.toString()}
           icon={<FileText className="h-5 w-5 text-purple-400" />}
           onClick={handlePropostasClick}

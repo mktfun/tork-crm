@@ -20,7 +20,9 @@ import Sinistros from "./pages/Sinistros";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import ModernMobileMenuDemo from "./pages/ModernMobileMenuDemo";
 import ProfileSettings from "./pages/settings/ProfileSettings";
 import BrokerageSettings from "./pages/settings/BrokerageSettings";
 import ProducerSettings from "./pages/settings/ProducerSettings";
@@ -45,11 +47,22 @@ function App() {
           <TooltipProvider>
             <div className="min-h-screen">
               <Routes>
-                {/* Rota pública de autenticação */}
+                {/* Rota principal - Landing page para não autenticados */}
+                <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
-                
-                {/* Todas as outras rotas são protegidas */}
-                <Route path="/" element={
+
+                {/* Redirects for legacy/direct route access */}
+                <Route path="/appointments" element={<Navigate to="/dashboard/appointments" replace />} />
+                <Route path="/policies" element={<Navigate to="/dashboard/policies" replace />} />
+                <Route path="/clients" element={<Navigate to="/dashboard/clients" replace />} />
+                <Route path="/tasks" element={<Navigate to="/dashboard/tasks" replace />} />
+                <Route path="/faturamento" element={<Navigate to="/dashboard/faturamento" replace />} />
+                <Route path="/renovacoes" element={<Navigate to="/dashboard/renovacoes" replace />} />
+                <Route path="/sinistros" element={<Navigate to="/dashboard/sinistros" replace />} />
+                <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
+
+                {/* Todas as rotas do sistema são protegidas */}
+                <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <RootLayout />
                   </ProtectedRoute>
@@ -65,10 +78,11 @@ function App() {
                   <Route path="renovacoes" element={<Renovacoes />} />
                   <Route path="sinistros" element={<Sinistros />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="demo/mobile-menu" element={<ModernMobileMenuDemo />} />
                   
                   {/* Rotas de configurações com layout próprio */}
                   <Route path="settings" element={<SettingsLayout />}>
-                    <Route index element={<Navigate to="/settings/profile" replace />} />
+                    <Route index element={<Navigate to="/dashboard/settings/profile" replace />} />
                     <Route path="profile" element={<ProfileSettings />} />
                     <Route path="brokerages" element={<BrokerageSettings />} />
                     <Route path="producers" element={<ProducerSettings />} />

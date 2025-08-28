@@ -1,4 +1,3 @@
-
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardKpis } from '@/components/dashboard/DashboardKpis';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
@@ -28,52 +27,52 @@ import type { OnboardingStep } from '@/types/onboarding';
 
 const dashboardSteps: OnboardingStep[] = [
   {
-    target: ".dashboard-header",
-    content: "Bem-vindo ao seu painel de controle! Aqui você terá uma visão completa da sua operação como corretor de seguros.",
-    title: "🎉 Bem-vindo!",
-    placement: "bottom",
+    target: '.dashboard-header',
+    content: 'Bem-vindo ao seu painel de controle! Aqui você terá uma visão completa da sua operação como corretor de seguros.',
+    title: '🎉 Bem-vindo!',
+    placement: 'bottom',
     disableBeacon: true,
   },
   {
-    target: ".dashboard-global-insight",
-    content: "Este cartão mostra insights inteligentes sobre sua performance, destacando tendências importantes dos seus dados.",
-    title: "💡 Insights Estratégicos",
-    placement: "bottom",
+    target: '.dashboard-global-insight',
+    content: 'Este cartão mostra insights inteligentes sobre sua performance, destacando tendências importantes dos seus dados.',
+    title: '💡 Insights Estratégicos',
+    placement: 'bottom',
   },
   {
-    target: ".dashboard-kpis",
-    content: "Aqui estão suas métricas principais: clientes ativos, renovações críticas, comissões e novas apólices. Clique em qualquer KPI para ver mais detalhes.",
-    title: "📊 KPIs Principais",
-    placement: "bottom",
+    target: '.dashboard-kpis',
+    content: 'Aqui estão suas métricas principais: clientes ativos, renovações críticas, comissões e novas apólices. Clique em qualquer KPI para ver mais detalhes.',
+    title: '📊 KPIs Principais',
+    placement: 'bottom',
   },
   {
-    target: ".performance-chart",
-    content: "Este gráfico mostra sua performance financeira ao longo do tempo. Use os filtros para personalizar a visualização.",
-    title: "📈 Performance Financeira",
-    placement: "top",
+    target: '.performance-chart',
+    content: 'Este gráfico mostra sua performance financeira ao longo do tempo. Use os filtros para personalizar a visualização.',
+    title: '📈 Performance Financeira',
+    placement: 'top',
   },
   {
-    target: ".dashboard-sidebar",
-    content: "Aqui você vê seus próximos agendamentos e pode gerenciar sua agenda rapidamente.",
-    title: "📅 Agendamentos",
-    placement: "left",
+    target: '.dashboard-sidebar',
+    content: 'Aqui você vê seus próximos agendamentos e pode gerenciar sua agenda rapidamente.',
+    title: '📅 Agendamentos',
+    placement: 'left',
   },
   {
-    target: ".dashboard-controller",
-    content: "Use estes controles para visualizar gráficos adicionais e análises detalhadas dos seus dados.",
-    title: "🎛️ Controles Avançados",
-    placement: "top",
+    target: '.dashboard-controller',
+    content: 'Use estes controles para visualizar gráficos adicionais e análises detalhadas dos seus dados.',
+    title: '🎛️ Controles Avançados',
+    placement: 'top',
   },
   {
-    target: "body",
-    content: "Perfeito! Agora você conhece as principais funcionalidades do dashboard. Explore o sistema e comece a gerenciar seus seguros com eficiência!",
-    title: "✅ Tutorial Concluído",
-    placement: "center",
+    target: 'body',
+    content: 'Perfeito! Agora você conhece as principais funcionalidades do dashboard. Explore o sistema e comece a gerenciar seus seguros com eficiência!',
+    title: '✅ Tutorial Concluído',
+    placement: 'center',
   }
 ];
 
 export default function Dashboard() {
-  usePageTitle("Dashboard");
+  usePageTitle('Dashboard');
 
   // 🛡️ SISTEMA DE PROTEÇÃO DISPONÍVEL - Ative quando necessário para debug
   // useGlassSystemProtection(); // Desabilitado para reduzir logs
@@ -91,13 +90,13 @@ export default function Dashboard() {
     if (!profile) return;
 
     try {
-      console.log("🎯 Marcando onboarding como concluído...");
+      console.log('🎯 Marcando onboarding como concluído...');
       await updateProfileMutation.mutateAsync({
         onboarding_completed: true
       });
-      console.log("✅ Onboarding marcado como concluído!");
+      console.log('✅ Onboarding marcado como concluído!');
     } catch (error) {
-      console.error("❌ Erro ao marcar onboarding como concluído:", error);
+      console.error('❌ Erro ao marcar onboarding como concluído:', error);
     }
   };
 
@@ -116,7 +115,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* GRADE DE KPIs */}
+      {/* GRADE DE KPIs - SEM FILTRO DE DATA (dados do mês atual) */}
       <div className="dashboard-kpis">
         <DashboardKpis />
       </div>
@@ -131,7 +130,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* LINHA 3: Sistema de Controle de Gráficos */}
+      {/* LINHA 3: Sistema de Controle de Gráficos - COM FILTRO DE DATA PRÓPRIO */}
       <div className="dashboard-controller">
         <DashboardController />
       </div>
@@ -147,5 +146,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-

@@ -21,26 +21,26 @@ const menuSections = [
   {
     title: 'Visão Geral',
     items: [
-      { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-      { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/reports' },
-      { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/faturamento' },
+      { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/dashboard/reports' },
+      { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/dashboard/faturamento' },
     ]
   },
   {
     title: 'Operacional',
     items: [
-      { id: 'policies', name: 'Apólices', icon: FileText, path: '/policies' },
-      { id: 'clients', name: 'Clientes', icon: Users, path: '/clients' },
-      { id: 'appointments', name: 'Agendamentos', icon: Calendar, path: '/appointments' },
-      { id: 'tasks', name: 'Tarefas', icon: ListTodo, path: '/tasks' },
-      { id: 'renovacoes', name: 'Renovações', icon: RefreshCw, path: '/renovacoes' },
-      { id: 'sinistros', name: 'Sinistros', icon: ShieldAlert, path: '/sinistros' },
+      { id: 'policies', name: 'Apólices', icon: FileText, path: '/dashboard/policies' },
+      { id: 'clients', name: 'Clientes', icon: Users, path: '/dashboard/clients' },
+      { id: 'appointments', name: 'Agendamentos', icon: Calendar, path: '/dashboard/appointments' },
+      { id: 'tasks', name: 'Tarefas', icon: ListTodo, path: '/dashboard/tasks' },
+      { id: 'renovacoes', name: 'Renovações', icon: RefreshCw, path: '/dashboard/renovacoes' },
+      { id: 'sinistros', name: 'Sinistros', icon: ShieldAlert, path: '/dashboard/sinistros' },
     ]
   },
   {
     title: 'Sistema',
     items: [
-      { id: 'settings', name: 'Configurações', icon: Settings, path: '/settings' },
+      { id: 'settings', name: 'Configurações', icon: Settings, path: '/dashboard/settings' },
     ]
   }
 ];
@@ -63,6 +63,14 @@ export function GlassSidebar() {
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
+  };
+
+  // Helper function to check if current path is active
+  const isPathActive = (itemPath: string) => {
+    if (itemPath === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/dashboard/';
+    }
+    return location.pathname.startsWith(itemPath);
   };
 
   return (
@@ -107,7 +115,7 @@ export function GlassSidebar() {
               </h3>
             )}
             {section.items.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive = isPathActive(item.path);
               const Icon = item.icon;
 
               return (
