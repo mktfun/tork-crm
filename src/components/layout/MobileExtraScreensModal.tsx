@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Grid3X3, Settings, FileText, TrendingUp, CreditCard, Shield, UserCog, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetPortal, SheetOverlay } from '@/components/ui/sheet';
 import { useNavigate } from 'react-router-dom';
 
 const extraScreens = [
