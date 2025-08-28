@@ -185,7 +185,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (clientsLoading || greetingsLoading) return [];
     
     console.log('🎂 Buscando aniversariantes de hoje...');
-    console.log('🎂 Saudações já enviadas este ano:', sentGreetings);
+    console.log('🎂 Saudações j�� enviadas este ano:', sentGreetings);
     
     // 1. Filtrar clientes que fazem aniversário hoje
     const birthdayClientsToday = clients.filter(client => 
@@ -357,27 +357,37 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.createdAt));
     }
     
-    const branchData: { [key: string]: { count: number; value: number } } = {};
+    const branchData: { [key: string]: { count: number; value: number; commission: number; totalPolicies: any[] } } = {};
     
     filteredPolicies
       .filter(policy => policy.status === 'Ativa')
       .forEach(policy => {
         const branch = policy.type || 'Não informado';
         const value = policy.premiumValue || 0;
-        
+        const commission = calculateCommissionValue(value, policy.type || '');
+
         if (!branchData[branch]) {
-          branchData[branch] = { count: 0, value: 0 };
+          branchData[branch] = { count: 0, value: 0, commission: 0, totalPolicies: [] };
         }
         branchData[branch].count += 1;
         branchData[branch].value += value;
+        branchData[branch].commission += commission;
+        branchData[branch].totalPolicies.push(policy);
       });
 
     // Converter para array e ordenar por valor
-    let distribution = Object.entries(branchData).map(([ramo, data]) => ({
-      ramo,
-      total: data.count,
-      valor: data.value
-    })).sort((a, b) => b.valor - a.valor);
+    let distribution = Object.entries(branchData).map(([ramo, data]) => {
+      // Calcular taxa média de comissão para este ramo
+      const avgCommissionRate = data.value > 0 ? (data.commission / data.value) * 100 : 0;
+
+      return {
+        ramo,
+        total: data.count,
+        valor: data.value,
+        valorComissao: data.commission,
+        taxaMediaComissao: avgCommissionRate
+      };
+    }).sort((a, b) => b.valor - a.valor);
 
     // Agrupar itens pequenos (menos de 5% do total de valor) em "Outros"
     const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
@@ -391,11 +401,18 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         (acc, item) => ({
           ramo: 'Outros',
           total: acc.total + item.total,
-          valor: acc.valor + item.valor
+          valor: acc.valor + item.valor,
+          valorComissao: acc.valorComissao + item.valorComissao,
+          taxaMediaComissao: 0 // Será recalculado abaixo
         }),
-        { ramo: 'Outros', total: 0, valor: 0 }
+        { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
       );
-      
+
+      // Recalcular taxa média de comissão para "Outros"
+      if (othersData.valor > 0) {
+        othersData.taxaMediaComissao = (othersData.valorComissao / othersData.valor) * 100;
+      }
+
       distribution = [...mainItems.slice(0, 7), othersData];
     }
     
