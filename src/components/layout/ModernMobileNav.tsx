@@ -62,7 +62,7 @@ export function ModernMobileNav() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
       <div className="max-w-sm mx-auto">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl shadow-black/50 backdrop-saturate-150">
+        <div className="liquid-glass-dock p-2">
           <InteractiveMenu
             items={navigationItems}
             accentColor="hsl(var(--chart-2))"
