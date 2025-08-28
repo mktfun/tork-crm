@@ -50,6 +50,16 @@ function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
 
+                {/* Redirects for legacy/direct route access */}
+                <Route path="/appointments" element={<Navigate to="/dashboard/appointments" replace />} />
+                <Route path="/policies" element={<Navigate to="/dashboard/policies" replace />} />
+                <Route path="/clients" element={<Navigate to="/dashboard/clients" replace />} />
+                <Route path="/tasks" element={<Navigate to="/dashboard/tasks" replace />} />
+                <Route path="/faturamento" element={<Navigate to="/dashboard/faturamento" replace />} />
+                <Route path="/renovacoes" element={<Navigate to="/dashboard/renovacoes" replace />} />
+                <Route path="/sinistros" element={<Navigate to="/dashboard/sinistros" replace />} />
+                <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
+
                 {/* Todas as rotas do sistema são protegidas */}
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
