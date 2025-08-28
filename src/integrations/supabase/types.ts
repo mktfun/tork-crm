@@ -400,6 +400,66 @@ export type Database = {
           },
         ]
       }
+      daily_metrics: {
+        Row: {
+          apolices_novas: number
+          apolices_perdidas: number
+          auto_value: number
+          consorcio_value: number
+          created_at: string
+          date: string
+          empresarial_value: number
+          error_message: string | null
+          id: string
+          outros_value: number
+          renovacoes: number
+          residencial_value: number
+          saude_value: number
+          sync_status: string
+          synced_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apolices_novas?: number
+          apolices_perdidas?: number
+          auto_value?: number
+          consorcio_value?: number
+          created_at?: string
+          date: string
+          empresarial_value?: number
+          error_message?: string | null
+          id?: string
+          outros_value?: number
+          renovacoes?: number
+          residencial_value?: number
+          saude_value?: number
+          sync_status?: string
+          synced_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apolices_novas?: number
+          apolices_perdidas?: number
+          auto_value?: number
+          consorcio_value?: number
+          created_at?: string
+          date?: string
+          empresarial_value?: number
+          error_message?: string | null
+          id?: string
+          outros_value?: number
+          renovacoes?: number
+          residencial_value?: number
+          saude_value?: number
+          sync_status?: string
+          synced_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           appointment_id: string | null
@@ -518,6 +578,36 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           telefone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sheets_sync_logs: {
+        Row: {
+          created_at: string
+          execution_time_ms: number | null
+          id: string
+          message: string | null
+          status: string
+          sync_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          message?: string | null
+          status: string
+          sync_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          message?: string | null
+          status?: string
+          sync_date?: string
+          user_id?: string
         }
         Relationships: []
       }
