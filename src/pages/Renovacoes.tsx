@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
@@ -173,7 +174,7 @@ export default function Renovacoes() {
               <AlertTriangle size={48} className="mx-auto" />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">Erro ao carregar renovações</h3>
-            <p className="text-slate-400 mb-4">Não foi possível carregar os dados. Verifique sua conexão e tente novamente.</p>
+            <p className="text-slate-400 mb-4">{error}</p>
             <Button onClick={refetch} variant="outline">
               Tentar novamente
             </Button>

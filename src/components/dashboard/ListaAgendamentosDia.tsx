@@ -1,3 +1,4 @@
+
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabaseClients } from '@/hooks/useSupabaseClients';
 import { useSupabaseTasks } from '@/hooks/useSupabaseTasks';
@@ -92,7 +93,7 @@ export function ListaAgendamentosDia() {
 
   // Função para navegar para detalhes do agendamento
   const handleAppointmentClick = (appointmentId: string) => {
-    navigate(`/dashboard/appointments?highlight=${appointmentId}`);
+    navigate(`/appointments?highlight=${appointmentId}`);
   };
 
   // Função para navegar para tarefas

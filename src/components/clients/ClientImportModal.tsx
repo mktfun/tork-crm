@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -47,7 +48,7 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          // CSV data parsed successfully
+          console.log('Dados brutos lidos:', results.data);
           setCsvData(results.data);
           setCsvHeaders(Object.keys(results.data[0] || {}));
           setStep('mapping');
@@ -82,7 +83,7 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
     const validCount = validRows.length;
     skippedCount = filteredData.stats.invalid;
 
-    // Import validation completed
+    console.log(`${validCount} linhas válidas de ${totalRows} total. ${skippedCount} linhas ignoradas.`);
 
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i];
@@ -142,7 +143,7 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
           try {
             const newClient = await addClient(clientData);
             clientId = newClient.id;
-            // Client created successfully
+            console.log(`Cliente criado: ${clientData.name}`);
           } catch (error) {
             console.error('Erro ao criar cliente:', error);
             errorCount++;
@@ -161,10 +162,10 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
             
             if (clientId) {
               successCount++;
-              // Client and appointment created successfully
+              console.log(`Cliente e agendamento criados: ${clientData.name}`);
             } else {
               appointmentOnlyCount++;
-              // Appointment created without linked client
+              console.log(`Agendamento criado sem cliente vinculado: ${appointmentData.title}`);
             }
           } catch (error) {
             console.error('Erro ao criar agendamento:', error);
@@ -173,7 +174,7 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
         } else if (clientId) {
           // Cliente criado sem agendamento
           successCount++;
-          // Client created without appointment
+          console.log(`Cliente criado sem agendamento: ${clientData.name}`);
         }
 
       } catch (error) {

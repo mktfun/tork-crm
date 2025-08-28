@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { GlassSidebar } from '@/components/layout/GlassSidebar';
 import { Header } from '@/components/layout/Header';
 import { SearchCommand } from '@/components/SearchCommand';
-import { ModernMobileNav } from '@/components/layout/ModernMobileNav';
+import { MobileFloatingNav } from '@/components/layout/MobileFloatingNav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -46,8 +47,8 @@ export function RootLayout() {
         </div>
       </div>
 
-      {/* NAVEGAÇÃO MODERNA APENAS NO MOBILE */}
-      {isMobile && <ModernMobileNav />}
+      {/* NAVEGAÇÃO FLUTUANTE APENAS NO MOBILE */}
+      {isMobile && <MobileFloatingNav />}
 
       {/* BUSCA UNIVERSAL */}
       <SearchCommand open={isSearchOpen} onOpenChange={setIsSearchOpen} />

@@ -1,3 +1,4 @@
+
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardKpis } from '@/components/dashboard/DashboardKpis';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
@@ -58,8 +59,6 @@ const dashboardSteps: OnboardingStep[] = [
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  
-  // Para os KPIs principais e insights globais, usar dados do mês atual (sem filtro)
   const metrics = useDashboardMetrics();
   const { data: profile, isLoading: profileIsLoading } = useProfile();
   const updateProfileMutation = useUpdateProfile();
@@ -97,7 +96,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* GRADE DE KPIs - SEM FILTRO DE DATA (dados do mês atual) */}
+      {/* GRADE DE KPIs */}
       <div className="dashboard-kpis">
         <DashboardKpis />
       </div>
@@ -112,7 +111,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* LINHA 3: Sistema de Controle de Gráficos - COM FILTRO DE DATA PRÓPRIO */}
+      {/* LINHA 3: Sistema de Controle de Gráficos */}
       <div className="dashboard-controller">
         <DashboardController />
       </div>

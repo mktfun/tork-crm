@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
@@ -17,8 +18,8 @@ export function DashboardController() {
   });
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
 
-  // Hook com dados filtrados - AGORA PASSA O FILTRO DE DATA
-  const metrics = useDashboardMetrics({ dateRange });
+  // Hook com dados filtrados
+  const metrics = useDashboardMetrics();
   
   return (
     <div className="space-y-6">

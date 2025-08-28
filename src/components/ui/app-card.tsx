@@ -1,18 +1,22 @@
+
 import { cn } from "@/lib/utils";
 import { ReactNode, HTMLAttributes } from "react";
+import { useGlassEffect } from "@/hooks/useGlassEffect";
 
 interface AppCardProps extends HTMLAttributes<HTMLDivElement> {
   className?: string;
   children: ReactNode;
 }
 
-// Card padrão usando o sistema glass limpo
+// OPERAÇÃO AQUÁRIO - VIDRO LÍQUIDO ATIVADO
 export function AppCard({ className, children, ...props }: AppCardProps) {
+  const glassRef = useGlassEffect<HTMLDivElement>();
+
   return (
     <div
+      ref={glassRef}
       className={cn(
-        // Glass effect limpo sem bordas transparentes
-        "rounded-xl border border-white/10 bg-white/10 backdrop-blur-lg shadow-lg p-4",
+        "glass-component p-4 shadow-lg",
         className
       )}
       {...props}

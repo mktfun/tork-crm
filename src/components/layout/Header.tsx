@@ -1,9 +1,9 @@
+
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserNav } from './UserNav';
 import { NotificationPanel } from './NotificationPanel';
 import { QuickActions } from './QuickActions';
-import { MobileExtraScreensModal } from './MobileExtraScreensModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface HeaderProps {
@@ -16,9 +16,11 @@ export function Header({ onSearchClick }: HeaderProps) {
   return (
     <header className="h-16 bg-slate-900/50 backdrop-blur-lg border-b border-white/10">
       <div className="flex items-center justify-between h-full px-4 md:px-6">
-        {/* Menu Button - apenas no mobile */}
+        {/* Logo/Title - apenas no mobile */}
         {isMobile && (
-          <MobileExtraScreensModal />
+          <div className="text-white font-semibold text-lg">
+            SegurApp
+          </div>
         )}
 
         {/* Área central - busca e ações rápidas */}
