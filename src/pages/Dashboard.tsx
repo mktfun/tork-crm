@@ -8,7 +8,22 @@ import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useGlassSystemProtection } from '@/hooks/useGlassSystemProtection';
 import type { OnboardingStep } from '@/types/onboarding';
+
+/**
+ * 🔒 DASHBOARD COM PROTEÇÃO GLASS SYSTEM 🔒
+ *
+ * ⚠️ Este dashboard usa o sistema Liquid Glass crítico
+ * ❌ NÃO alterar a estrutura de DashboardKpis
+ * ❌ NÃO remover classes CSS dos containers
+ *
+ * COMPONENTES PROTEGIDOS:
+ * - DashboardKpis (contém KpiCards críticos)
+ * - Todas as seções com className específicas
+ *
+ * ✅ Sistema de monitoramento ativo via useGlassSystemProtection
+ */
 
 const dashboardSteps: OnboardingStep[] = [
   {
@@ -58,7 +73,10 @@ const dashboardSteps: OnboardingStep[] = [
 
 export default function Dashboard() {
   usePageTitle('Dashboard');
-  
+
+  // 🛡️ SISTEMA DE PROTEÇÃO ATIVO - Monitora integridade do Glass System
+  useGlassSystemProtection();
+
   // Para os KPIs principais e insights globais, usar dados do mês atual (sem filtro)
   const metrics = useDashboardMetrics();
   const { data: profile, isLoading: profileIsLoading } = useProfile();

@@ -2,6 +2,27 @@ import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { AppCard } from '@/components/ui/app-card';
 
+/**
+ * 🔒 COMPONENTE PROTEGIDO - CARDS KPI DASHBOARD 🔒
+ *
+ * ⚠️ ATENÇÃO: COMPONENTE CRÍTICO DO DASHBOARD
+ * ❌ NÃO ALTERAR AS CLASSES CORE (hover:scale-105, flex, etc)
+ * ❌ NÃO REMOVER O AppCard como base
+ * ❌ NÃO ALTERAR A ESTRUTURA HTML
+ *
+ * ESTRUTURA PROTEGIDA:
+ * - AppCard como container principal
+ * - Flex layout com justify-between
+ * - Classes de cores definidas (default/warning/danger)
+ * - Efeitos hover controlados
+ *
+ * ALTERAÇÕES SEGURAS:
+ * ✅ Adicionar novas variantes de cor seguindo o padrão
+ * ✅ Modificar ícones e textos
+ * ✅ Adicionar props opcionais
+ * ❌ NÃO quebrar a estrutura visual estabelecida
+ */
+
 interface KpiCardProps {
   title: string;
   value: string;

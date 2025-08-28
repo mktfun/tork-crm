@@ -120,27 +120,60 @@
   }
 }
 
-/* OPERAÇÃO AQUÁRIO - LIQUID GLASS SYSTEM PREMIUM */
+/*
+🔒🔒🔒 SEÇÃO ULTRA PROTEGIDA - NÃO ALTERAR 🔒🔒🔒
+⚠️  OPERAÇÃO AQUÁRIO - LIQUID GLASS SYSTEM PREMIUM ⚠️
+❌ QUALQUER ALTERAÇÃO AQUI QUEBRA TODO O SISTEMA VISUAL ❌
+
+RESPONSÁVEL: Sistema crítico de efeitos glass
+ÚLTIMA ALTERAÇÃO: Funcionando perfeitamente
+PRÓXIMA MANUTENÇÃO: Apenas em emergência
+
+DEPENDÊNCIAS CRÍTICAS:
+- useGlassEffect.ts (variáveis --x e --y)
+- AppCard.tsx (classe glass-component)
+- KpiCard.tsx (herda estes estilos)
+- Todos os componentes do dashboard
+
+⚠️ ANTES DE ALTERAR, LEIA: /PROTECTION.md ⚠️
+*/
+
 .glass-component {
+  /* 🎯 FUNDO SEMI-TRANSPARENTE CALIBRADO - NÃO ALTERAR */
   background: rgba(40, 40, 60, 0.55);
+
+  /* 🎯 BLUR CRÍTICO PARA EFEITO GLASS - NÃO ALTERAR */
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
+
+  /* 🎯 BORDAS GLASS PREMIUM - NÃO ALTERAR */
   border: 1px solid rgba(255, 255, 255, 0.12);
+
+  /* 🎯 SOMBRA PROFUNDA PARA FLUTUAÇÃO - NÃO ALTERAR */
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+  /* 🎯 ESTRUTURA BÁSICA - NÃO ALTERAR */
   border-radius: 16px;
   position: relative;
   overflow: hidden;
 }
 
+/* 🌟 EFEITO MÁGICO - BRILHO QUE SEGUE O MOUSE 🌟 */
 .glass-component::before {
   content: '';
   position: absolute;
+
+  /* 🎯 VARIÁVEIS DINÂMICAS DO MOUSE - CRÍTICO */
   top: var(--y, 50%);
   left: var(--x, 50%);
+
   transform: translate(-50%, -50%);
   width: 300px;
   height: 300px;
+
+  /* 🎯 GRADIENTE RADIAL MÁGICO - NÃO ALTERAR */
   background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+
   opacity: 0;
   transition: opacity 0.4s ease;
   pointer-events: none;
@@ -149,6 +182,8 @@
 .glass-component:hover::before {
   opacity: 1;
 }
+
+/* 🔒🔒🔒 FIM DA SEÇÃO PROTEGIDA 🔒🔒🔒 */
 
 /* PREMIUM GLASS SIDEBAR SYSTEM */
 .glass-sidebar-premium {
