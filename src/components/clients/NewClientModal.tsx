@@ -41,8 +41,10 @@ export function NewClientModal() {
     }
   });
 
-  const onSubmit = async (data: ClientFormData) => {
+  const onSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     try {
+      const data = form.getValues();
       // Clean up empty string values to undefined for optional fields
       const cleanedData = {
         ...data,
@@ -75,6 +77,18 @@ export function NewClientModal() {
     setActiveTab(value);
   };
 
+  const handleNextTab = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    if (activeTab === 'personal') setActiveTab('address');
+    if (activeTab === 'address') setActiveTab('observations');
+  };
+
+  const handlePrevTab = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    if (activeTab === 'address') setActiveTab('personal');
+    if (activeTab === 'observations') setActiveTab('address');
+  };
+
   const handleClose = () => {
     const isDirty = form.formState.isDirty;
     if (isDirty) {
@@ -105,7 +119,7 @@ export function NewClientModal() {
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-3 bg-slate-800/50">
                 <TabsTrigger 
@@ -158,10 +172,7 @@ export function NewClientModal() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      if (activeTab === 'address') setActiveTab('personal');
-                      if (activeTab === 'observations') setActiveTab('address');
-                    }}
+                    onClick={handlePrevTab}
                     className="border-white/20 text-white hover:bg-white/10"
                   >
                     Anterior
@@ -171,17 +182,15 @@ export function NewClientModal() {
                 {activeTab !== 'observations' ? (
                   <Button
                     type="button"
-                    onClick={() => {
-                      if (activeTab === 'personal') setActiveTab('address');
-                      if (activeTab === 'address') setActiveTab('observations');
-                    }}
+                    onClick={handleNextTab}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Próximo
                   </Button>
                 ) : (
                   <Button 
-                    type="submit" 
+                    type="button"
+                    onClick={onSubmit}
                     className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={form.formState.isSubmitting}
                   >
@@ -190,7 +199,7 @@ export function NewClientModal() {
                 )}
               </div>
             </div>
-          </form>
+          </div>
         </Form>
       </DialogContent>
     </Dialog>

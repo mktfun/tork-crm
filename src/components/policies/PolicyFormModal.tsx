@@ -132,7 +132,8 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     }
   };
 
-  const handleNext = async () => {
+  const handleNext = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
     const fieldsToValidate = getFieldsForStep(currentStep);
     const isStepValid = await trigger(fieldsToValidate);
     
@@ -141,15 +142,19 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     }
   };
 
-  const handleBack = () => {
+  const handleBack = (e?: React.MouseEvent) => {
+    e?.preventDefault();
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const onSubmit = async (data: PolicyFormData) => {
+  const onSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setIsSubmitting(true);
+    
     try {
+      const data = watch();
       const finalData = {
         ...data,
         brokerageId: data.brokerageId ? parseInt(data.brokerageId) : undefined,
@@ -469,7 +474,8 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           </Button>
         ) : (
           <Button
-            type="submit"
+            type="button"
+            onClick={onSubmit}
             disabled={isSubmitting}
             className="bg-green-600 hover:bg-green-700"
           >
@@ -489,7 +495,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
         {/* Stepper */}
         <Stepper steps={STEPS} currentStep={currentStep} />
         
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <div>
           {/* Step Content */}
           <div className="min-h-[400px]">
             {renderStepContent()}
@@ -497,7 +503,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
           {/* Navigation */}
           {renderNavigationButtons()}
-        </form>
+        </div>
       </div>
     </TooltipProvider>
   );
