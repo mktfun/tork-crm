@@ -7,17 +7,17 @@ export function AtalhosRapidos() {
   const navigate = useNavigate();
 
   const handleNovaApolice = () => {
-    navigate('/policies');
+    navigate('/dashboard/policies');
     console.log('Navegando para apólices');
   };
 
   const handleNovoCliente = () => {
-    navigate('/clients');
+    navigate('/dashboard/clients');
     console.log('Navegando para clientes');
   };
 
   const handleLancamentoFinanceiro = () => {
-    navigate('/faturamento');
+    navigate('/dashboard/faturamento');
     console.log('Navegando para faturamento');
   };
 

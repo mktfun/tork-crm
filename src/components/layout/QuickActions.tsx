@@ -14,12 +14,12 @@ export function QuickActions() {
   const navigate = useNavigate();
 
   const handleNewClient = () => {
-    navigate('/clients');
+    navigate('/dashboard/clients');
     console.log('Abrir modal de novo cliente');
   };
 
   const handleNewPolicy = () => {
-    navigate('/policies');
+    navigate('/dashboard/policies');
     console.log('Abrir modal de nova apólice');
   };
 

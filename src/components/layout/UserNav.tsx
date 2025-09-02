@@ -22,11 +22,11 @@ export function UserNav() {
   };
 
   const handleProfile = () => {
-    navigate('/settings/profile');
+    navigate('/dashboard/settings/profile');
   };
 
   const handleSettings = () => {
-    navigate('/settings');
+    navigate('/dashboard/settings/profile');
   };
 
   const handleLogout = async () => {

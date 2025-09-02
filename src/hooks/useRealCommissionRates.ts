@@ -23,7 +23,7 @@ export function useRealCommissionRates() {
       return new Map<string, DynamicCommissionRate>();
     }
 
-    return calculateRealCommissionRatesByType(policies, 2); // Min 2 apólices por tipo
+    return calculateRealCommissionRatesByType(policies.filter(p => p.type) as any, 2); // Min 2 apólices por tipo
   }, [policies, loading]);
 
   // Relatório das taxas calculadas
@@ -42,7 +42,7 @@ export function useRealCommissionRates() {
       };
     }
 
-    return validateDataCoverage(policies, 2);
+    return validateDataCoverage(policies.filter(p => p.type) as any, 2);
   }, [policies, loading]);
 
   // Função para obter taxa de comissão por tipo

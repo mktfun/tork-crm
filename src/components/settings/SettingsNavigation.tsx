@@ -6,31 +6,31 @@ import { AppCard } from '@/components/ui/app-card';
 const navItems = [
   {
     name: 'Meu Perfil',
-    path: '/settings/profile',
+    path: '/dashboard/settings/profile',
     icon: User,
     description: 'Informações pessoais'
   },
   {
     name: 'Corretoras',
-    path: '/settings/brokerages',
+    path: '/dashboard/settings/brokerages',
     icon: Building,
     description: 'Empresas representadas'
   },
   {
     name: 'Produtores',
-    path: '/settings/producers',
+    path: '/dashboard/settings/producers',
     icon: Users,
     description: 'Equipe de vendas'
   },
   {
     name: 'Seguradoras',
-    path: '/settings/companies',
+    path: '/dashboard/settings/companies',
     icon: Shield,
     description: 'Parceiros seguradoras'
   },
   {
     name: 'Transações',
-    path: '/settings/transactions',
+    path: '/dashboard/settings/transactions',
     icon: CreditCard,
     description: 'Tipos de operações'
   }
