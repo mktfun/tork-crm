@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit2, Plus, Check, X } from 'lucide-react';
 import { useSupabaseRamos, useCreateRamo, useUpdateRamo, useDeleteRamo } from '@/hooks/useSupabaseRamos';
@@ -54,34 +54,32 @@ export function GestaoRamos() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Gestão de Ramos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-slate-700 rounded w-1/4"></div>
-            <div className="h-10 bg-slate-700 rounded"></div>
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 bg-slate-700 rounded"></div>
-              ))}
-            </div>
+      <AppCard className="p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-white">Gestão de Ramos</h2>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-slate-700 rounded w-1/4"></div>
+          <div className="h-10 bg-slate-700 rounded"></div>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 bg-slate-700 rounded"></div>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AppCard>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-white">Gestão de Ramos</CardTitle>
-        <CardDescription className="text-slate-400">
+    <AppCard className="p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-white">Gestão de Ramos</h2>
+        <p className="text-sm text-slate-400 mt-2">
           Gerencie os ramos de seguro disponíveis no sistema. Todos os ramos criados aqui poderão ser associados às seguradoras.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+        </p>
+      </div>
+      <div className="space-y-6">
         {/* Formulário para criar novo ramo */}
         <form onSubmit={handleCreateRamo} className="flex gap-2">
           <div className="flex-1">
@@ -225,7 +223,7 @@ export function GestaoRamos() {
             <p>• Novos ramos criados aqui ficarão disponíveis para associar às seguradoras</p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </AppCard>
   );
 }

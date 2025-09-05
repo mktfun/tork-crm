@@ -5,7 +5,7 @@ import { useCompanyRamosById, useCreateCompanyRamo, useDeleteCompanyRamo } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building2 } from 'lucide-react';
@@ -38,34 +38,30 @@ export function GestaoSeguradoras() {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-white">Gestão de Seguradoras</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="animate-pulse space-y-4">
-              <div className="h-4 bg-slate-700 rounded w-1/4"></div>
-              <div className="h-10 bg-slate-700 rounded"></div>
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-slate-700 rounded"></div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-white">Ramos da Seguradora</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="animate-pulse space-y-4">
+        <AppCard className="p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-white">Gestão de Seguradoras</h2>
+          </div>
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-slate-700 rounded w-1/4"></div>
+            <div className="h-10 bg-slate-700 rounded"></div>
+            <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-8 bg-slate-700 rounded"></div>
+                <div key={i} className="h-12 bg-slate-700 rounded"></div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </AppCard>
+        <AppCard className="p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-white">Ramos da Seguradora</h2>
+          </div>
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 bg-slate-700 rounded"></div>
+            ))}
+          </div>
+        </AppCard>
       </div>
     );
   }
@@ -73,14 +69,14 @@ export function GestaoSeguradoras() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Lista de Seguradoras */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-white">Gestão de Seguradoras</CardTitle>
-          <CardDescription className="text-slate-400">
+      <AppCard className="p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-white">Gestão de Seguradoras</h2>
+          <p className="text-sm text-slate-400 mt-2">
             Selecione uma seguradora para gerenciar seus ramos
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </p>
+        </div>
+        <div className="space-y-4">
           {/* Lista de seguradoras existentes */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-slate-300 mb-4">
@@ -138,26 +134,26 @@ export function GestaoSeguradoras() {
               <p>• Agora você pode gerenciar as associações seguradoras-ramos</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AppCard>
 
       {/* Gestão de Ramos da Seguradora Selecionada */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-white">
+      <AppCard className="p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-white">
             {selectedCompanyId 
               ? `Ramos - ${companies.find(c => c.id === selectedCompanyId)?.name}`
               : 'Ramos da Seguradora'
             }
-          </CardTitle>
-          <CardDescription className="text-slate-400">
+          </h2>
+          <p className="text-sm text-slate-400 mt-2">
             {selectedCompanyId 
               ? 'Gerencie quais ramos esta seguradora oferece'
               : 'Selecione uma seguradora para gerenciar seus ramos'
             }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div>
           {!selectedCompanyId ? (
             <div className="text-center py-8 text-slate-400">
               <Building2 className="w-12 h-12 mx-auto mb-4 text-slate-600" />
@@ -225,8 +221,8 @@ export function GestaoSeguradoras() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </AppCard>
     </div>
   );
 }

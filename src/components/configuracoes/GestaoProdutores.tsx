@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -121,9 +120,9 @@ export function GestaoProdutores() {
   };
 
   return (
-    <Card className="bg-slate-900 border-slate-800">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-white">Gestão de Produtores</CardTitle>
+    <AppCard className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold text-white">Gestão de Produtores</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewProducer} className="bg-blue-600 hover:bg-blue-700">
@@ -278,8 +277,8 @@ export function GestaoProdutores() {
             </form>
           </DialogContent>
         </Dialog>
-      </CardHeader>
-      <CardContent className="p-0">
+      </div>
+      <div>
         {loading ? (
           <div className="text-center py-8">
             <div className="text-slate-400">Carregando...</div>
@@ -290,7 +289,7 @@ export function GestaoProdutores() {
             <p className="text-sm mt-1">Clique em "Adicionar Produtor" para começar.</p>
           </div>
         ) : (
-          <AppCard className="p-0">
+          <div className="rounded-lg overflow-hidden border border-slate-700">
             <Table>
               <TableHeader>
                 <TableRow className="border-b-slate-700 hover:bg-slate-800/50">
@@ -365,9 +364,9 @@ export function GestaoProdutores() {
                 ))}
               </TableBody>
             </Table>
-          </AppCard>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </AppCard>
   );
 }
