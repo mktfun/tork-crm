@@ -400,6 +400,42 @@ export type Database = {
           },
         ]
       }
+      company_ramos: {
+        Row: {
+          company_id: string
+          created_at: string
+          ramo_id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          ramo_id: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          ramo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_ramos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_ramos_ramo_id_fkey"
+            columns: ["ramo_id"]
+            isOneToOne: false
+            referencedRelation: "ramos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_metrics: {
         Row: {
           apolices_novas: number
@@ -578,6 +614,27 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           telefone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ramos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          user_id?: string
         }
         Relationships: []
       }
