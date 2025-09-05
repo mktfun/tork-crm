@@ -571,6 +571,8 @@ export type Database = {
       producers: {
         Row: {
           brokerage_id: number
+          company_name: string | null
+          cpf_cnpj: string | null
           created_at: string
           email: string | null
           id: string
@@ -581,6 +583,8 @@ export type Database = {
         }
         Insert: {
           brokerage_id: number
+          company_name?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -591,6 +595,8 @@ export type Database = {
         }
         Update: {
           brokerage_id?: number
+          company_name?: string | null
+          cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
