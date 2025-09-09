@@ -24,6 +24,7 @@ export interface ChangelogView {
 export function useChangelogs() {
   const [changelogs, setChangelogs] = useState<Changelog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [viewedChangelogIds, setViewedChangelogIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -58,6 +59,7 @@ export function useChangelogs() {
       const unreadChangelogs = changelogsData?.filter(c => !viewedIds.has(c.id)) || [];
 
       setChangelogs((changelogsData as Changelog[]) || []);
+      setViewedChangelogIds(viewedIds);
       setUnreadCount(unreadChangelogs.length);
     } catch (error) {
       console.error('Error fetching changelogs:', error);
@@ -69,17 +71,29 @@ export function useChangelogs() {
   const markAsViewed = async (changelogId: string) => {
     if (!user?.id) return;
 
+    // Check if already viewed to avoid duplicate calls
+    if (viewedChangelogIds.has(changelogId)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_changelog_views')
-        .upsert({
-          user_id: user.id,
-          changelog_id: changelogId
-        });
+        .upsert(
+          {
+            user_id: user.id,
+            changelog_id: changelogId
+          },
+          {
+            onConflict: 'user_id,changelog_id',
+            ignoreDuplicates: true
+          }
+        );
 
       if (error) throw error;
 
-      // Update local state
+      // Update local state immediately
+      setViewedChangelogIds(prev => new Set([...prev, changelogId]));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking changelog as viewed:', error);
@@ -90,17 +104,30 @@ export function useChangelogs() {
     if (!user?.id || changelogs.length === 0) return;
 
     try {
-      const viewsToInsert = changelogs.map(changelog => ({
+      // Only process unread changelogs to avoid duplicate key errors
+      const unreadChangelogs = changelogs.filter(changelog => !viewedChangelogIds.has(changelog.id));
+      
+      if (unreadChangelogs.length === 0) {
+        return; // All already viewed
+      }
+
+      const viewsToInsert = unreadChangelogs.map(changelog => ({
         user_id: user.id,
         changelog_id: changelog.id
       }));
 
       const { error } = await supabase
         .from('user_changelog_views')
-        .upsert(viewsToInsert);
+        .upsert(viewsToInsert, {
+          onConflict: 'user_id,changelog_id',
+          ignoreDuplicates: true
+        });
 
       if (error) throw error;
 
+      // Update local state
+      const newViewedIds = new Set([...viewedChangelogIds, ...unreadChangelogs.map(c => c.id)]);
+      setViewedChangelogIds(newViewedIds);
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all as viewed:', error);
@@ -110,6 +137,7 @@ export function useChangelogs() {
   return {
     changelogs,
     unreadCount,
+    viewedChangelogIds,
     loading,
     markAsViewed,
     markAllAsViewed,

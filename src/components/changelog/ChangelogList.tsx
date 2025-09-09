@@ -5,12 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCheck, Filter } from 'lucide-react';
 import { Changelog, useChangelogs } from '@/hooks/useChangelogs';
 
-interface ChangelogListProps {
-  viewedChangelogIds?: Set<string>;
-}
+interface ChangelogListProps {}
 
-export function ChangelogList({ viewedChangelogIds = new Set() }: ChangelogListProps) {
-  const { changelogs, markAsViewed, markAllAsViewed, unreadCount } = useChangelogs();
+export function ChangelogList({}: ChangelogListProps) {
+  const { changelogs, markAsViewed, markAllAsViewed, unreadCount, viewedChangelogIds } = useChangelogs();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
