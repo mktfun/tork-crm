@@ -119,7 +119,7 @@ export function GestaoRamos() {
               <p className="text-sm">Adicione o primeiro ramo usando o formulário acima.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="max-h-[500px] overflow-y-auto space-y-2 pr-2">
               {ramos.map((ramo) => (
                 <div
                   key={ramo.id}

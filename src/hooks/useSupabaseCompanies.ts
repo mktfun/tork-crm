@@ -4,20 +4,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Company } from '@/types';
 
+interface CompanyWithRamosCount extends Company {
+  ramos_count?: number;
+}
+
 export function useSupabaseCompanies() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 🚀 **REACT QUERY COM OTIMIZAÇÃO**
+  // 🚀 **REACT QUERY COM OTIMIZAÇÃO E CONTAGEM DE RAMOS**
   const { data: companies = [], isLoading: loading, error } = useQuery({
     queryKey: ['companies', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
+      // Usar a view otimizada que já inclui a contagem de ramos
       const { data, error } = await supabase
-        .from('companies')
+        .from('companies_with_ramos_count')
         .select('*')
-        .eq('user_id', user.id)
         .order('name', { ascending: true });
 
       if (error) {
@@ -25,10 +29,11 @@ export function useSupabaseCompanies() {
         throw error;
       }
 
-      const formattedCompanies: Company[] = data?.map((company: any) => ({
+      const formattedCompanies: CompanyWithRamosCount[] = data?.map((company: any) => ({
         id: company.id,
         name: company.name,
         createdAt: company.created_at,
+        ramos_count: company.ramos_count || 0,
       })) || [];
 
       return formattedCompanies;

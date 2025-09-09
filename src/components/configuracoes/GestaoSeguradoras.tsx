@@ -128,7 +128,7 @@ export function GestaoSeguradoras() {
                 <p className="text-sm">Vá para "Gestão de Seguradoras" em Configurações para adicionar seguradoras.</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="max-h-[500px] overflow-y-auto space-y-2 pr-2">
                 {companies.map((company) => (
                   <div
                     key={company.id}
@@ -211,7 +211,7 @@ export function GestaoSeguradoras() {
                         )}
                         
                         <Badge variant="outline" className="border-slate-600 text-slate-400">
-                          {companyRamos.filter((cr: any) => cr.company_id === company.id).length} ramos
+                          {(company as any).ramos_count || 0} ramos
                         </Badge>
                       </div>
                     </div>
@@ -268,37 +268,39 @@ export function GestaoSeguradoras() {
                   <h4 className="text-sm font-medium text-slate-300 mb-4">
                     Ramos disponíveis ({ramos.length})
                   </h4>
-                  {ramos.map((ramo) => {
-                    const isAssociated = companyRamos.some((cr: any) => cr.ramo_id === ramo.id);
-                    
-                    return (
-                      <div
-                        key={ramo.id}
-                        className="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-lg"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id={`ramo-${ramo.id}`}
-                            checked={isAssociated}
-                            onCheckedChange={() => handleToggleRamo(ramo.id, isAssociated)}
-                            disabled={createCompanyRamo.isPending || deleteCompanyRamo.isPending}
-                          />
-                          <Label 
-                            htmlFor={`ramo-${ramo.id}`}
-                            className={`cursor-pointer ${isAssociated ? 'text-white font-medium' : 'text-slate-300'}`}
-                          >
-                            {ramo.nome}
-                          </Label>
+                  <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
+                    {ramos.map((ramo) => {
+                      const isAssociated = companyRamos.some((cr: any) => cr.ramo_id === ramo.id);
+                      
+                      return (
+                        <div
+                          key={ramo.id}
+                          className="flex items-center justify-between p-3 bg-slate-800 border border-slate-700 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`ramo-${ramo.id}`}
+                              checked={isAssociated}
+                              onCheckedChange={() => handleToggleRamo(ramo.id, isAssociated)}
+                              disabled={createCompanyRamo.isPending || deleteCompanyRamo.isPending}
+                            />
+                            <Label 
+                              htmlFor={`ramo-${ramo.id}`}
+                              className={`cursor-pointer ${isAssociated ? 'text-white font-medium' : 'text-slate-300'}`}
+                            >
+                              {ramo.nome}
+                            </Label>
+                          </div>
+                          
+                          {isAssociated && (
+                            <Badge variant="default" className="bg-green-600 text-white text-xs">
+                              Ativo
+                            </Badge>
+                          )}
                         </div>
-                        
-                        {isAssociated && (
-                          <Badge variant="default" className="bg-green-600 text-white text-xs">
-                            Ativo
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               
