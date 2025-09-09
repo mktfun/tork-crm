@@ -1,0 +1,151 @@
+name: Auto Changelog Generation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
+
+jobs:
+  generate-changelog:
+    if: github.event_name == 'push' || (github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Get latest tag
+      id: get_tag
+      run: |
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+    - name: Generate version
+      id: version
+      run: |
+        LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+        VERSION_NUM=$(echo $LATEST_TAG | sed 's/v//')
+        
+        # Get commits since last tag
+        COMMITS=$(git log $LATEST_TAG..HEAD --oneline --no-merges)
+        
+        # Determine version bump based on commit messages
+        if echo "$COMMITS" | grep -q "^[a-f0-9]* \(feat\|feature\):"; then
+          NEW_VERSION=$(echo $VERSION_NUM | awk -F. '{$2 = $2 + 1; $3 = 0} 1' OFS=.)
+          CHANGE_TYPE="feature"
+        elif echo "$COMMITS" | grep -q "^[a-f0-9]* \(fix\|bugfix\):"; then
+          NEW_VERSION=$(echo $VERSION_NUM | awk -F. '{$3 = $3 + 1} 1' OFS=.)
+          CHANGE_TYPE="bugfix"
+        elif echo "$COMMITS" | grep -q "^[a-f0-9]* \(improvement\|enhance\):"; then
+          NEW_VERSION=$(echo $VERSION_NUM | awk -F. '{$2 = $2 + 1; $3 = 0} 1' OFS=.)
+          CHANGE_TYPE="improvement"
+        elif echo "$COMMITS" | grep -q "^[a-f0-9]* \(breaking\|BREAKING\):"; then
+          NEW_VERSION=$(echo $VERSION_NUM | awk -F. '{$1 = $1 + 1; $2 = 0; $3 = 0} 1' OFS=.)
+          CHANGE_TYPE="breaking"
+        else
+          NEW_VERSION=$(echo $VERSION_NUM | awk -F. '{$3 = $3 + 1} 1' OFS=.)
+          CHANGE_TYPE="improvement"
+        fi
+        
+        echo "new_version=v$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "change_type=$CHANGE_TYPE" >> $GITHUB_OUTPUT
+
+    - name: Parse commits and generate changelog
+      id: changelog
+      run: |
+        LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+        
+        # Get commits since last tag
+        COMMITS=$(git log $LATEST_TAG..HEAD --pretty=format:"%s" --no-merges)
+        
+        if [ -z "$COMMITS" ]; then
+          echo "No new commits found"
+          exit 0
+        fi
+        
+        # Parse commit messages and generate title/description
+        TITLE=""
+        DESCRIPTION=""
+        CATEGORY="${{ steps.version.outputs.change_type }}"
+        PRIORITY="medium"
+        
+        while IFS= read -r commit; do
+          if echo "$commit" | grep -q "^feat:"; then
+            FEATURE=$(echo "$commit" | sed 's/^feat: *//')
+            TITLE="Nova Funcionalidade: $FEATURE"
+            DESCRIPTION="$DESCRIPTION• $FEATURE\n"
+            CATEGORY="feature"
+          elif echo "$commit" | grep -q "^fix:"; then
+            FIX=$(echo "$commit" | sed 's/^fix: *//')
+            TITLE="Correção de Bugs"
+            DESCRIPTION="$DESCRIPTION• Corrigido: $FIX\n"
+            CATEGORY="bugfix"
+            PRIORITY="high"
+          elif echo "$commit" | grep -q "^improvement:"; then
+            IMP=$(echo "$commit" | sed 's/^improvement: *//')
+            TITLE="Melhorias do Sistema"
+            DESCRIPTION="$DESCRIPTION• $IMP\n"
+            CATEGORY="improvement"
+          elif echo "$commit" | grep -q "^breaking:"; then
+            BREAK=$(echo "$commit" | sed 's/^breaking: *//')
+            TITLE="Mudanças Importantes"
+            DESCRIPTION="$DESCRIPTION• ⚠️ $BREAK\n"
+            CATEGORY="breaking"
+            PRIORITY="critical"
+          else
+            # Generic improvement for other commits
+            TITLE="Atualizações do Sistema"
+            DESCRIPTION="$DESCRIPTION• $commit\n"
+          fi
+        done <<< "$COMMITS"
+        
+        # Set default title if empty
+        if [ -z "$TITLE" ]; then
+          TITLE="Atualizações do Sistema"
+        fi
+        
+        # Clean up description
+        DESCRIPTION=$(echo -e "$DESCRIPTION" | sed '/^$/d')
+        
+        echo "title=$TITLE" >> $GITHUB_OUTPUT
+        echo "description<<EOF" >> $GITHUB_OUTPUT
+        echo -e "$DESCRIPTION" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        echo "category=$CATEGORY" >> $GITHUB_OUTPUT
+        echo "priority=$PRIORITY" >> $GITHUB_OUTPUT
+
+    - name: Call Supabase Edge Function
+      if: steps.changelog.outputs.title != ''
+      run: |
+        curl -X POST "https://jaouwhckqqnaxqyfvgyq.supabase.co/functions/v1/auto-changelog" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "version": "${{ steps.version.outputs.new_version }}",
+            "title": "${{ steps.changelog.outputs.title }}",
+            "description": "${{ steps.changelog.outputs.description }}",
+            "category": "${{ steps.changelog.outputs.category }}",
+            "priority": "${{ steps.changelog.outputs.priority }}",
+            "repo": "${{ github.repository }}",
+            "commit": "${{ github.sha }}",
+            "author": "${{ github.actor }}"
+          }'
+
+    - name: Create Git Tag
+      if: steps.changelog.outputs.title != ''
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag "${{ steps.version.outputs.new_version }}"
+        git push origin "${{ steps.version.outputs.new_version }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
