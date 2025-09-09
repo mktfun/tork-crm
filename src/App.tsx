@@ -29,6 +29,7 @@ import ProducerSettings from "./pages/settings/ProducerSettings";
 import CompanySettings from "./pages/settings/CompanySettings";
 import TransactionSettings from "./pages/settings/TransactionSettings";
 import RamoSettings from "./pages/settings/RamoSettings";
+import Novidades from "./pages/Novidades";
 
 // Helper to redirect legacy detail routes to dashboard namespace
 function ParamRedirect({ toBase }: { toBase: string }) {
@@ -89,6 +90,7 @@ function App() {
                   <Route path="renovacoes" element={<Renovacoes />} />
                   <Route path="sinistros" element={<Sinistros />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="novidades" element={<Novidades />} />
                   <Route path="demo/mobile-menu" element={<ModernMobileMenuDemo />} />
                   
                   {/* Rotas de configurações com layout próprio */}

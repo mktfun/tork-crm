@@ -282,6 +282,42 @@ export type Database = {
         }
         Relationships: []
       }
+      changelogs: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_published: boolean
+          priority: string
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          is_published?: boolean
+          priority?: string
+          title: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_published?: boolean
+          priority?: string
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           address: string | null
@@ -1151,6 +1187,35 @@ export type Database = {
             columns: ["producer_id"]
             isOneToOne: false
             referencedRelation: "producers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_changelog_views: {
+        Row: {
+          changelog_id: string
+          id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          changelog_id: string
+          id?: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          changelog_id?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_changelog_views_changelog_id_fkey"
+            columns: ["changelog_id"]
+            isOneToOne: false
+            referencedRelation: "changelogs"
             referencedColumns: ["id"]
           },
         ]

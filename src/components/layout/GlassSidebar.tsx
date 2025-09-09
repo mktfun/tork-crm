@@ -13,9 +13,12 @@ import {
   RefreshCw,
   BarChart3,
   ShieldAlert,
-  LucideIcon
+  LucideIcon,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useChangelogs } from '@/hooks/useChangelogs';
+import { ChangelogBadge } from '@/components/changelog/ChangelogBadge';
 
 const menuSections = [
   {
@@ -40,6 +43,7 @@ const menuSections = [
   {
     title: 'Sistema',
     items: [
+      { id: 'novidades', name: 'Novidades', icon: Megaphone, path: '/dashboard/novidades' },
       { id: 'settings', name: 'Configurações', icon: Settings, path: '/dashboard/settings' },
     ]
   }
@@ -48,6 +52,7 @@ const menuSections = [
 export function GlassSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount } = useChangelogs();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
@@ -123,7 +128,7 @@ export function GlassSidebar() {
                   key={item.id}
                   onClick={() => handleNavigation(item.path)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
+                    "w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 relative",
                     "text-white/80 hover:text-white hover:bg-white/10",
                     "focus:outline-none focus:ring-2 focus:ring-white/20",
                     isActive && "bg-white/15 text-white font-medium",
@@ -131,7 +136,15 @@ export function GlassSidebar() {
                   )}
                   title={isCollapsed ? item.name : undefined}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <div className="relative">
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    
+                    {/* Badge for novidades */}
+                    {item.id === 'novidades' && unreadCount > 0 && (
+                      <ChangelogBadge count={unreadCount} />
+                    )}
+                  </div>
+                  
                   {!isCollapsed && (
                     <span className="text-sm font-medium">
                       {item.name}
