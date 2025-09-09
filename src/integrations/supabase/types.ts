@@ -1434,6 +1434,10 @@ export type Database = {
         Args: { "": unknown }
         Returns: unknown
       }
+      is_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
       preview_apolices_filtradas: {
         Args: { p_ramo?: string; p_seguradora_id?: string; p_user_id: string }
         Returns: {
@@ -1458,6 +1462,10 @@ export type Database = {
           phone: string
           total_records: number
         }[]
+      }
+      promote_user_to_admin: {
+        Args: { user_email: string }
+        Returns: boolean
       }
       set_limit: {
         Args: { "": number }
