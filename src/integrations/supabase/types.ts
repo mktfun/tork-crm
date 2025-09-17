@@ -768,6 +768,45 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          action_type: string
+          attempted_access: Json | null
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          record_id: string | null
+          severity: string | null
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          attempted_access?: Json | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          severity?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          attempted_access?: Json | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          severity?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sheets_sync_logs: {
         Row: {
           created_at: string
@@ -1299,20 +1338,25 @@ export type Database = {
           claim_number: string | null
           claim_type: string | null
           client_id: string | null
-          cliente_name: string | null
+          client_name: string | null
+          client_phone: string | null
+          company_name: string | null
           created_at: string | null
           deductible_amount: number | null
           description: string | null
           documents_checklist: Json | null
           evidence_urls: string[] | null
           id: string | null
+          insurance_company: string | null
           location_occurrence: string | null
           occurrence_date: string | null
           payment_date: string | null
           police_report_number: string | null
           policy_id: string | null
+          policy_number: string | null
           priority: string | null
           producer_id: string | null
+          producer_name: string | null
           report_date: string | null
           resolution_date: string | null
           status: string | null
@@ -1320,6 +1364,20 @@ export type Database = {
           user_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "apolices_insurance_company_fkey"
+            columns: ["insurance_company"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apolices_insurance_company_fkey"
+            columns: ["insurance_company"]
+            isOneToOne: false
+            referencedRelation: "companies_with_ramos_count"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sinistros_brokerage_id_fkey"
             columns: ["brokerage_id"]
@@ -1357,19 +1415,12 @@ export type Database = {
         Returns: undefined
       }
       get_clientes_filtrados: {
-        Args:
-          | {
-              p_ramo?: string
-              p_search_term?: string
-              p_seguradora_id?: string
-              p_user_id: string
-            }
-          | {
-              p_ramo_id: string
-              p_search_term: string
-              p_seguradora_id: string
-            }
-          | { p_search_term: string; p_seguradora_id: string }
+        Args: {
+          p_ramo?: string
+          p_search_term?: string
+          p_seguradora_id?: string
+          p_user_id: string
+        }
         Returns: {
           address: string | null
           birth_date: string | null
