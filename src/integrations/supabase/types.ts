@@ -1299,24 +1299,20 @@ export type Database = {
           claim_number: string | null
           claim_type: string | null
           client_id: string | null
-          client_name: string | null
-          client_phone: string | null
+          cliente_name: string | null
           created_at: string | null
           deductible_amount: number | null
           description: string | null
           documents_checklist: Json | null
           evidence_urls: string[] | null
           id: string | null
-          insurance_company: string | null
           location_occurrence: string | null
           occurrence_date: string | null
           payment_date: string | null
           police_report_number: string | null
           policy_id: string | null
-          policy_number: string | null
           priority: string | null
           producer_id: string | null
-          producer_name: string | null
           report_date: string | null
           resolution_date: string | null
           status: string | null
@@ -1324,20 +1320,6 @@ export type Database = {
           user_id: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "apolices_insurance_company_fkey"
-            columns: ["insurance_company"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "apolices_insurance_company_fkey"
-            columns: ["insurance_company"]
-            isOneToOne: false
-            referencedRelation: "companies_with_ramos_count"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sinistros_brokerage_id_fkey"
             columns: ["brokerage_id"]
@@ -1389,11 +1371,26 @@ export type Database = {
             }
           | { p_search_term: string; p_seguradora_id: string }
         Returns: {
+          address: string | null
+          birth_date: string | null
+          cep: string | null
+          city: string | null
+          complement: string | null
+          cpf_cnpj: string | null
+          created_at: string
           email: string
           id: string
-          nome: string
+          marital_status: string | null
+          name: string
+          neighborhood: string | null
+          number: string | null
+          observations: string | null
           phone: string
-          total_seguros: number
+          profession: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
         }[]
       }
       get_empresas_com_metricas: {
