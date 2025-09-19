@@ -199,8 +199,11 @@ export function useGenericSupabaseMutation(config: MutationConfig) {
   return {
     // Functions
     addItem: addMutation.mutate,
+    addItemAsync: addMutation.mutateAsync,
     updateItem: updateMutation.mutate,
+    updateItemAsync: updateMutation.mutateAsync,
     deleteItem: deleteMutation.mutate,
+    deleteItemAsync: deleteMutation.mutateAsync,
     
     // Loading states
     isAdding: addMutation.isPending,

@@ -41,7 +41,7 @@ const clientMutationConfig = {
 
 export function QuickAddClientModal({ onClientCreated, triggerClassName }: QuickAddClientModalProps) {
   const [open, setOpen] = useState(false);
-  const { addItem, isAdding } = useGenericSupabaseMutation(clientMutationConfig);
+  const { addItemAsync, isAdding } = useGenericSupabaseMutation(clientMutationConfig);
 
   const form = useForm({
     resolver: zodResolver(quickClientSchema),
@@ -55,20 +55,23 @@ export function QuickAddClientModal({ onClientCreated, triggerClassName }: Quick
 
   const onSubmit = async (data: any) => {
     try {
-      addItem(data);
-      // Simulate success for immediate callback
-      setTimeout(() => {
-        onClientCreated({ 
-          id: `temp-${Date.now()}`, 
-          name: data.name,
-          email: data.email || '',
-          phone: data.phone || '',
-          status: data.status,
-          createdAt: new Date().toISOString()
+      // Use addItemAsync to get the actual created client data
+      const newClient = await addItemAsync(data) as any;
+      
+      if (newClient) {
+        // Chamar callback com o cliente real criado
+        onClientCreated({
+          id: newClient.id,
+          name: newClient.name,
+          email: newClient.email || '',
+          phone: newClient.phone || '',
+          status: newClient.status,
+          createdAt: newClient.created_at || new Date().toISOString()
         } as Client);
+        
         form.reset();
         setOpen(false);
-      }, 100);
+      }
     } catch (error) {
       console.error('Erro ao cadastrar cliente:', error);
     }
