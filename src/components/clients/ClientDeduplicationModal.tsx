@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Merge, Users, CheckCircle, Eye } from 'lucide-react';
 import { Client } from '@/types';
 import { useSupabaseClients } from '@/hooks/useSupabaseClients';
+import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
 import { MergePreview } from './MergePreview';
 import { toast } from 'sonner';
 
@@ -35,7 +36,14 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const [primaryClient, setPrimaryClient] = useState<Client | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { updateClient, deleteClient } = useSupabaseClients();
+  const { updateItem: updateClient, deleteItem: deleteClient } = useGenericSupabaseMutation({
+    tableName: 'clientes',
+    queryKey: 'clients',
+    onSuccessMessage: {
+      update: 'Cliente atualizado com sucesso',
+      delete: 'Cliente removido com sucesso'
+    }
+  });
 
   // Funções auxiliares melhoradas
   const normalizeName = (name: string): string => {
@@ -277,11 +285,11 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       });
 
       // Atualizar o cliente principal
-      await updateClient(primaryClient.id, mergedData);
+      updateClient({ id: primaryClient.id, ...mergedData });
 
       // Deletar os clientes secundários
       for (const client of secondaryClients) {
-        await deleteClient(client.id);
+        deleteClient(client.id);
       }
 
       // Remover o grupo processado

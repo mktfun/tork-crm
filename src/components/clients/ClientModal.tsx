@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSupabaseClients } from '@/hooks/useSupabaseClients';
+import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,9 +30,14 @@ interface FormData {
 
 export function ClientModal() {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { addClient } = useSupabaseClients();
+  const { addItem: addClient, isAdding } = useGenericSupabaseMutation({
+    tableName: 'clientes',
+    queryKey: 'clients',
+    onSuccessMessage: {
+      add: 'Cliente adicionado com sucesso'
+    }
+  });
   
   const { register, handleSubmit, reset } = useForm<FormData>({
     defaultValues: {
@@ -56,16 +61,32 @@ export function ClientModal() {
   });
 
   const onSubmit = async (data: FormData) => {
-    setIsSubmitting(true);
-    try {
-      await addClient(data);
-      reset();
-      setOpen(false);
-    } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Map form data to database format
+    const clientData = {
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      cpf_cnpj: data.cpfCnpj || null,
+      birth_date: data.birthDate || null,
+      marital_status: data.maritalStatus || null,
+      profession: data.profession || null,
+      status: data.status || 'Ativo',
+      cep: data.cep || null,
+      address: data.address || null,
+      number: data.number || null,
+      complement: data.complement || null,
+      neighborhood: data.neighborhood || null,
+      city: data.city || null,
+      state: data.state || null,
+      observations: data.observations || null,
+    };
+
+    addClient(clientData, {
+      onSuccess: () => {
+        reset();
+        setOpen(false);
+      }
+    });
   };
 
   return (
@@ -283,9 +304,9 @@ export function ClientModal() {
             <Button 
               type="submit" 
               className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={isSubmitting}
+              disabled={isAdding}
             >
-              {isSubmitting ? 'Salvando...' : 'Salvar Cliente'}
+              {isAdding ? 'Salvando...' : 'Salvar Cliente'}
             </Button>
           </DialogFooter>
         </form>

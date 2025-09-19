@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppCard } from '@/components/ui/app-card';
 import { Button } from '@/components/ui/button';
 import { useClients, usePolicies, useTransactions, useTransactionTypes } from '@/hooks/useAppData';
+import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
 import { Client, TransactionType } from '@/types';
 import { generateWhatsAppUrl } from '@/utils/whatsapp';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -16,7 +17,14 @@ import { ClientInteractionsHistory } from '@/components/clients/ClientInteractio
 export default function ClientDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { clients, updateClient, loading: clientsLoading } = useClients();
+  const { clients, loading: clientsLoading } = useClients();
+  const { updateItem: updateClient } = useGenericSupabaseMutation({
+    tableName: 'clientes',
+    queryKey: 'clients',
+    onSuccessMessage: {
+      update: 'Cliente atualizado com sucesso'
+    }
+  });
   const { policies, loading: policiesLoading } = usePolicies();
   const { transactions, loading: transactionsLoading } = useTransactions();
   const { transactionTypes } = useTransactionTypes();
@@ -38,7 +46,7 @@ export default function ClientDetails() {
 
   const handleSaveChanges = async () => {
     if (client && editedClient) {
-      await updateClient(client.id, editedClient);
+      updateClient({ id: client.id, ...editedClient });
       setClient(editedClient);
       setIsEditing(false);
     }

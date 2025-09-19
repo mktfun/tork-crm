@@ -10,7 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
-import { useClients, useAppointments } from '@/hooks/useAppData';
+import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
+import { useAppointments } from '@/hooks/useAppData';
 import { ColumnMappingTable } from './import/ColumnMappingTable';
 import { ImportPreview } from './import/ImportPreview';
 import { validateImportRow, filterValidRows, validateDate } from './import/ImportUtils';
@@ -37,7 +38,13 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { addClient } = useClients();
+  const { addItem: addClient } = useGenericSupabaseMutation({
+    tableName: 'clientes',
+    queryKey: 'clients',
+    onSuccessMessage: {
+      add: 'Cliente importado com sucesso'
+    }
+  });
   const { addAppointment } = useAppointments();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,9 +147,17 @@ export function ClientImportModal({ open, onOpenChange, onImportComplete }: Clie
         // Tentar criar cliente se tiver dados mínimos
         if (clientData.name && (clientData.email || clientData.phone)) {
           try {
-            const newClient = await addClient(clientData);
-            clientId = newClient.id;
-            // Client created successfully
+            addClient(clientData, {
+              onSuccess: (newClient) => {
+                clientId = newClient.id;
+                successCount++;
+              },
+              onError: (error) => {
+                console.error('Erro ao criar cliente:', error);
+                errorCount++;
+              }
+            });
+            // Client creation initiated
           } catch (error) {
             console.error('Erro ao criar cliente:', error);
             errorCount++;

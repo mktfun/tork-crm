@@ -10,13 +10,10 @@ import { useSupabaseBrokerages } from './useSupabaseBrokerages';
 import { useSupabaseProducers } from './useSupabaseProducers';
 
 export function useClients() {
-  const { clients, loading, addClient, updateClient, deleteClient, refetch } = useSupabaseClients();
+  const { clients, loading, refetch } = useSupabaseClients();
   
   return {
     clients,
-    addClient,
-    updateClient,
-    deleteClient,
     loading,
     error: null,
     refetch

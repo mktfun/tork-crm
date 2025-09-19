@@ -11,13 +11,19 @@ import { PersonalDataTab } from './form-tabs/PersonalDataTab';
 import { AddressContactTab } from './form-tabs/AddressContactTab';
 import { ObservationsTab } from './form-tabs/ObservationsTab';
 import { clientSchema, type ClientFormData } from '@/schemas/clientSchema';
-import { useClients } from '@/hooks/useAppData';
+import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
 import { toast } from 'sonner';
 
 export function NewClientModal() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
-  const { addClient } = useClients();
+  const { addItem: addClient } = useGenericSupabaseMutation({
+    tableName: 'clientes',
+    queryKey: 'clients',
+    onSuccessMessage: {
+      add: 'Cliente criado com sucesso'
+    }
+  });
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
