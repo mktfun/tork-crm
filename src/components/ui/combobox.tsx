@@ -61,13 +61,13 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-slate-900/95 backdrop-blur-lg border-slate-700">
+      <PopoverContent className="w-full p-0 bg-slate-900/95 backdrop-blur-lg border-slate-700 z-50">
         <Command className="bg-transparent">
           <CommandInput 
             placeholder={searchPlaceholder} 
             className="text-slate-50 placeholder:text-slate-400"
           />
-          <CommandList>
+          <CommandList className="max-h-60 overflow-y-auto">
             <CommandEmpty className="text-slate-400 py-6 text-center text-sm">
               {emptyText}
             </CommandEmpty>
