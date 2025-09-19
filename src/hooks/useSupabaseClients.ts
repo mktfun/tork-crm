@@ -143,7 +143,8 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm, filters
       };
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 30 * 1000, // 30 segundos - OTIMIZAÇÃO: Reduzido de 5 minutos
+    refetchOnWindowFocus: true, // OTIMIZAÇÃO: Atualiza se o usuário voltar para a aba
   });
 
   // 🚀 **MUTATIONS COM INVALIDAÇÃO AUTOMÁTICA**
@@ -228,7 +229,7 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm, filters
         throw new Error('Usuário não autenticado');
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('clientes')
         .update({
           name: updates.name,
@@ -248,21 +249,62 @@ export function useSupabaseClients({ pagination, sortConfig, searchTerm, filters
           state: updates.state || null,
           observations: updates.observations || null,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) {
         console.error('Erro ao atualizar cliente:', error);
         throw error;
       }
+
+      return data;
     },
-    onSuccess: () => {
+    // OTIMIZAÇÃO: Update Otimístico - UI atualiza instantaneamente
+    onMutate: async ({ id, updates }) => {
+      // Cancela qualquer refetch pendente para não sobrescrever nosso update otimista
+      await queryClient.cancelQueries({ queryKey: ['clients'] });
+
+      // Guarda o estado anterior em caso de erro (rollback)
+      const previousClientsData = queryClient.getQueryData(['clients', user?.id]);
+
+      // Atualiza o cache otimisticamente
+      queryClient.setQueryData(['clients', user?.id], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          clients: old.clients.map((client: Client) =>
+            client.id === id ? { ...client, ...updates } : client
+          )
+        };
+      });
+
+      // Também atualiza o cache de todos os clientes
+      queryClient.setQueryData(['all-clients', user?.id], (old: Client[]) => {
+        if (!old) return old;
+        return old.map((client: Client) =>
+          client.id === id ? { ...client, ...updates } : client
+        );
+      });
+      
+      return { previousClientsData };
+    },
+    // Se a mutação falhar, fazemos o rollback
+    onError: (err, { id }, context) => {
+      if (context?.previousClientsData) {
+        queryClient.setQueryData(['clients', user?.id], context.previousClientsData);
+      }
+      console.error('Erro inesperado ao atualizar cliente:', err);
+      toast.error('Erro inesperado ao atualizar cliente');
+    },
+    // Ao final, sempre revalida os dados para garantir consistência
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['all-clients'] });
-      toast.success('Cliente atualizado com sucesso!');
     },
-    onError: (error) => {
-      console.error('Erro inesperado ao atualizar cliente:', error);
-      toast.error('Erro inesperado ao atualizar cliente');
+    onSuccess: () => {
+      toast.success('Cliente atualizado com sucesso!');
     }
   });
 

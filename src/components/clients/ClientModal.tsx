@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useSupabaseClients } from '@/hooks/useSupabaseClients';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ interface FormData {
   phone: string;
   cpfCnpj: string;
   birthDate: string;
-  maritalStatus: string;
+  maritalStatus: 'Solteiro(a)' | 'Casado(a)' | 'Divorciado(a)' | 'Viúvo(a)' | '';
   profession: string;
   cep: string;
   address: string;
@@ -24,11 +25,14 @@ interface FormData {
   city: string;
   state: string;
   observations: string;
-  status: string;
+  status: 'Ativo' | 'Inativo';
 }
 
 export function ClientModal() {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { addClient } = useSupabaseClients();
   
   const { register, handleSubmit, reset } = useForm<FormData>({
     defaultValues: {
@@ -51,10 +55,17 @@ export function ClientModal() {
     }
   });
 
-  const onSubmit = (data: FormData) => {
-    console.log('Form data:', data);
-    reset();
-    setOpen(false);
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+    try {
+      await addClient(data);
+      reset();
+      setOpen(false);
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -272,8 +283,9 @@ export function ClientModal() {
             <Button 
               type="submit" 
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
             >
-              Salvar Cliente
+              {isSubmitting ? 'Salvando...' : 'Salvar Cliente'}
             </Button>
           </DialogFooter>
         </form>

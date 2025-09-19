@@ -5,11 +5,15 @@ import { Header } from '@/components/layout/Header';
 import { SearchCommand } from '@/components/SearchCommand';
 import { ModernMobileNav } from '@/components/layout/ModernMobileNav';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useRealtimeClients } from '@/hooks/useRealtimeClients';
 import { cn } from '@/lib/utils';
 
 export function RootLayout() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isMobile = useIsMobile();
+  
+  // 🚀 **REALTIME GLOBAL** - Ativo em toda a aplicação
+  useRealtimeClients();
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900">
