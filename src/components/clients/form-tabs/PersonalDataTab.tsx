@@ -235,6 +235,52 @@ export function PersonalDataTab({ form }: PersonalDataTabProps) {
           />
         </div>
 
+        {/* CONTAINER FLEX PARA TELEFONE E EMAIL - RESPONSIVO */}
+        <div className="md:col-span-2 flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="phone" className="text-white">Telefone *</FormLabel>
+                  <FormControl>
+                    <MaskedInput
+                      {...field}
+                      id="phone"
+                      mask="(99) 99999-9999"
+                      placeholder="(11) 99999-9999"
+                      className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="email" className="text-white">Email *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      placeholder="cliente@email.com"
+                      className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
         <div className="md:col-span-2">
           <FormField
             control={form.control}
@@ -400,51 +446,6 @@ export function PersonalDataTab({ form }: PersonalDataTabProps) {
           )}
         />
 
-        {/* CONTAINER FLEX PARA TELEFONE E EMAIL - RESPONSIVO */}
-        <div className="md:col-span-2 flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel htmlFor="phone" className="text-white">Telefone *</FormLabel>
-                  <FormControl>
-                    <MaskedInput
-                      {...field}
-                      id="phone"
-                      mask="(99) 99999-9999"
-                      placeholder="(11) 99999-9999"
-                      className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="flex-1">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel htmlFor="email" className="text-white">Email *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      id="email"
-                      type="email"
-                      placeholder="cliente@email.com"
-                      className="bg-black/20 border-white/20 text-white placeholder:text-white/50"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
       </div>
     </div>
   );
