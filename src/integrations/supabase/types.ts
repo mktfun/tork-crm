@@ -732,6 +732,7 @@ export type Database = {
           avatar_url: string | null
           birthday_message_template: string | null
           commission_settlement_days: number
+          commission_settlement_installments: number
           commission_settlement_strategy: string
           created_at: string
           email: string
@@ -748,6 +749,7 @@ export type Database = {
           avatar_url?: string | null
           birthday_message_template?: string | null
           commission_settlement_days?: number
+          commission_settlement_installments?: number
           commission_settlement_strategy?: string
           created_at?: string
           email: string
@@ -764,6 +766,7 @@ export type Database = {
           avatar_url?: string | null
           birthday_message_template?: string | null
           commission_settlement_days?: number
+          commission_settlement_installments?: number
           commission_settlement_strategy?: string
           created_at?: string
           email?: string
@@ -1664,6 +1667,10 @@ export type Database = {
         Returns: number
       }
       settle_due_commissions: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      settle_due_commissions_v2: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

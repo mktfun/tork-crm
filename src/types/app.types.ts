@@ -14,4 +14,5 @@ export interface Profile {
   settle_commissions_automatically?: boolean;
   commission_settlement_days?: number;
   commission_settlement_strategy?: 'first' | 'all' | 'custom';
+  commission_settlement_installments?: number;
 }
