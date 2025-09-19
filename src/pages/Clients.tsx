@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { User, Search, Loader2, ArrowUpDown, Grid3X3, List } from 'lucide-react';
+import { PrivacyToggle } from '@/components/ui/PrivacyToggle';
 import { useSupabaseClients } from '@/hooks/useSupabaseClients';
 import { useAllClients } from '@/hooks/useAllClients';
 import { usePolicies, useCompanies, useCompanyBranches } from '@/hooks/useAppData';
@@ -188,6 +189,7 @@ export default function Clients() {
           </p>
         </div>
         <div className="flex gap-3">
+          <PrivacyToggle />
           <Button 
             onClick={() => setIsImportModalOpen(true)}
             variant="outline"

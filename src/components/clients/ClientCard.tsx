@@ -5,6 +5,7 @@ import { MessageCircle, User, TrendingUp, FileText } from 'lucide-react';
 import { generateWhatsAppUrl } from '@/utils/whatsapp';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { usePrivacyStore } from '@/stores/usePrivacyStore';
 
 interface ClientWithStats {
   id: string;
@@ -25,6 +26,8 @@ interface ClientCardProps {
 
 export function ClientCard({ client }: ClientCardProps) {
   const navigate = useNavigate();
+  const { showValues } = usePrivacyStore();
+  const maskedValue = 'R$ •••••••';
 
   const handleWhatsAppClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,7 +78,7 @@ export function ClientCard({ client }: ClientCardProps) {
         {/* Linha 2: Prêmio Total */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-white/60">Prêmio Total</span>
-          <span className="font-semibold text-white">{formatCurrency(client.total_premium)}</span>
+          <span className="font-semibold text-white">{showValues ? formatCurrency(client.total_premium) : maskedValue}</span>
         </div>
 
         {/* Linha 3: Comissão Total (Destaque) */}
@@ -84,7 +87,7 @@ export function ClientCard({ client }: ClientCardProps) {
             <TrendingUp size={14} />
             <span className="font-medium">Comissão Total</span>
           </div>
-          <span className="font-bold text-emerald-400">{formatCurrency(client.total_commission)}</span>
+          <span className="font-bold text-emerald-400">{showValues ? formatCurrency(client.total_commission) : maskedValue}</span>
         </div>
       </div>
 
