@@ -91,6 +91,7 @@ export function AppointmentModal({
         status: 'Pendente',
         notes: formData.notes.trim() || undefined,
         priority: formData.priority,
+        is_recurring: !!recurrenceRule,
         recurrence_rule: recurrenceRule
       });
       
