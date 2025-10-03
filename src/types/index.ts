@@ -63,6 +63,11 @@ export interface Policy {
     id: string;
     name: string;
   };
+  // 🆕 DADOS DO RAMO PARA EXIBIÇÃO
+  ramos?: {
+    id: string;
+    nome: string;
+  };
   // 🆕 DADOS DO CLIENTE PARA EXIBIÇÃO
   client?: {
     id: string;

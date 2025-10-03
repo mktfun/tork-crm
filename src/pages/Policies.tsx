@@ -239,7 +239,7 @@ export default function Policies() {
                     
                     <div>
                       <p className="text-slate-400">Ramo</p>
-                      <p className="text-white">{policy.type || 'Não especificado'}</p>
+                      <p className="text-white">{(policy as any).ramos?.nome || policy.type || 'Não especificado'}</p>
                     </div>
                     
                     {producer && (
