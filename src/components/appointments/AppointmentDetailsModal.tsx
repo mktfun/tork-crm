@@ -147,10 +147,8 @@ export function AppointmentDetailsModal({ appointment, open, onOpenChange }: App
   const handleSaveRecurrence = async () => {
     setIsSavingRecurrence(true);
     try {
-      const originalStartTimestamptz = `${appointment.date}T${appointment.time}:00Z`;
       await updateAppointment(appointment.id, {
-        recurrence_rule: newRecurrenceRule,
-        original_start_timestamptz: newRecurrenceRule ? originalStartTimestamptz : null
+        recurrence_rule: newRecurrenceRule
       });
 
       toast({
