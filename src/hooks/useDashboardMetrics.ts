@@ -3,6 +3,7 @@ import { useClients, usePolicies, useTransactions, useAppointments } from '@/hoo
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { useProfile } from '@/hooks/useProfile';
 import { useBirthdayGreetings } from '@/hooks/useBirthdayGreetings';
+import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +12,9 @@ import { formatCurrency } from '@/utils/formatCurrency';
 import { format, differenceInDays, eachDayOfInterval, parseISO, isWithinInterval, isSameMonth, isSameYear, startOfDay, endOfDay, isAfter, isBefore } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useRealCommissionRates } from '@/hooks/useRealCommissionRates';
+
+// Helper: check if string is UUID
+const isUuid = (str: string): boolean => /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(str);
 
 interface UseDashboardMetricsProps {
   dateRange?: DateRange;
@@ -28,6 +32,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   const { clients, loading: clientsLoading } = useClients();
   const { transactions, loading: transactionsLoading } = useTransactions();
   const { getCompanyName } = useCompanyNames();
+  const { data: ramos = [] } = useSupabaseRamos();
 
   // Hook para taxas de comissão reais baseadas nos dados da corretora
   const {
@@ -367,12 +372,29 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.createdAt));
     }
     
+    // Build lookup maps for ramo names
+    const ramoById = new Map<string, string>();
+    const ramoByNormalizedName = new Map<string, string>();
+    
+    ramos.forEach(r => {
+      ramoById.set(r.id, r.nome);
+      ramoByNormalizedName.set(r.nome.toLowerCase().trim(), r.nome);
+    });
+    
     const branchData: { [key: string]: { count: number; value: number; commission: number; totalPolicies: any[] } } = {};
     
     filteredPolicies
       .filter(policy => policy.status === 'Ativa')
       .forEach(policy => {
-        const branch = (policy as any).ramos?.nome || policy.type || 'Não informado';
+        const t = policy.type || '';
+        
+        // Priority: 1) ramos.nome from JOIN, 2) UUID lookup, 3) Name normalization, 4) Fallback
+        const branch =
+          (policy as any).ramos?.nome
+          || (isUuid(t) ? ramoById.get(t) : undefined)
+          || (t ? ramoByNormalizedName.get(t.toLowerCase().trim()) : undefined)
+          || 'Não informado';
+        
         const value = policy.premiumValue || 0;
         const commission = calculateCommissionValue(value, policy.type || '');
 
