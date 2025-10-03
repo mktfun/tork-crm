@@ -13,6 +13,10 @@ Você tem acesso às seguintes ferramentas:
 - search_policies: Buscar apólices por número, cliente, seguradora ou status
 - get_financial_summary: Obter resumo financeiro de transações
 - analyze_renewals: Analisar apólices próximas ao vencimento
+- search_tasks: Buscar tarefas pendentes ou concluídas
+- get_upcoming_appointments: Ver próximos agendamentos
+- get_client_portfolio: Análise completa de um cliente específico
+- search_transactions: Buscar transações específicas
 
 Você deve:
 1. Responder em português brasileiro de forma clara e profissional
@@ -90,6 +94,79 @@ const TOOLS = [
         days_ahead: {
           type: "number",
           description: "Número de dias à frente para analisar (padrão: 30)"
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    name: "search_tasks",
+    description: "Busca tarefas (pendentes, concluídas ou todas). Pode filtrar por prioridade e tipo.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: {
+          type: "string",
+          description: "Status da tarefa: 'Pendente', 'Concluída' (opcional)"
+        },
+        priority: {
+          type: "string",
+          description: "Prioridade: 'Baixa', 'Média', 'Alta' (opcional)"
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    name: "get_upcoming_appointments",
+    description: "Lista próximos agendamentos em ordem cronológica",
+    parameters: {
+      type: "object",
+      properties: {
+        days_ahead: {
+          type: "number",
+          description: "Número de dias à frente (padrão: 7)"
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    name: "get_client_portfolio",
+    description: "Análise completa de um cliente: apólices, transações, agendamentos e histórico",
+    parameters: {
+      type: "object",
+      properties: {
+        client_id: {
+          type: "string",
+          description: "ID do cliente (UUID)"
+        }
+      },
+      required: ["client_id"]
+    }
+  },
+  {
+    type: "function",
+    name: "search_transactions",
+    description: "Busca transações por período, tipo, status ou descrição",
+    parameters: {
+      type: "object",
+      properties: {
+        start_date: {
+          type: "string",
+          description: "Data inicial (YYYY-MM-DD, opcional)"
+        },
+        end_date: {
+          type: "string",
+          description: "Data final (YYYY-MM-DD, opcional)"
+        },
+        status: {
+          type: "string",
+          description: "'PAGO', 'PENDENTE', 'VENCIDO' (opcional)"
+        },
+        nature: {
+          type: "string",
+          description: "'RECEITA' ou 'DESPESA' (opcional)"
         }
       }
     }
@@ -211,6 +288,155 @@ async function executeToolCall(toolName: string, args: any, userId: string) {
           success: true,
           data: data || [],
           message: `${data?.length || 0} apólices vencem nos próximos ${daysAhead} dias`
+        };
+      }
+
+      case 'search_tasks': {
+        let query = supabase
+          .from('tasks')
+          .select('id, title, description, status, priority, due_date, task_type')
+          .eq('user_id', userId)
+          .order('due_date', { ascending: true });
+
+        if (args.status) {
+          query = query.eq('status', args.status);
+        }
+        if (args.priority) {
+          query = query.eq('priority', args.priority);
+        }
+
+        const { data, error } = await query.limit(20);
+        if (error) throw error;
+
+        return {
+          success: true,
+          data: data || [],
+          message: `Encontradas ${data?.length || 0} tarefas`
+        };
+      }
+
+      case 'get_upcoming_appointments': {
+        const daysAhead = args.days_ahead || 7;
+        const today = new Date();
+        const futureDate = new Date();
+        futureDate.setDate(futureDate.getDate() + daysAhead);
+
+        const { data, error } = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            title,
+            date,
+            time,
+            status,
+            notes,
+            clientes!inner(name, phone)
+          `)
+          .eq('user_id', userId)
+          .gte('date', today.toISOString().split('T')[0])
+          .lte('date', futureDate.toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .order('time', { ascending: true });
+
+        if (error) throw error;
+
+        return {
+          success: true,
+          data: data || [],
+          message: `${data?.length || 0} agendamentos nos próximos ${daysAhead} dias`
+        };
+      }
+
+      case 'get_client_portfolio': {
+        const { client_id } = args;
+
+        // Buscar dados do cliente
+        const { data: client, error: clientError } = await supabase
+          .from('clientes')
+          .select('*')
+          .eq('id', client_id)
+          .eq('user_id', userId)
+          .single();
+
+        if (clientError) throw clientError;
+
+        // Buscar apólices do cliente
+        const { data: policies } = await supabase
+          .from('apolices')
+          .select('id, policy_number, status, expiration_date, premium_value, type')
+          .eq('client_id', client_id)
+          .eq('user_id', userId);
+
+        // Buscar transações relacionadas
+        const { data: transactions } = await supabase
+          .from('transactions')
+          .select('id, description, amount, status, nature, transaction_date')
+          .eq('client_id', client_id)
+          .eq('user_id', userId)
+          .order('transaction_date', { ascending: false })
+          .limit(10);
+
+        // Buscar agendamentos
+        const { data: appointments } = await supabase
+          .from('appointments')
+          .select('id, title, date, time, status')
+          .eq('client_id', client_id)
+          .eq('user_id', userId)
+          .order('date', { ascending: false })
+          .limit(5);
+
+        return {
+          success: true,
+          data: {
+            client,
+            policies: policies || [],
+            transactions: transactions || [],
+            appointments: appointments || [],
+            summary: {
+              total_policies: policies?.length || 0,
+              active_policies: policies?.filter(p => p.status === 'Ativa').length || 0,
+              total_premium: policies?.reduce((sum, p) => sum + Number(p.premium_value || 0), 0) || 0
+            }
+          },
+          message: `Portfólio completo do cliente ${client.name}`
+        };
+      }
+
+      case 'search_transactions': {
+        let query = supabase
+          .from('transactions')
+          .select('id, description, amount, status, nature, transaction_date, due_date')
+          .eq('user_id', userId)
+          .order('transaction_date', { ascending: false });
+
+        if (args.start_date) {
+          query = query.gte('transaction_date', args.start_date);
+        }
+        if (args.end_date) {
+          query = query.lte('transaction_date', args.end_date);
+        }
+        if (args.status) {
+          query = query.eq('status', args.status);
+        }
+        if (args.nature) {
+          query = query.eq('nature', args.nature);
+        }
+
+        const { data, error } = await query.limit(20);
+        if (error) throw error;
+
+        const summary = (data || []).reduce((acc, t) => {
+          acc.total += Number(t.amount);
+          if (t.nature === 'RECEITA') acc.revenue += Number(t.amount);
+          else acc.expenses += Number(t.amount);
+          return acc;
+        }, { total: 0, revenue: 0, expenses: 0 });
+
+        return {
+          success: true,
+          data: data || [],
+          summary,
+          message: `Encontradas ${data?.length || 0} transações`
         };
       }
 

@@ -1,11 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, X } from 'lucide-react';
+import { Send, Bot, User, Loader2, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+
+const QUICK_QUESTIONS = [
+  "Quais apólices vencem este mês?",
+  "Mostre minhas tarefas pendentes",
+  "Resumo financeiro do mês",
+  "Próximos agendamentos da semana",
+  "Clientes com mais apólices ativas"
+];
 
 interface Message {
   role: 'user' | 'assistant';
@@ -22,6 +31,7 @@ export function AIAssistant() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -43,6 +53,7 @@ export function AIAssistant() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setIsTyping(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
@@ -57,12 +68,16 @@ export function AIAssistant() {
 
       if (error) throw error;
 
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.message
-      };
+      // Simular typing por um breve momento
+      setTimeout(() => {
+        setIsTyping(false);
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: data.message
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }, 500);
 
-      setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error calling AI assistant:', error);
       toast({
@@ -75,7 +90,13 @@ export function AIAssistant() {
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
+      setIsTyping(false);
     }
+  };
+
+  const handleQuickQuestion = (question: string) => {
+    setInput(question);
+    setTimeout(() => sendMessage(), 100);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -89,21 +110,23 @@ export function AIAssistant() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:scale-110 transition-transform z-50"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:scale-110 transition-transform z-50 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
         size="icon"
       >
-        <Bot className="h-6 w-6" />
+        <Sparkles className="h-6 w-6 animate-pulse" />
       </Button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-[400px] h-[600px] bg-background border rounded-lg shadow-2xl flex flex-col z-50">
+    <div className="fixed bottom-6 right-6 w-[400px] h-[650px] bg-background border rounded-lg shadow-2xl flex flex-col z-50">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-600/10 to-blue-600/10">
         <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Assistente Virtual</h3>
+          <div className="p-1.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full">
+            <Sparkles className="h-4 w-4 text-white" />
+          </div>
+          <h3 className="font-semibold">Assistente IA</h3>
         </div>
         <Button
           variant="ghost"
@@ -115,6 +138,25 @@ export function AIAssistant() {
         </Button>
       </div>
 
+      {/* Quick Questions - Only show when no messages yet */}
+      {messages.length === 1 && (
+        <div className="p-4 border-b bg-muted/30">
+          <p className="text-xs text-muted-foreground mb-2">Perguntas rápidas:</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_QUESTIONS.map((question, idx) => (
+              <Badge
+                key={idx}
+                variant="outline"
+                className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
+                onClick={() => handleQuickQuestion(question)}
+              >
+                {question}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
@@ -123,11 +165,11 @@ export function AIAssistant() {
               key={index}
               className={`flex gap-3 ${
                 message.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
+              } animate-in fade-in slide-in-from-bottom-2 duration-300`}
             >
               {message.role === 'assistant' && (
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-primary" />
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-purple-600/20 to-blue-600/20 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-purple-600" />
                 </div>
               )}
               <div
@@ -146,13 +188,15 @@ export function AIAssistant() {
               )}
             </div>
           ))}
-          {isLoading && (
-            <div className="flex gap-3 justify-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="h-4 w-4 text-primary" />
+          {isTyping && (
+            <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-purple-600/20 to-blue-600/20 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-purple-600" />
               </div>
-              <div className="rounded-lg px-4 py-2 bg-muted">
-                <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="rounded-lg px-4 py-2 bg-muted flex items-center gap-1">
+                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
