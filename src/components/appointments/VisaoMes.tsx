@@ -21,7 +21,7 @@ export function VisaoMes({ appointments, onDateClick, onEventClick }: VisaoMesPr
       clientId: apt.client_id,
       policyId: apt.policy_id,
       status: apt.status,
-      isRecurring: apt.is_recurring,
+      recurrenceRule: apt.recurrence_rule,
       notes: apt.notes,
       time: apt.time
     }
