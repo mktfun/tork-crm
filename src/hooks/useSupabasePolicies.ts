@@ -78,6 +78,9 @@ export function useSupabasePolicies() {
     mutationFn: async (policyData: Omit<Policy, 'id' | 'createdAt'>) => {
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Check if type is UUID (ramo_id) for proper field mapping
+      const isRamoUuid = policyData.type && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(policyData.type);
+      
       const { data, error } = await supabase
         .from('apolices')
         .insert([
@@ -87,6 +90,7 @@ export function useSupabasePolicies() {
             policy_number: policyData.policyNumber || null,
             insurance_company: policyData.insuranceCompany,
             type: policyData.type,
+            ramo_id: isRamoUuid ? policyData.type : null,
             insured_asset: policyData.insuredAsset || null,
             premium_value: policyData.premiumValue,
             commission_rate: policyData.commissionRate,
@@ -167,7 +171,13 @@ export function useSupabasePolicies() {
       if (updates.clientId) updateData.client_id = updates.clientId;
       if (updates.policyNumber) updateData.policy_number = updates.policyNumber;
       if (updates.insuranceCompany) updateData.insurance_company = updates.insuranceCompany;
-      if (updates.type) updateData.type = updates.type;
+      if (updates.type) {
+        updateData.type = updates.type;
+        // If type is UUID, also update ramo_id
+        if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i.test(updates.type)) {
+          updateData.ramo_id = updates.type;
+        }
+      }
       if (updates.insuredAsset !== undefined) updateData.insured_asset = updates.insuredAsset;
       if (updates.premiumValue !== undefined) updateData.premium_value = updates.premiumValue;
       if (updates.commissionRate !== undefined) updateData.commission_rate = updates.commissionRate;
