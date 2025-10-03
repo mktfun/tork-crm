@@ -120,7 +120,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     // Comissões REALIZADAS por produtor baseadas nas transações
     const isCommissionTx = (t: any) => {
       const desc = (t.description || '').toLowerCase();
-      return t.nature === 'RECEITA' && (desc.includes('comiss') || !!t.policy_id || !!t.policyId);
+      return (['GANHO', 'RECEITA'].includes(t.nature)) && (desc.includes('comiss') || !!t.policy_id || !!t.policyId);
     };
 
     transacoesFiltradas.filter(isCommissionTx).forEach(tx => {

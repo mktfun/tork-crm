@@ -139,7 +139,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     const comissaoTotal = filteredTransactions
       .filter(t => {
         const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
-        const isGanho = t.nature === 'GANHO';
+      const isGanho = ['GANHO', 'RECEITA'].includes(t.nature);
         return isRealizado && isGanho;
       })
       .reduce((sum, t) => sum + t.amount, 0);

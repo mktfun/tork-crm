@@ -1,19 +1,26 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 export function BackfillCommissionsButton() {
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleBackfill = async () => {
+    if (!user) {
+      toast.error('Você precisa estar logado para executar esta operação');
+      return;
+    }
+
     setIsLoading(true);
     try {
       console.log('🚀 Iniciando backfill de comissões...');
       
       const { data, error } = await supabase.functions.invoke('backfill-commissions', {
-        body: {}
+        body: { userId: user.id }
       });
 
       if (error) {

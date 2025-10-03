@@ -11,6 +11,7 @@ interface TransactionFilters {
   pageSize: number;
   dateRange?: DateRange;
   clientId?: string | null;
+  nature?: 'receita' | 'despesa';
 }
 
 interface TransactionMetrics {
@@ -54,7 +55,7 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
         query = query.gte('date', from).lte('date', to);
       } else if (filters.period !== 'all') {
         const now = new Date();
-        let startDate: Date;
+        let startDate: Date | undefined;
 
         switch (filters.period) {
           case 'current-month':
@@ -135,7 +136,7 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
         metricsQuery = metricsQuery.gte('date', from).lte('date', to);
       } else if (filters.period !== 'all') {
         const now = new Date();
-        let startDate: Date;
+        let startDate: Date | undefined;
 
         switch (filters.period) {
           case 'current-month':
@@ -159,6 +160,14 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
                                       .lte('date', endLastYear.toISOString().split('T')[0]);
             break;
         }
+      }
+
+      // 🔧 FILTRO DE NATURE - Resiliência para RECEITA/DESPESA e GANHO/PERDA
+      if (filters.nature) {
+        const natureValues = filters.nature === 'receita'
+          ? ['GANHO', 'RECEITA']
+          : ['PERDA', 'DESPESA'];
+        query = query.in('nature', natureValues);
       }
 
       if (filters.companyId !== 'all') {
@@ -185,15 +194,15 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
         const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount;
         
         if (transaction.status === 'REALIZADO' || transaction.status === 'PAGO') {
-          if (transaction.nature === 'GANHO') {
+          if (['GANHO', 'RECEITA'].includes(transaction.nature)) {
             totalGanhos += amount;
-          } else if (transaction.nature === 'PERDA') {
+          } else if (['PERDA', 'DESPESA'].includes(transaction.nature)) {
             totalPerdas += amount;
           }
         } else if (transaction.status === 'PREVISTO' || transaction.status === 'PENDENTE' || transaction.status === 'PARCIALMENTE_PAGO') {
-          if (transaction.nature === 'GANHO') {
+          if (['GANHO', 'RECEITA'].includes(transaction.nature)) {
             totalPrevisto += amount;
-          } else if (transaction.nature === 'PERDA') {
+          } else if (['PERDA', 'DESPESA'].includes(transaction.nature)) {
             totalPrevisto -= amount;
           }
         }
@@ -244,10 +253,10 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
 
     let updateQuery = supabase
       .from('transactions')
-      .update({ status: 'PAGO' })
+      .update({ status: 'PAGO', paid_date: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('status', 'PENDENTE')
-      .eq('nature', 'GANHO')
+      .in('nature', ['GANHO', 'RECEITA'])
       .not('policy_id', 'is', null);
 
     if (filters.dateRange?.from && filters.dateRange?.to) {

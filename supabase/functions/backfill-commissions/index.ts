@@ -1,6 +1,3 @@
-// 🔄 Edge Function para Backfill de Comissões Retroativas
-// Esta função processa todas as apólices ativas sem transação de comissão e gera automaticamente
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -14,89 +11,97 @@ interface Policy {
   premium_value: number;
   commission_rate: number;
   expiration_date: string;
+  start_date: string;
   producer_id?: string;
   brokerage_id?: number;
-  status: string;
 }
 
+// 🔧 Função robusta para obter o ID do tipo de transação "Comissão"
 async function getCommissionTypeId(supabaseClient: any, userId: string): Promise<string | null> {
   const { data, error } = await supabaseClient
     .from('transaction_types')
     .select('id')
     .eq('user_id', userId)
     .eq('name', 'Comissão')
-    .eq('nature', 'GANHO')
-    .maybeSingle();
+    .order('created_at', { ascending: true })
+    .limit(1);
 
   if (error) {
-    console.error('❌ Erro ao buscar tipo de transação:', error);
-    return null;
+    console.error(`❌ Erro ao buscar tipo 'Comissão':`, error.message);
+    throw new Error(`Erro ao buscar tipo 'Comissão': ${error.message}`);
   }
-
-  return data?.id || null;
+  
+  if (data && data.length > 0) {
+    console.log(`✅ Tipo "Comissão" encontrado:`, data[0].id);
+    return data[0].id;
+  }
+  
+  console.warn(`⚠️ Tipo "Comissão" não encontrado para o usuário ${userId}`);
+  return null;
 }
 
-async function generateCommissionTransaction(supabaseClient: any, policy: Policy) {
-  console.log(`💰 Processando apólice: ${policy.policy_number}`);
-
-  // 1. Verificar se já existe transação de comissão
-  const { data: existingTransaction } = await supabaseClient
+// 💰 Função para gerar transação de comissão
+async function generateCommissionTransaction(supabaseClient: any, policy: Policy, commissionTypeId: string) {
+  console.log(`🔍 Verificando apólice ${policy.policy_number}...`);
+  
+  // 1. Verificar se já existe uma transação para esta apólice
+  const { data: existingTransaction, error: checkError } = await supabaseClient
     .from('transactions')
     .select('id')
     .eq('policy_id', policy.id)
-    .eq('nature', 'GANHO')
+    .in('nature', ['RECEITA', 'GANHO']) // Verifica ambos os padrões
+    .limit(1)
     .maybeSingle();
 
+  if (checkError && checkError.code !== 'PGRST116') {
+    console.error(`❌ Erro ao verificar transação para apólice ${policy.id}:`, checkError.message);
+    return { status: 'error', message: checkError.message };
+  }
+
   if (existingTransaction) {
-    console.log(`⚠️ Comissão já existe para apólice ${policy.policy_number}`);
-    return { status: 'skipped', reason: 'already_exists' };
+    console.log(`⏭️ Transação já existe para apólice ${policy.policy_number}`);
+    return { status: 'skipped', message: 'Transação já existe' };
   }
 
-  // 2. Obter o tipo de transação de comissão
-  const commissionTypeId = await getCommissionTypeId(supabaseClient, policy.user_id);
-  
-  if (!commissionTypeId) {
-    console.error(`❌ Tipo de transação "Comissão" não encontrado para usuário ${policy.user_id}`);
-    return { status: 'error', reason: 'no_commission_type' };
-  }
-
-  // 3. Calcular valor da comissão
-  const commissionAmount = (policy.premium_value * policy.commission_rate) / 100;
+  // 2. Calcular comissão
+  const commissionPercentage = (policy.commission_rate || 0) / 100;
+  const commissionAmount = (policy.premium_value || 0) * commissionPercentage;
 
   if (commissionAmount <= 0) {
-    console.log(`⚠️ Valor de comissão zero ou negativo para apólice ${policy.policy_number}`);
-    return { status: 'skipped', reason: 'zero_commission' };
+    console.log(`⚠️ Comissão zero para apólice ${policy.policy_number}`);
+    return { status: 'skipped', message: 'Comissão zero' };
   }
 
-  // 4. Criar transação de comissão
-  const { error } = await supabaseClient
+  // 3. Inserir a nova transação (respeitando o CHECK constraint - RECEITA)
+  const { error: insertError } = await supabaseClient
     .from('transactions')
     .insert({
       user_id: policy.user_id,
-      client_id: policy.client_id,
       policy_id: policy.id,
-      type_id: commissionTypeId,
-      description: `Comissão da apólice ${policy.policy_number} (Retroativa)`,
-      amount: commissionAmount,
-      date: new Date().toISOString().split('T')[0],
-      transaction_date: new Date().toISOString().split('T')[0],
-      due_date: policy.expiration_date,
-      status: 'PENDENTE',
-      nature: 'GANHO',
+      client_id: policy.client_id,
       company_id: policy.insurance_company,
-      brokerage_id: policy.brokerage_id,
-      producer_id: policy.producer_id
+      producer_id: policy.producer_id || null,
+      brokerage_id: policy.brokerage_id || null,
+      amount: commissionAmount,
+      date: policy.start_date || new Date().toISOString().split('T')[0],
+      transaction_date: policy.start_date || new Date().toISOString().split('T')[0],
+      due_date: policy.expiration_date,
+      description: `Comissão (Retroativa) Apólice ${policy.policy_number}`,
+      type_id: commissionTypeId,
+      nature: 'RECEITA', // 🔧 CORRIGIDO: usar RECEITA para respeitar o CHECK constraint
+      status: 'PENDENTE',
     });
 
-  if (error) {
-    console.error(`❌ Erro ao criar transação para apólice ${policy.policy_number}:`, error.message);
-    return { status: 'error', reason: error.message };
+  if (insertError) {
+    console.error(`❌ Erro ao criar transação para apólice ${policy.id}:`, insertError.message);
+    return { status: 'error', message: insertError.message };
   }
 
   console.log(`✅ Comissão criada para apólice ${policy.policy_number}: R$ ${commissionAmount.toFixed(2)}`);
   return { status: 'success', amount: commissionAmount };
 }
 
+// 🚀 Handler principal
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -105,33 +110,49 @@ serve(async (req) => {
 
   try {
     console.log('🚀 Iniciando backfill de comissões...');
+    
+    // Ler userId do body
+    const body = await req.json();
+    const userId = body?.userId;
+
+    if (!userId) {
+      throw new Error("userId é obrigatório no corpo da requisição.");
+    }
+
+    console.log(`👤 Executando backfill para usuário: ${userId}`);
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // 1. Buscar todas as apólices ativas
-    const { data: activePolicies, error: policiesError } = await supabaseAdmin
+    // 1. Obter o tipo de comissão
+    const commissionTypeId = await getCommissionTypeId(supabaseAdmin, userId);
+    
+    if (!commissionTypeId) {
+      throw new Error("O tipo de transação 'Comissão' não foi encontrado para este usuário. Crie-o manualmente antes de rodar o backfill.");
+    }
+
+    console.log(`✅ Usando tipo de comissão: ${commissionTypeId}`);
+
+    // 2. Buscar todas as apólices ativas do usuário
+    const { data: policies, error: policiesError } = await supabaseAdmin
       .from('apolices')
       .select('*')
-      .eq('status', 'Ativa');
+      .eq('user_id', userId)
+      .eq('status', 'Ativa')
+      .order('created_at', { ascending: false });
 
     if (policiesError) {
       console.error('❌ Erro ao buscar apólices:', policiesError);
       throw policiesError;
     }
 
-    if (!activePolicies || activePolicies.length === 0) {
+    if (!policies || policies.length === 0) {
       return new Response(
         JSON.stringify({ 
-          message: "Nenhuma apólice ativa encontrada.",
-          summary: {
-            total: 0,
-            success: 0,
-            skipped: 0,
-            errors: 0
-          }
+          message: "Nenhuma apólice ativa encontrada para este usuário.",
+          summary: { total: 0, success: 0, skipped: 0, errors: 0 }
         }), 
         { 
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -140,17 +161,23 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📊 Total de apólices ativas encontradas: ${activePolicies.length}`);
+    console.log(`📋 Encontradas ${policies.length} apólices ativas`);
 
-    // 2. Processar cada apólice
+    // 3. Processar cada apólice
     let successCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
-    const results = [];
+    const details: any[] = [];
 
-    for (const policy of activePolicies) {
-      const result = await generateCommissionTransaction(supabaseAdmin, policy);
+    for (const policy of policies) {
+      const result = await generateCommissionTransaction(supabaseAdmin, policy as Policy, commissionTypeId);
       
+      details.push({
+        policyId: policy.id,
+        policyNumber: policy.policy_number,
+        ...result
+      });
+
       if (result.status === 'success') {
         successCount++;
       } else if (result.status === 'skipped') {
@@ -158,47 +185,39 @@ serve(async (req) => {
       } else {
         errorCount++;
       }
-
-      results.push({
-        policyNumber: policy.policy_number,
-        ...result
-      });
     }
 
     const summary = {
-      total: activePolicies.length,
+      total: policies.length,
       success: successCount,
       skipped: skippedCount,
       errors: errorCount
     };
 
-    console.log('📊 === RESUMO DO BACKFILL ===');
-    console.log(`Total de apólices processadas: ${summary.total}`);
-    console.log(`✅ Comissões criadas: ${summary.success}`);
-    console.log(`⏭️ Puladas (já existiam): ${summary.skipped}`);
-    console.log(`❌ Erros: ${summary.errors}`);
+    console.log('📊 Resumo do backfill:', summary);
 
     return new Response(
       JSON.stringify({ 
-        message: "Backfill de comissões concluído com sucesso!",
+        message: 'Backfill de comissões concluído com sucesso!',
         summary,
-        details: results
+        details
       }), 
-      {
+      { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+        status: 200
       }
     );
-  } catch (error) {
-    console.error('❌ Erro fatal no backfill:', error);
+
+  } catch (error: any) {
+    console.error("💥 Erro fatal no backfill:", error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        details: error.stack
+        details: 'Verifique os logs para mais informações'
       }), 
-      {
+      { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 500
       }
     );
   }

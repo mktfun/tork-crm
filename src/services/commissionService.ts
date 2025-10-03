@@ -64,22 +64,49 @@ export async function ensureDefaultTransactionTypes(userId: string) {
   }
 }
 
-// Function to get the commission transaction type ID for a user
-export async function getCommissionTypeId(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
+// 🔧 Função robusta para obter ou criar o ID do tipo de transação "Comissão"
+export async function getCommissionTypeId(userId: string): Promise<string> {
+  console.log('🔍 Buscando tipo de transação "Comissão" para usuário:', userId);
+  
+  // 1. Tenta buscar o tipo de forma determinística
+  const { data: existingType, error: fetchError } = await supabase
     .from('transaction_types')
     .select('id')
     .eq('user_id', userId)
     .eq('name', 'Comissão')
-    .eq('nature', 'GANHO')
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle();
 
-  if (error) {
-    console.error('Error fetching commission type:', error);
-    return null;
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    console.error('❌ Erro ao buscar tipo de transação:', fetchError);
+    throw new Error(`Erro ao buscar tipo de transação: ${fetchError.message}`);
   }
 
-  return data?.id || null;
+  if (existingType) {
+    console.log('✅ Tipo "Comissão" encontrado:', existingType.id);
+    return existingType.id;
+  }
+
+  // 2. Se não existir, cria
+  console.log("📝 Tipo 'Comissão' não encontrado. Criando um novo...");
+  const { data: newType, error: createError } = await supabase
+    .from('transaction_types')
+    .insert({
+      user_id: userId,
+      name: 'Comissão',
+      nature: 'GANHO', // Em transaction_types, a natureza é conceitual
+    })
+    .select('id')
+    .single();
+
+  if (createError) {
+    console.error('❌ Erro ao criar tipo de transação:', createError);
+    throw new Error(`Erro ao criar tipo de transação: ${createError.message}`);
+  }
+
+  console.log('✅ Novo tipo "Comissão" criado:', newType.id);
+  return newType.id;
 }
 
 // 🎯 **FUNÇÃO CENTRALIZADA ÚNICA** - Function to generate commission transaction for a policy
@@ -88,16 +115,21 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
   
   if (!policy.userId) {
     console.error('❌ No user ID found for policy');
-    return;
+    throw new Error('Apólice ou ID do usuário inválido.');
   }
 
   // 🛡️ **VERIFICAÇÃO ANTI-DUPLICATA** - Check if commission already exists for this policy
-  const { data: existingTransaction } = await supabase
+  const { data: existingTransaction, error: checkError } = await supabase
     .from('transactions')
     .select('id')
     .eq('policy_id', policy.id)
-    .eq('nature', 'RECEITA')
+    .in('nature', ['RECEITA', 'GANHO']) // Verifica ambos os padrões
     .maybeSingle();
+
+  if (checkError && checkError.code !== 'PGRST116') {
+    console.error('❌ Erro ao verificar transação existente:', checkError);
+    throw checkError;
+  }
 
   if (existingTransaction) {
     console.log('⚠️ Commission transaction already exists for policy:', policy.policyNumber);
@@ -109,7 +141,7 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
   
   if (!commissionTypeId) {
     console.error('❌ No commission transaction type found for user');
-    return;
+    throw new Error('Tipo de transação "Comissão" não encontrado');
   }
 
   // Calculate commission amount
@@ -117,10 +149,10 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
   
   if (commissionAmount <= 0) {
     console.log('⚠️ Commission amount is zero or negative, skipping transaction creation');
-    return;
+    return null;
   }
 
-  // 🎯 **CRIAÇÃO ÚNICA DA COMISSÃO**
+  // 🎯 **CRIAÇÃO ÚNICA DA COMISSÃO** - Respeita o CHECK constraint do banco (RECEITA)
   const { data, error } = await supabase
     .from('transactions')
     .insert({
@@ -134,7 +166,7 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
       transaction_date: new Date().toISOString().split('T')[0],
       due_date: policy.expirationDate,
       status: 'PENDENTE',
-      nature: 'GANHO',
+      nature: 'RECEITA', // 🔧 CORRIGIDO: usar RECEITA para respeitar o CHECK constraint
       company_id: policy.insuranceCompany,
       brokerage_id: policy.brokerageId,
       producer_id: policy.producerId
