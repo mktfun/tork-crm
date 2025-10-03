@@ -152,8 +152,11 @@ export type Database = {
           date: string
           id: string
           notes: string | null
+          original_start_timestamptz: string | null
+          parent_appointment_id: string | null
           policy_id: string | null
           priority: string | null
+          recurrence_rule: string | null
           status: string
           time: string
           title: string
@@ -166,8 +169,11 @@ export type Database = {
           date: string
           id?: string
           notes?: string | null
+          original_start_timestamptz?: string | null
+          parent_appointment_id?: string | null
           policy_id?: string | null
           priority?: string | null
+          recurrence_rule?: string | null
           status?: string
           time: string
           title: string
@@ -180,8 +186,11 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
+          original_start_timestamptz?: string | null
+          parent_appointment_id?: string | null
           policy_id?: string | null
           priority?: string | null
+          recurrence_rule?: string | null
           status?: string
           time?: string
           title?: string
@@ -201,6 +210,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients_with_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_parent_appointment_id_fkey"
+            columns: ["parent_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
           {

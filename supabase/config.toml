@@ -1,1 +1,4 @@
 project_id = "jaouwhckqqnaxqyfvgyq"
+
+[functions.create-next-appointment]
+verify_jwt = false

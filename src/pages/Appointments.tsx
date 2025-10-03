@@ -88,7 +88,7 @@ export default function Appointments() {
           client_id: apt.client_id,
           policy_id: apt.policy_id,
           notes: apt.notes,
-          is_recurring: apt.is_recurring,
+          recurrence_rule: apt.recurrence_rule,
           parent_appointment_id: apt.parent_appointment_id
         },
         backgroundColor: colors.backgroundColor,
