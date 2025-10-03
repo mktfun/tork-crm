@@ -7,10 +7,11 @@ import { Calendar, Clock, User, FileText, CheckCircle, RotateCcw, X } from 'luci
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useClients } from '@/hooks/useAppData';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RecurrenceConfig } from './RecurrenceConfig';
 import { AppCard } from '@/components/ui/app-card';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppointmentDetailsModalProps {
   appointment: any;
@@ -23,7 +24,7 @@ export function AppointmentDetailsModal({ appointment, open, onOpenChange }: App
   const [isCanceling, setIsCanceling] = useState(false);
   const [showRecurrenceConfig, setShowRecurrenceConfig] = useState(false);
   const [recurrenceRule, setRecurrenceRule] = useState<string | null>(appointment?.recurrence_rule || null);
-  const { updateAppointment, addAppointment } = useSupabaseAppointments();
+  const { updateAppointment } = useSupabaseAppointments();
   const { clients } = useClients();
   const { toast } = useToast();
 
@@ -34,59 +35,35 @@ export function AppointmentDetailsModal({ appointment, open, onOpenChange }: App
   const isCanceled = appointment.status === 'Cancelado';
   const isPending = appointment.status === 'Pendente';
 
-  const calculateNextDate = (currentDate: string, currentTime: string, rule: string) => {
-    const baseDate = new Date(`${currentDate}T${currentTime}`);
-    
-    if (rule.includes('FREQ=DAILY')) {
-      const interval = rule.match(/INTERVAL=(\d+)/);
-      return addDays(baseDate, interval ? parseInt(interval[1]) : 1);
-    } else if (rule.includes('FREQ=WEEKLY')) {
-      const interval = rule.match(/INTERVAL=(\d+)/);
-      return addWeeks(baseDate, interval ? parseInt(interval[1]) : 1);
-    } else if (rule.includes('FREQ=MONTHLY')) {
-      const interval = rule.match(/INTERVAL=(\d+)/);
-      return addMonths(baseDate, interval ? parseInt(interval[1]) : 1);
-    } else if (rule.includes('FREQ=YEARLY')) {
-      const interval = rule.match(/INTERVAL=(\d+)/);
-      return addYears(baseDate, interval ? parseInt(interval[1]) : 1);
-    }
-    
-    return addYears(baseDate, 1);
-  };
-
   const handleConcluirAgendamento = async () => {
     if (!isPending) return;
 
     setIsCompleting(true);
     try {
+      // Atualiza o status do agendamento
       await updateAppointment(appointment.id, {
         status: 'Realizado',
         recurrence_rule: recurrenceRule
       });
 
-      if (recurrenceRule) {
-        const nextDate = calculateNextDate(appointment.date, appointment.time, recurrenceRule);
-        
-        await addAppointment({
-          client_id: appointment.client_id,
-          policy_id: appointment.policy_id,
-          title: appointment.title,
-          date: format(nextDate, 'yyyy-MM-dd'),
-          time: format(nextDate, 'HH:mm'),
-          status: 'Pendente',
-          notes: appointment.notes,
-          recurrence_rule: recurrenceRule,
-          parent_appointment_id: appointment.id
-        });
+      // Chama a Edge Function para processar a recorrência no backend
+      const { error: functionError } = await supabase.functions.invoke('process-appointment-completion', {
+        body: { appointmentId: appointment.id },
+      });
 
+      if (functionError) {
+        console.error('Erro ao processar recorrência:', functionError);
         toast({
-          title: "Sucesso",
-          description: "Agendamento concluído e próximo agendamento criado!"
+          title: "Aviso",
+          description: "Agendamento concluído, mas houve um erro ao criar o próximo agendamento.",
+          variant: "destructive"
         });
       } else {
         toast({
           title: "Sucesso",
-          description: "Agendamento marcado como realizado!"
+          description: recurrenceRule 
+            ? "Agendamento concluído e próximo agendamento criado!"
+            : "Agendamento marcado como realizado!"
         });
       }
 

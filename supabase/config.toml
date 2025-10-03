@@ -1,1 +1,4 @@
 project_id = "jaouwhckqqnaxqyfvgyq"
+
+[functions.process-appointment-completion]
+verify_jwt = false
