@@ -151,12 +151,9 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          is_recurring: boolean | null
           notes: string | null
-          parent_appointment_id: string | null
           policy_id: string | null
           priority: string | null
-          recurrence_rule: string | null
           status: string
           time: string
           title: string
@@ -168,12 +165,9 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
-          is_recurring?: boolean | null
           notes?: string | null
-          parent_appointment_id?: string | null
           policy_id?: string | null
           priority?: string | null
-          recurrence_rule?: string | null
           status?: string
           time: string
           title: string
@@ -185,12 +179,9 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
-          is_recurring?: boolean | null
           notes?: string | null
-          parent_appointment_id?: string | null
           policy_id?: string | null
           priority?: string | null
-          recurrence_rule?: string | null
           status?: string
           time?: string
           title?: string
@@ -210,13 +201,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients_with_stats"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_parent_appointment_id_fkey"
-            columns: ["parent_appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
           {
