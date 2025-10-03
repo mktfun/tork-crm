@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AppCard } from '@/components/ui/app-card';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AppointmentDetailsModalProps {
   appointment: any;
@@ -40,10 +41,40 @@ export function AppointmentDetailsModal({ appointment, open, onOpenChange }: App
         status: 'Realizado'
       });
 
-      toast({
-        title: "Sucesso",
-        description: "Agendamento marcado como realizado!"
-      });
+      // Se o agendamento tem regra de recorrência, criar próximo agendamento
+      if (appointment.recurrence_rule) {
+        try {
+          const { error: functionError } = await supabase.functions.invoke('create-next-appointment', {
+            body: { appointmentId: appointment.id }
+          });
+
+          if (functionError) {
+            console.error('Erro ao criar próximo agendamento:', functionError);
+            toast({
+              title: "Agendamento Concluído",
+              description: "Agendamento marcado como realizado, mas houve um problema ao criar a próxima ocorrência.",
+              variant: "default"
+            });
+          } else {
+            toast({
+              title: "Sucesso",
+              description: "Agendamento concluído e próxima ocorrência criada automaticamente!"
+            });
+          }
+        } catch (err) {
+          console.error('Erro ao invocar Edge Function:', err);
+          toast({
+            title: "Agendamento Concluído",
+            description: "Agendamento marcado como realizado, mas houve um problema ao criar a próxima ocorrência.",
+            variant: "default"
+          });
+        }
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Agendamento marcado como realizado!"
+        });
+      }
 
       onOpenChange(false);
     } catch (error) {

@@ -10,6 +10,7 @@ import { useClients, usePolicies } from '@/hooks/useAppData';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { useToast } from '@/hooks/use-toast';
+import RecurrenceConfig from './RecurrenceConfig';
 
 
 interface AppointmentModalProps {
@@ -26,6 +27,7 @@ export function AppointmentModal({
   triggerButton
 }: AppointmentModalProps) {
   const [open, setOpen] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     clientId: '',
     policyId: '',
@@ -81,6 +83,10 @@ export function AppointmentModal({
     }
     
     try {
+      const startTimestamp = recurrenceRule 
+        ? new Date(`${formData.date}T${formData.time}:00`).toISOString()
+        : null;
+
       await addAppointment({
         client_id: formData.clientId === 'none' || !formData.clientId ? null : formData.clientId,
         policy_id: formData.policyId === 'none' || !formData.policyId ? null : formData.policyId,
@@ -89,7 +95,9 @@ export function AppointmentModal({
         time: formData.time,
         status: 'Pendente',
         notes: formData.notes.trim() || undefined,
-        priority: formData.priority
+        priority: formData.priority,
+        recurrence_rule: recurrenceRule,
+        original_start_timestamptz: startTimestamp
       });
       
       toast({
@@ -107,6 +115,7 @@ export function AppointmentModal({
         notes: '',
         priority: 'Normal'
       });
+      setRecurrenceRule(null);
       setModalOpen(false);
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
@@ -234,9 +243,11 @@ export function AppointmentModal({
               />
             </div>
 
+            <RecurrenceConfig onRecurrenceChange={setRecurrenceRule} />
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-slate-300">Observações (opcional)</Label>
-              <Textarea 
+              <Textarea
                 id="notes" 
                 value={formData.notes} 
                 onChange={e => handleInputChange('notes', e.target.value)} 
@@ -353,9 +364,11 @@ export function AppointmentModal({
             />
           </div>
 
+          <RecurrenceConfig onRecurrenceChange={setRecurrenceRule} />
+
           <div className="space-y-2">
             <Label htmlFor="notes" className="text-slate-300">Observações (opcional)</Label>
-            <Textarea 
+            <Textarea
               id="notes" 
               value={formData.notes} 
               onChange={e => handleInputChange('notes', e.target.value)} 
