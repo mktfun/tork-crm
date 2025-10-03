@@ -13,10 +13,6 @@ Você tem acesso às seguintes ferramentas:
 - search_policies: Buscar apólices por número, cliente, seguradora ou status
 - get_financial_summary: Obter resumo financeiro de transações
 - analyze_renewals: Analisar apólices próximas ao vencimento
-- search_tasks: Buscar tarefas pendentes ou concluídas
-- get_upcoming_appointments: Ver próximos agendamentos
-- get_client_portfolio: Análise completa de um cliente específico
-- search_transactions: Buscar transações específicas
 
 Você deve:
 1. Responder em português brasileiro de forma clara e profissional
@@ -30,428 +26,161 @@ Sempre que o usuário fizer uma pergunta, analise se precisa usar alguma ferrame
 const TOOLS = [
   {
     type: "function",
-    name: "search_clients",
-    description: "Busca clientes no banco de dados por nome, CPF/CNPJ, email ou telefone. Retorna lista com dados básicos dos clientes encontrados.",
-    parameters: {
-      type: "object",
-      properties: {
-        search_term: {
-          type: "string",
-          description: "Termo de busca (nome, CPF/CNPJ, email ou telefone)"
-        }
-      },
-      required: ["search_term"]
-    }
-  },
-  {
-    type: "function",
-    name: "search_policies",
-    description: "Busca apólices no banco de dados. Pode filtrar por número da apólice, cliente, seguradora ou status.",
-    parameters: {
-      type: "object",
-      properties: {
-        policy_number: {
-          type: "string",
-          description: "Número da apólice (opcional)"
+    function: {
+      name: "search_clients",
+      description: "Busca clientes no banco de dados por nome, CPF, email ou qualquer outro termo de identificação.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Termo de busca para encontrar o cliente. Pode ser nome, parte do nome, email, etc." },
+          status: { type: "string", enum: ["Ativo", "Inativo"], description: "Filtra clientes pelo status." },
+          limit: { type: "number", default: 5, description: "Número máximo de resultados a retornar." }
         },
-        client_name: {
-          type: "string",
-          description: "Nome do cliente (opcional)"
-        },
-        status: {
-          type: "string",
-          description: "Status da apólice: 'Ativa', 'Vencida', 'Cancelada', 'Aguardando Apólice' (opcional)"
-        }
+        required: ["query"]
       }
     }
   },
   {
     type: "function",
-    name: "get_financial_summary",
-    description: "Retorna resumo financeiro com receitas, despesas e comissões em um período específico",
-    parameters: {
-      type: "object",
-      properties: {
-        start_date: {
-          type: "string",
-          description: "Data inicial no formato YYYY-MM-DD"
+    function: {
+      name: "search_policies",
+      description: "Busca apólices de seguro por número, nome do cliente, seguradora ou status.",
+      parameters: {
+        type: "object",
+        properties: {
+          client_name: { type: "string", description: "Nome do cliente para filtrar as apólices." },
+          status: { type: "string", enum: ["Ativa", "Vencida", "Cancelada"], description: "Status da apólice." },
+          limit: { type: "number", default: 5, description: "Número máximo de resultados a retornar." }
         },
-        end_date: {
-          type: "string",
-          description: "Data final no formato YYYY-MM-DD"
-        }
-      },
-      required: ["start_date", "end_date"]
-    }
-  },
-  {
-    type: "function",
-    name: "analyze_renewals",
-    description: "Analisa apólices que estão próximas ao vencimento para identificar oportunidades de renovação",
-    parameters: {
-      type: "object",
-      properties: {
-        days_ahead: {
-          type: "number",
-          description: "Número de dias à frente para analisar (padrão: 30)"
-        }
       }
     }
   },
   {
     type: "function",
-    name: "search_tasks",
-    description: "Busca tarefas (pendentes, concluídas ou todas). Pode filtrar por prioridade e tipo.",
-    parameters: {
-      type: "object",
-      properties: {
-        status: {
-          type: "string",
-          description: "Status da tarefa: 'Pendente', 'Concluída' (opcional)"
+    function: {
+      name: "get_financial_summary",
+      description: "Retorna um resumo financeiro das comissões (receitas) dentro de um período específico.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { type: "string", enum: ["current-month", "last-30-days", "current-year"], default: "current-month", description: "Período para o resumo financeiro." },
         },
-        priority: {
-          type: "string",
-          description: "Prioridade: 'Baixa', 'Média', 'Alta' (opcional)"
-        }
       }
     }
   },
   {
     type: "function",
-    name: "get_upcoming_appointments",
-    description: "Lista próximos agendamentos em ordem cronológica",
-    parameters: {
-      type: "object",
-      properties: {
-        days_ahead: {
-          type: "number",
-          description: "Número de dias à frente (padrão: 7)"
-        }
-      }
-    }
-  },
-  {
-    type: "function",
-    name: "get_client_portfolio",
-    description: "Análise completa de um cliente: apólices, transações, agendamentos e histórico",
-    parameters: {
-      type: "object",
-      properties: {
-        client_id: {
-          type: "string",
-          description: "ID do cliente (UUID)"
-        }
-      },
-      required: ["client_id"]
-    }
-  },
-  {
-    type: "function",
-    name: "search_transactions",
-    description: "Busca transações por período, tipo, status ou descrição",
-    parameters: {
-      type: "object",
-      properties: {
-        start_date: {
-          type: "string",
-          description: "Data inicial (YYYY-MM-DD, opcional)"
+    function: {
+      name: "analyze_renewals",
+      description: "Analisa e retorna uma lista de apólices que estão próximas do vencimento, priorizando as mais críticas.",
+      parameters: {
+        type: "object",
+        properties: {
+          days_ahead: { type: "number", default: 30, description: "Número de dias no futuro para verificar os vencimentos. Padrão 30 dias." }
         },
-        end_date: {
-          type: "string",
-          description: "Data final (YYYY-MM-DD, opcional)"
-        },
-        status: {
-          type: "string",
-          description: "'PAGO', 'PENDENTE', 'VENCIDO' (opcional)"
-        },
-        nature: {
-          type: "string",
-          description: "'RECEITA' ou 'DESPESA' (opcional)"
-        }
       }
     }
   }
 ];
 
-async function executeToolCall(toolName: string, args: any, userId: string) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+async function executeToolCall(toolCall: any, supabase: any, userId: string) {
+  const { name, arguments: argsStr } = toolCall.function;
+  const args = JSON.parse(argsStr);
+  console.log(`Executing tool: ${name}`, args);
 
-  console.log(`Executing tool: ${toolName}`, args);
+  switch (name) {
+    case 'search_clients': {
+      let query = supabase
+        .from('clientes')
+        .select('id, name, email, phone, status')
+        .eq('user_id', userId)
+        .ilike('name', `%${args.query}%`)
+        .limit(args.limit || 5);
 
-  try {
-    switch (toolName) {
-      case 'search_clients': {
-        const { search_term } = args;
-        const { data, error } = await supabase
-          .from('clientes')
-          .select('id, name, email, phone, cpf_cnpj, status')
-          .eq('user_id', userId)
-          .or(`name.ilike.%${search_term}%,email.ilike.%${search_term}%,phone.ilike.%${search_term}%,cpf_cnpj.ilike.%${search_term}%`)
-          .limit(10);
+      if (args.status) {
+        query = query.eq('status', args.status);
+      }
+      
+      const { data, error } = await query;
+      if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
+      return { tool_call_id: toolCall.id, output: JSON.stringify(data) };
+    }
 
-        if (error) throw error;
-        return {
-          success: true,
-          data: data || [],
-          message: `Encontrados ${data?.length || 0} clientes`
-        };
+    case 'search_policies': {
+      let query = supabase
+        .from('apolices')
+        .select('policy_number, status, expiration_date, clientes(name)')
+        .eq('user_id', userId)
+        .limit(args.limit || 5);
+
+      if (args.status) {
+        query = query.eq('status', args.status);
+      }
+      if (args.client_name) {
+        // Esta é uma busca em tabela relacionada, requer um RPC ou uma view para eficiência.
+        // Simplificação por agora: Buscaremos o ID do cliente primeiro.
+        const { data: clientData } = await supabase.from('clientes').select('id').ilike('name', `%${args.client_name}%`).eq('user_id', userId).single();
+        if(clientData) {
+            query = query.eq('client_id', clientData.id);
+        }
       }
 
-      case 'search_policies': {
-        let query = supabase
-          .from('apolices')
-          .select(`
-            id,
-            policy_number,
-            status,
-            expiration_date,
-            premium_value,
-            commission_rate,
-            clientes!inner(name)
-          `)
-          .eq('user_id', userId);
+      const { data, error } = await query;
+      if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
+      return { tool_call_id: toolCall.id, output: JSON.stringify(data) };
+    }
+      
+    case 'get_financial_summary': {
+        const today = new Date();
+        let startDate;
 
-        if (args.policy_number) {
-          query = query.ilike('policy_number', `%${args.policy_number}%`);
+        if (args.period === 'last-30-days') {
+            startDate = new Date(today.setDate(today.getDate() - 30));
+        } else if (args.period === 'current-year') {
+            startDate = new Date(today.getFullYear(), 0, 1);
+        } else { // current-month
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
         }
-        if (args.client_name) {
-          query = query.ilike('clientes.name', `%${args.client_name}%`);
-        }
-        if (args.status) {
-          query = query.eq('status', args.status);
-        }
-
-        const { data, error } = await query.limit(10);
-        if (error) throw error;
-
-        return {
-          success: true,
-          data: data || [],
-          message: `Encontradas ${data?.length || 0} apólices`
-        };
-      }
-
-      case 'get_financial_summary': {
-        const { start_date, end_date } = args;
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('nature, amount, status')
-          .eq('user_id', userId)
-          .gte('transaction_date', start_date)
-          .lte('transaction_date', end_date);
-
-        if (error) throw error;
-
-        const summary = (data || []).reduce((acc, t) => {
-          if (t.nature === 'RECEITA') {
-            acc.revenue += Number(t.amount);
-            if (t.status === 'PAGO') acc.received += Number(t.amount);
-          } else {
-            acc.expenses += Number(t.amount);
-            if (t.status === 'PAGO') acc.paid += Number(t.amount);
-          }
-          return acc;
-        }, { revenue: 0, received: 0, expenses: 0, paid: 0 });
-
-        return {
-          success: true,
-          data: summary,
-          message: `Resumo financeiro de ${start_date} a ${end_date}`
-        };
-      }
-
-      case 'analyze_renewals': {
-        const daysAhead = args.days_ahead || 30;
-        const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + daysAhead);
 
         const { data, error } = await supabase
-          .from('apolices')
-          .select(`
-            id,
-            policy_number,
-            expiration_date,
-            premium_value,
-            status,
-            clientes!inner(name, phone, email)
-          `)
-          .eq('user_id', userId)
-          .eq('status', 'Ativa')
-          .lte('expiration_date', futureDate.toISOString().split('T')[0])
-          .order('expiration_date', { ascending: true });
+            .from('transactions')
+            .select('amount, status')
+            .eq('user_id', userId)
+            .eq('nature', 'RECEITA')
+            .gte('transaction_date', startDate.toISOString());
 
-        if (error) throw error;
+        if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
+        
+        const summary = data.reduce((acc, t) => {
+            if (t.status === 'PAGO') acc.realizadas += Number(t.amount);
+            if (t.status === 'PENDENTE') acc.pendentes += Number(t.amount);
+            acc.total += Number(t.amount);
+            return acc;
+        }, { realizadas: 0, pendentes: 0, total: 0 });
 
-        return {
-          success: true,
-          data: data || [],
-          message: `${data?.length || 0} apólices vencem nos próximos ${daysAhead} dias`
-        };
-      }
+        return { tool_call_id: toolCall.id, output: JSON.stringify(summary) };
+    }
 
-      case 'search_tasks': {
-        let query = supabase
-          .from('tasks')
-          .select('id, title, description, status, priority, due_date, task_type')
-          .eq('user_id', userId)
-          .order('due_date', { ascending: true });
-
-        if (args.status) {
-          query = query.eq('status', args.status);
-        }
-        if (args.priority) {
-          query = query.eq('priority', args.priority);
-        }
-
-        const { data, error } = await query.limit(20);
-        if (error) throw error;
-
-        return {
-          success: true,
-          data: data || [],
-          message: `Encontradas ${data?.length || 0} tarefas`
-        };
-      }
-
-      case 'get_upcoming_appointments': {
-        const daysAhead = args.days_ahead || 7;
+    case 'analyze_renewals': {
         const today = new Date();
         const futureDate = new Date();
-        futureDate.setDate(futureDate.getDate() + daysAhead);
+        futureDate.setDate(today.getDate() + (args.days_ahead || 30));
 
         const { data, error } = await supabase
-          .from('appointments')
-          .select(`
-            id,
-            title,
-            date,
-            time,
-            status,
-            notes,
-            clientes!inner(name, phone)
-          `)
-          .eq('user_id', userId)
-          .gte('date', today.toISOString().split('T')[0])
-          .lte('date', futureDate.toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .order('time', { ascending: true });
+            .from('apolices')
+            .select('policy_number, expiration_date, status, clientes(name)')
+            .eq('user_id', userId)
+            .eq('status', 'Ativa')
+            .gte('expiration_date', today.toISOString())
+            .lte('expiration_date', futureDate.toISOString())
+            .order('expiration_date', { ascending: true });
 
-        if (error) throw error;
-
-        return {
-          success: true,
-          data: data || [],
-          message: `${data?.length || 0} agendamentos nos próximos ${daysAhead} dias`
-        };
-      }
-
-      case 'get_client_portfolio': {
-        const { client_id } = args;
-
-        // Buscar dados do cliente
-        const { data: client, error: clientError } = await supabase
-          .from('clientes')
-          .select('*')
-          .eq('id', client_id)
-          .eq('user_id', userId)
-          .single();
-
-        if (clientError) throw clientError;
-
-        // Buscar apólices do cliente
-        const { data: policies } = await supabase
-          .from('apolices')
-          .select('id, policy_number, status, expiration_date, premium_value, type')
-          .eq('client_id', client_id)
-          .eq('user_id', userId);
-
-        // Buscar transações relacionadas
-        const { data: transactions } = await supabase
-          .from('transactions')
-          .select('id, description, amount, status, nature, transaction_date')
-          .eq('client_id', client_id)
-          .eq('user_id', userId)
-          .order('transaction_date', { ascending: false })
-          .limit(10);
-
-        // Buscar agendamentos
-        const { data: appointments } = await supabase
-          .from('appointments')
-          .select('id, title, date, time, status')
-          .eq('client_id', client_id)
-          .eq('user_id', userId)
-          .order('date', { ascending: false })
-          .limit(5);
-
-        return {
-          success: true,
-          data: {
-            client,
-            policies: policies || [],
-            transactions: transactions || [],
-            appointments: appointments || [],
-            summary: {
-              total_policies: policies?.length || 0,
-              active_policies: policies?.filter(p => p.status === 'Ativa').length || 0,
-              total_premium: policies?.reduce((sum, p) => sum + Number(p.premium_value || 0), 0) || 0
-            }
-          },
-          message: `Portfólio completo do cliente ${client.name}`
-        };
-      }
-
-      case 'search_transactions': {
-        let query = supabase
-          .from('transactions')
-          .select('id, description, amount, status, nature, transaction_date, due_date')
-          .eq('user_id', userId)
-          .order('transaction_date', { ascending: false });
-
-        if (args.start_date) {
-          query = query.gte('transaction_date', args.start_date);
-        }
-        if (args.end_date) {
-          query = query.lte('transaction_date', args.end_date);
-        }
-        if (args.status) {
-          query = query.eq('status', args.status);
-        }
-        if (args.nature) {
-          query = query.eq('nature', args.nature);
-        }
-
-        const { data, error } = await query.limit(20);
-        if (error) throw error;
-
-        const summary = (data || []).reduce((acc, t) => {
-          acc.total += Number(t.amount);
-          if (t.nature === 'RECEITA') acc.revenue += Number(t.amount);
-          else acc.expenses += Number(t.amount);
-          return acc;
-        }, { total: 0, revenue: 0, expenses: 0 });
-
-        return {
-          success: true,
-          data: data || [],
-          summary,
-          message: `Encontradas ${data?.length || 0} transações`
-        };
-      }
-
-      default:
-        return {
-          success: false,
-          error: `Ferramenta desconhecida: ${toolName}`
-        };
+        if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
+        return { tool_call_id: toolCall.id, output: JSON.stringify(data) };
     }
-  } catch (error) {
-    console.error(`Error in ${toolName}:`, error);
-    return {
-      success: false,
-      error: error.message
-    };
+
+    default:
+      return { tool_call_id: toolCall.id, output: JSON.stringify({ error: 'Tool não encontrada' }) };
   }
 }
 
@@ -512,19 +241,20 @@ serve(async (req) => {
       // Adicionar a mensagem da IA com tool calls ao histórico
       aiMessages.push(result.choices[0].message);
 
+      // Criar cliente Supabase com service role
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
       // Executar todas as tool calls
       for (const toolCall of toolCalls) {
-        const toolResult = await executeToolCall(
-          toolCall.function.name,
-          JSON.parse(toolCall.function.arguments),
-          userId
-        );
+        const toolResult = await executeToolCall(toolCall, supabase, userId);
 
         // Adicionar resultado da tool ao histórico
         aiMessages.push({
           role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(toolResult)
+          tool_call_id: toolResult.tool_call_id,
+          content: toolResult.output
         });
       }
 
