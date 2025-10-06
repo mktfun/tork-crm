@@ -164,7 +164,6 @@ export function EditTransactionModal({
                     <SelectValue placeholder="Selecione um ramo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
                     {ramos.map(ramo => (
                       <SelectItem key={ramo.id} value={ramo.id}>
                         {ramo.nome}
@@ -184,7 +183,6 @@ export function EditTransactionModal({
                     <SelectValue placeholder="Selecione uma apólice" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    <SelectItem value="">Nenhuma</SelectItem>
                     {policies
                       .filter(p => p.status === 'Ativa' || p.status === 'Aguardando Apólice')
                       .map(policy => (
