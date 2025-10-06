@@ -82,6 +82,19 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
           .lte('transaction_date', format(filtros.intervalo.to, 'yyyy-MM-dd'));
       }
 
+      // Filtros de seleção múltipla para transações
+      if (filtros.seguradoraIds.length > 0) {
+        query = query.in('company_id', filtros.seguradoraIds);
+      }
+
+      if (filtros.ramos.length > 0) {
+        query = query.in('ramo_id', filtros.ramos);
+      }
+
+      if (filtros.produtorIds.length > 0) {
+        query = query.in('producer_id', filtros.produtorIds);
+      }
+
       const { data, error } = await query;
       
       if (error) {
