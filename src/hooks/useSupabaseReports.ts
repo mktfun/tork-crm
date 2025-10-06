@@ -166,6 +166,17 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
     index === self.findIndex(c => c.id === cliente.id)
   ).map(transformClientData);
 
+  // Calcular KPIs financeiros a partir das transações
+  const totalGanhos = (transacoesData || [])
+    .filter(t => t.nature === 'RECEITA' && (t.status === 'PAGO' || t.status === 'REALIZADO'))
+    .reduce((acc, t) => acc + (t.amount || 0), 0);
+
+  const totalPerdas = (transacoesData || [])
+    .filter(t => t.nature === 'DESPESA' && (t.status === 'PAGO' || t.status === 'REALIZADO'))
+    .reduce((acc, t) => acc + (t.amount || 0), 0);
+
+  const saldoLiquido = totalGanhos - totalPerdas;
+
   return {
     // Dados principais
     apolices: apolicesData || [],
@@ -177,6 +188,11 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
     ramosDisponiveis: metadados?.ramosDisponiveis || [],
     statusDisponiveis: metadados?.statusDisponiveis || [],
     produtores: metadados?.produtores || [],
+    
+    // KPIs Financeiros
+    totalGanhos,
+    totalPerdas,
+    saldoLiquido,
     
     // Estados
     isLoading,

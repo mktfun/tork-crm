@@ -17,6 +17,9 @@ import { useClientesPreview } from '@/hooks/useClientesPreview';
 import { useClientesPreviewWithStats } from '@/hooks/useClientesPreviewWithStats';
 import { useApolicesPreview } from '@/hooks/useApolicesPreview';
 import PreviewCard from '@/components/PreviewCard';
+import { KpiCard } from '@/components/reports/KpiCard';
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatCurrency';
 
 interface FiltrosGlobais {
   intervalo: DateRange | undefined;
@@ -57,6 +60,9 @@ export default function Reports() {
     dadosEvolucaoCarteira,
     dadosPerformanceProdutor,
     dadosVencimentosCriticos,
+    totalGanhos,
+    totalPerdas,
+    saldoLiquido,
     temFiltrosAtivos,
     temDados,
     isLoading
@@ -104,6 +110,41 @@ export default function Reports() {
         ) : (
           <>
             <VisaoGeralCarteira clientes={clientesFiltrados} apolices={apolicesFiltradas} />
+            
+            {/* Resumo Financeiro Geral (Faturamento) */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-1">Resumo Financeiro Geral</h2>
+                <p className="text-sm text-slate-400">Análise de fluxo de caixa real da corretora (transações efetivadas)</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <KpiCard
+                  title="Total de Ganhos"
+                  value={formatCurrency(totalGanhos)}
+                  subtitle="Receitas realizadas no período"
+                  icon={TrendingUp}
+                  trend="up"
+                  trendValue={`${((transacoesFiltradas || []).filter(t => t.nature === 'RECEITA' && (t.status === 'PAGO' || t.status === 'REALIZADO')).length)} transações`}
+                />
+                <KpiCard
+                  title="Total de Perdas"
+                  value={formatCurrency(totalPerdas)}
+                  subtitle="Despesas realizadas no período"
+                  icon={TrendingDown}
+                  trend="down"
+                  trendValue={`${((transacoesFiltradas || []).filter(t => t.nature === 'DESPESA' && (t.status === 'PAGO' || t.status === 'REALIZADO')).length)} transações`}
+                />
+                <KpiCard
+                  title="Saldo Líquido"
+                  value={formatCurrency(saldoLiquido)}
+                  subtitle="Ganhos - Perdas"
+                  icon={DollarSign}
+                  trend={saldoLiquido > 0 ? 'up' : saldoLiquido < 0 ? 'down' : 'neutral'}
+                  trendValue={saldoLiquido > 0 ? 'Positivo' : saldoLiquido < 0 ? 'Negativo' : 'Neutro'}
+                />
+              </div>
+            </div>
+
             <RelatorioFaturamento apolices={apolicesFiltradas} clientes={clientesFiltrados} transactions={transacoesFiltradas} intervalo={filtrosGlobais.intervalo} />
             <div className="flex flex-col gap-6">
               <div className="space-y-4">

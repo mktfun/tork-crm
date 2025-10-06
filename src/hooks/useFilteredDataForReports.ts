@@ -22,6 +22,9 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     ramosDisponiveis,
     statusDisponiveis,
     produtores,
+    totalGanhos,
+    totalPerdas,
+    saldoLiquido,
     isLoading,
     temDados,
     temFiltrosAtivos
@@ -283,6 +286,9 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     dadosPerformanceProdutor,
     dadosRenovacoesPorStatus,
     dadosVencimentosCriticos,
+    totalGanhos,
+    totalPerdas,
+    saldoLiquido,
     temFiltrosAtivos,
     temDados,
     isLoading // ✅ LOADING REAL do Supabase
