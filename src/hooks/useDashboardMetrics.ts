@@ -482,7 +482,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     const companyData: { [key: string]: { count: number; value: number; commission: number } } = {};
     
     paidTransactions.forEach(transaction => {
-      const companyId = (transaction as any).company_id || 'Não informado';
+      const companyId = transaction.companyId || 'Não informado';
       const value = transaction.amount || 0;
 
       if (!companyData[companyId]) {

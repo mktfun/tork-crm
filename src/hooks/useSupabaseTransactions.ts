@@ -42,6 +42,7 @@ export function useSupabaseTransactions() {
         // 🆕 MAPEAMENTO DOS NOVOS CAMPOS DNA DA CORRETAGEM
         brokerageId: transaction.brokerage_id || undefined,
         producerId: transaction.producer_id || undefined,
+        ramoId: transaction.ramo_id || undefined,
         
         clientId: transaction.client_id,
         policyId: transaction.policy_id,
