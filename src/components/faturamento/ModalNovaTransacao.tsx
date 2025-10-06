@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,15 +7,39 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
 import { useTransactions, useTransactionTypes, useClients, usePolicies, useCompanies } from '@/hooks/useAppData';
+import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
+import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 import { Transaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+
+// Função auxiliar para sugerir ramo baseado na descrição
+const inferRamoFromDescription = (description: string, ramos: any[]): string => {
+  const desc = description.toLowerCase();
+  const keywords = {
+    'auto': ['auto', 'carro', 'veículo', 'veiculo', 'automóvel', 'automovel', 'moto', 'motocicleta'],
+    'saúde': ['saude', 'saúde', 'plano de saude', 'médico', 'medico', 'hospital'],
+    'vida': ['vida', 'seguro de vida'],
+    'residencial': ['residencial', 'casa', 'residência', 'residencia', 'imóvel', 'imovel'],
+    'empresarial': ['empresarial', 'empresa', 'comercial', 'negócio', 'negocio'],
+  };
+
+  for (const [ramoName, terms] of Object.entries(keywords)) {
+    if (terms.some(term => desc.includes(term))) {
+      const matchedRamo = ramos.find(r => r.nome.toLowerCase().includes(ramoName));
+      if (matchedRamo) return matchedRamo.id;
+    }
+  }
+  return '';
+};
 
 export function ModalNovaTransacao() {
   const { addTransaction } = useTransactions();
   const { transactionTypes } = useTransactionTypes();
-  const { clients } = useClients(); // Dados REAIS dos clientes
-  const { policies } = usePolicies(); // Dados REAIS das apólices
-  const { companies } = useCompanies(); // Dados REAIS das seguradoras
+  const { clients } = useClients();
+  const { policies } = usePolicies();
+  const { companies } = useCompanies();
+  const { producers } = useSupabaseProducers();
+  const { data: ramos = [] } = useSupabaseRamos();
   const { toast } = useToast();
   
   const [isOpen, setIsOpen] = useState(false);
@@ -26,8 +50,20 @@ export function ModalNovaTransacao() {
     date: new Date().toISOString().split('T')[0],
     clientId: '',
     policyId: '',
-    companyId: ''
+    companyId: '',
+    producerId: '',
+    ramoId: ''
   });
+
+  // Sugerir ramo baseado na descrição
+  useEffect(() => {
+    if (formData.description && !formData.ramoId && ramos.length > 0) {
+      const suggestedRamo = inferRamoFromDescription(formData.description, ramos);
+      if (suggestedRamo) {
+        setFormData(prev => ({ ...prev, ramoId: suggestedRamo }));
+      }
+    }
+  }, [formData.description, ramos]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -50,13 +86,14 @@ export function ModalNovaTransacao() {
       amount: formData.amount,
       status: 'REALIZADO',
       date: formData.date,
-      // 🆕 NOVOS CAMPOS OBRIGATÓRIOS
-      nature: 'GANHO', // Valor padrão, pode ser determinado pelo tipo de transação
+      nature: 'GANHO',
       transactionDate: formData.date,
       dueDate: formData.date,
       ...(formData.clientId && { clientId: formData.clientId }),
       ...(formData.policyId && { policyId: formData.policyId }),
-      ...(formData.companyId && { companyId: formData.companyId })
+      ...(formData.companyId && { companyId: formData.companyId }),
+      ...(formData.producerId && { producerId: formData.producerId }),
+      ...(formData.ramoId && { ramoId: formData.ramoId })
     };
 
     addTransaction(transactionData);
@@ -75,7 +112,9 @@ export function ModalNovaTransacao() {
       date: new Date().toISOString().split('T')[0],
       clientId: '',
       policyId: '',
-      companyId: ''
+      companyId: '',
+      producerId: '',
+      ramoId: ''
     });
     
     setIsOpen(false); // A ordem para fechar a porta!
@@ -200,13 +239,51 @@ export function ModalNovaTransacao() {
                 className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
                 <option value="">Nenhuma seguradora</option>
-                {/* DADOS REAIS DAS SEGURADORAS */}
                 {companies.map(company => (
                   <option key={company.id} value={company.id}>
-                    {company.name} {/* MOSTRA O NOME PARA O USUÁRIO */}
+                    {company.name}
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <Label htmlFor="producerId">Produtor</Label>
+              <select
+                id="producerId"
+                value={formData.producerId}
+                onChange={(e) => handleInputChange('producerId', e.target.value)}
+                className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="">Nenhum produtor</option>
+                {producers.map(producer => (
+                  <option key={producer.id} value={producer.id}>
+                    {producer.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="ramoId">Ramo/Produto</Label>
+              <select
+                id="ramoId"
+                value={formData.ramoId}
+                onChange={(e) => handleInputChange('ramoId', e.target.value)}
+                className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="">Nenhum ramo</option>
+                {ramos.map(ramo => (
+                  <option key={ramo.id} value={ramo.id}>
+                    {ramo.nome}
+                  </option>
+                ))}
+              </select>
+              {formData.ramoId && formData.description && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 Sugestão baseada na descrição
+                </p>
+              )}
             </div>
           </div>
 
