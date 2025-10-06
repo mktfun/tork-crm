@@ -378,3 +378,80 @@ export function useSupabaseTransactions() {
     },
   };
 }
+
+// 🆕 HOOK PARA BUSCAR TRANSAÇÕES ÓRFÃS (PENDENTES SEM RAMO)
+export function useOrphanTransactions() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['orphan-transactions', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase.rpc('get_orphan_transactions', {
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error('Erro ao buscar transações órfãs:', error);
+        throw error;
+      }
+
+      return (data || []) as Array<{
+        id: string;
+        description: string;
+        date: string;
+        amount: number;
+        company_id?: string;
+        nature: string;
+      }>;
+    },
+    enabled: !!user,
+    staleTime: 30 * 1000, // 30 segundos
+  });
+}
+
+// 🆕 HOOK PARA ATUALIZAR TRANSAÇÕES EM LOTE
+export function useBatchUpdateTransactions() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (updates: Array<{
+      id: string;
+      ramo_id: string | null;
+      company_id: string | null;
+    }>) => {
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Filtrar apenas atualizações com ramo_id
+      const validUpdates = updates.filter(u => u.ramo_id);
+
+      if (validUpdates.length === 0) {
+        throw new Error('Nenhuma transação selecionada para vincular');
+      }
+
+      const { data, error } = await supabase.rpc('batch_update_transactions', {
+        p_user_id: user.id,
+        updates: validUpdates
+      });
+
+      if (error) {
+        console.error('Erro ao atualizar transações:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: (message) => {
+      // Invalidação global de cache
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['orphan-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports-transacoes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      console.log('✅ Transações atualizadas:', message);
+    },
+  });
+}

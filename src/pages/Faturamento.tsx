@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History, Link2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -22,7 +22,7 @@ import { ModalBaixaParcial } from '@/components/faturamento/ModalBaixaParcial';
 import { HistoricoPagamentos } from '@/components/faturamento/HistoricoPagamentos';
 import { FiltrosFaturamento } from '@/components/faturamento/FiltrosFaturamento';
 import { BackfillCommissionsButton } from '@/components/faturamento/BackfillCommissionsButton';
-import { EnrichOldTransactionsButton } from '@/components/faturamento/EnrichOldTransactionsButton';
+import { EnrichTransactionsModal } from '@/components/faturamento/EnrichTransactionsModal';
 import { TransactionTableSkeleton } from '@/components/faturamento/TransactionTableSkeleton';
 import { MetricsSkeleton } from '@/components/faturamento/MetricsSkeleton';
 import { useSupabaseTransactionsPaginated } from '@/hooks/useSupabaseTransactionsPaginated';
@@ -44,6 +44,7 @@ export default function Faturamento() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getCurrentMonthRange());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [isEnrichModalOpen, setIsEnrichModalOpen] = useState(false);
 
   const pageSize = 20;
   const [searchParams] = useSearchParams();
@@ -117,7 +118,14 @@ export default function Faturamento() {
             <p className="text-slate-400">Acompanhe todas as transações financeiras da corretora</p>
           </div>
           <div className="flex gap-4">
-            <EnrichOldTransactionsButton />
+            <Button
+              onClick={() => setIsEnrichModalOpen(true)}
+              variant="outline"
+              className="bg-white/10 border-white/20 text-slate-200 hover:bg-white/20"
+            >
+              <Link2 className="w-4 h-4 mr-2" />
+              Vincular Transações Manualmente
+            </Button>
             <BackfillCommissionsButton />
             <ModalNovaTransacao />
           </div>
@@ -487,6 +495,11 @@ export default function Faturamento() {
             transaction={selectedTransaction}
           />
         )}
+
+        <EnrichTransactionsModal 
+          isOpen={isEnrichModalOpen} 
+          onClose={() => setIsEnrichModalOpen(false)} 
+        />
       </div>
     </div>
   );

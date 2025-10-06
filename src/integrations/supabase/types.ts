@@ -1502,6 +1502,10 @@ export type Database = {
       }
     }
     Functions: {
+      batch_update_transactions: {
+        Args: { p_user_id: string; updates: Json }
+        Returns: string
+      }
       check_upcoming_appointments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -1567,6 +1571,10 @@ export type Database = {
           total_funcionarios: number
           total_funcionarios_ativos: number
         }[]
+      }
+      get_orphan_transactions: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
       get_user_companies_with_ramos: {
         Args: Record<PropertyKey, never>
