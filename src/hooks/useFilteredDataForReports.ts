@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseReports } from './useSupabaseReports';
 import { DateRange } from 'react-day-picker';
 import { format, startOfMonth, differenceInDays, parseISO, isAfter, isBefore, addDays } from 'date-fns';
@@ -13,37 +15,64 @@ interface FiltrosGlobais {
 }
 
 export function useFilteredDataForReports(filtros: FiltrosGlobais) {
+  // ✅ BUSCAR DEPENDÊNCIAS DIRETAMENTE DENTRO DO HOOK
+  const { data: ramos, isLoading: ramosLoading } = useQuery({
+    queryKey: ['ramos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ramos')
+        .select('id, nome')
+        .order('nome');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: seguradoras, isLoading: seguradorasLoading } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   // ✅ NOVA ARQUITETURA: Usar o hook especializado do Supabase
   const {
     apolices: apolicesFiltradas,
     clientes: clientesFiltrados,
     transacoes: transacoesFiltradas,
-    seguradoras,
-    ramosDisponiveis,
     statusDisponiveis,
     produtores,
     totalGanhos,
     totalPerdas,
     saldoLiquido,
-    isLoading,
+    isLoading: supabaseLoading,
     temDados,
     temFiltrosAtivos
   } = useSupabaseReports(filtros);
 
   // 🛡️ GUARD: Verificar se TODOS os dados críticos estão prontos
   const isDataReady = Boolean(
-    ramosDisponiveis && ramosDisponiveis.length > 0 &&
+    ramos && ramos.length > 0 &&
     seguradoras && seguradoras.length > 0 &&
     produtores && produtores.length > 0
   );
 
   console.log('🔍 [useFilteredDataForReports] Estado dos dados:', {
     transacoes: transacoesFiltradas?.length || 0,
-    ramos: ramosDisponiveis?.length || 0,
+    ramos: ramos?.length || 0,
     seguradoras: seguradoras?.length || 0,
     produtores: produtores?.length || 0,
     isDataReady,
-    isLoading
+    ramosLoading,
+    seguradorasLoading,
+    supabaseLoading
   });
 
   // 📊 DADOS CALCULADOS: Manter apenas a formatação para os gráficos
@@ -291,8 +320,8 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
 
   // 📊 DISTRIBUIÇÃO POR RAMOS (baseada em transações pagas)
   const branchDistributionDataFromTransactions = useMemo(() => {
-    // 🛡️ GUARD CLAUSE ROBUSTA
-    if (!transacoesFiltradas || !ramosDisponiveis || ramosDisponiveis.length === 0) {
+    // 🛡️ GUARD CLAUSE ROBUSTA: Aguardar dados locais
+    if (!transacoesFiltradas || !ramos || ramos.length === 0) {
       console.warn('⚠️ [branchDistribution] Aguardando dados: transações ou ramos');
       return [];
     }
@@ -317,10 +346,10 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       ramoData[ramoId].value += (t.amount || 0);
     });
     
-    // Helper para obter nome do ramo
+    // ✅ CORREÇÃO: Helper usando dados locais do hook
     const getRamoName = (ramoId: string): string => {
       if (ramoId === 'Não informado') return 'Não informado';
-      const ramo = ramosDisponiveis.find((r: any) => r.id === ramoId);
+      const ramo = ramos.find((r: any) => r.id === ramoId);
       return ramo?.nome || 'Ramo Desconhecido';
     };
     
@@ -356,7 +385,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     }
     
     return distribution;
-  }, [transacoesFiltradas, ramosDisponiveis]);
+  }, [transacoesFiltradas, ramos]);
 
   // 📊 DISTRIBUIÇÃO POR SEGURADORAS (baseada em transações pagas)
   const companyDistributionDataFromTransactions = useMemo(() => {
@@ -386,7 +415,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       companyData[companyId].value += (t.amount || 0);
     });
     
-    // Helper para obter nome da seguradora
+    // ✅ CORREÇÃO: Helper usando dados locais do hook
     const getCompanyName = (companyId: string) => {
       if (companyId === 'Não informado') return 'Não informado';
       const company = seguradoras.find(c => c.id === companyId);
@@ -427,6 +456,8 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     return distribution;
   }, [transacoesFiltradas, seguradoras]);
 
+  const isLoading = supabaseLoading || ramosLoading || seguradorasLoading || !isDataReady;
+
   console.log('📊 Hook useFilteredDataForReports - NOVA ARQUITETURA:', {
     apolices: apolicesFiltradas.length,
     clientes: clientesFiltrados.length,
@@ -439,7 +470,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     clientesFiltrados,
     transacoesFiltradas,
     seguradoras,
-    ramosDisponiveis,
+    ramosDisponiveis: ramos,
     statusDisponiveis,
     produtores,
     dadosEvolucaoCarteira,
@@ -453,6 +484,6 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     saldoLiquido,
     temFiltrosAtivos,
     temDados,
-    isLoading: isLoading || !isDataReady // 🛡️ Loading completo: considera dados críticos
+    isLoading // 🛡️ Loading completo: considera todos os dados críticos
   };
 }
