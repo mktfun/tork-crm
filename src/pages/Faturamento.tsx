@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History, Pencil } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -326,10 +326,17 @@ export default function Faturamento() {
                     return (
                       <TableRow 
                         key={transaction.id} 
-                        className="border-b-white/10 hover:bg-white/5 cursor-pointer group"
+                        className={`border-b-white/10 cursor-pointer group ${
+                          transaction.policyId === null 
+                            ? "hover:bg-blue-500/10" 
+                            : "hover:bg-white/5"
+                        }`}
                         onClick={(e) => {
                           if ((e.target as HTMLElement).closest('a, button')) return;
-                          if (transaction.policyId) {
+                          
+                          if (transaction.policyId === null) {
+                            handleEditTransaction(transaction.id);
+                          } else if (transaction.policyId) {
                             navigate(`/policies/${transaction.policyId}`);
                           }
                         }}
@@ -402,21 +409,6 @@ export default function Faturamento() {
 
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {/* Botão de Editar - Sempre visível */}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditTransaction(transaction.id);
-                              }}
-                              className="flex items-center gap-1 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
-                              title="Editar transação"
-                            >
-                              <Pencil size={14} />
-                              Editar
-                            </Button>
-
                             {/* Ações para transações pendentes */}
                             {transaction.status === 'PENDENTE' && (
                               <>
