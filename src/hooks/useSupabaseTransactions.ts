@@ -134,9 +134,10 @@ export function useSupabaseTransactions() {
       return data;
     },
     onSuccess: () => {
-      // 🎯 **INVALIDAÇÃO AUTOMÁTICA**
+      // 🎯 **INVALIDAÇÃO AUTOMÁTICA** - Invalida TODAS as queries relacionadas a transações
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      console.log('✅ Transaction criada e cache invalidado');
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+      console.log('✅ Transaction criada e cache invalidado (lista principal + paginada + relatórios)');
     },
     onError: (error) => {
       console.error('Erro ao criar transaction:', error);
@@ -207,10 +208,11 @@ export function useSupabaseTransactions() {
       console.log('✅ Pagamento parcial registrado:', { transactionId, amountPaid, totalPaid, newStatus });
     },
     onSuccess: () => {
-      // 🎯 **INVALIDAÇÃO AUTOMÁTICA** - Atualiza tanto transações quanto pagamentos
+      // 🎯 **INVALIDAÇÃO AUTOMÁTICA** - Atualiza transações, pagamentos e relatórios
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['transaction-payments'] });
-      console.log('Cache de transações invalidado. A UI deve atualizar agora.');
+      console.log('✅ Pagamento parcial registrado - cache invalidado (lista + paginada + pagamentos)');
     },
     onError: (error) => {
       console.error('Erro ao processar pagamento parcial:', error);
@@ -283,9 +285,10 @@ export function useSupabaseTransactions() {
       }
     },
     onSuccess: () => {
-      // 🎯 **INVALIDAÇÃO AUTOMÁTICA**
+      // 🎯 **INVALIDAÇÃO AUTOMÁTICA** - Invalida todas as queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      console.log('✅ Transaction atualizada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+      console.log('✅ Transaction atualizada - cache invalidado (lista + paginada)');
     },
     onError: (error) => {
       console.error('Erro ao atualizar transaction:', error);
@@ -308,9 +311,10 @@ export function useSupabaseTransactions() {
       }
     },
     onSuccess: () => {
-      // 🎯 **INVALIDAÇÃO AUTOMÁTICA**
+      // 🎯 **INVALIDAÇÃO AUTOMÁTICA** - Invalida todas as queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      console.log('✅ Transaction deletada com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+      console.log('✅ Transaction deletada - cache invalidado (lista + paginada)');
     },
     onError: (error) => {
       console.error('Erro ao deletar transaction:', error);
@@ -331,6 +335,9 @@ export function useSupabaseTransactions() {
     addPartialPayment: (transactionId: string, amountPaid: number, description?: string) =>
       addPartialPaymentMutation.mutateAsync({ transactionId, amountPaid, description }),
     getTransactionPayments,
-    refetch: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
+    },
   };
 }
