@@ -11,26 +11,8 @@ import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
 import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 import { Transaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { inferRamoFromDescription } from '@/utils/ramoInference';
 
-// Função auxiliar para sugerir ramo baseado na descrição
-const inferRamoFromDescription = (description: string, ramos: any[]): string => {
-  const desc = description.toLowerCase();
-  const keywords = {
-    'auto': ['auto', 'carro', 'veículo', 'veiculo', 'automóvel', 'automovel', 'moto', 'motocicleta'],
-    'saúde': ['saude', 'saúde', 'plano de saude', 'médico', 'medico', 'hospital'],
-    'vida': ['vida', 'seguro de vida'],
-    'residencial': ['residencial', 'casa', 'residência', 'residencia', 'imóvel', 'imovel'],
-    'empresarial': ['empresarial', 'empresa', 'comercial', 'negócio', 'negocio'],
-  };
-
-  for (const [ramoName, terms] of Object.entries(keywords)) {
-    if (terms.some(term => desc.includes(term))) {
-      const matchedRamo = ramos.find(r => r.nome.toLowerCase().includes(ramoName));
-      if (matchedRamo) return matchedRamo.id;
-    }
-  }
-  return '';
-};
 
 export function ModalNovaTransacao() {
   const { addTransaction } = useTransactions();
@@ -55,15 +37,20 @@ export function ModalNovaTransacao() {
     ramoId: ''
   });
 
-  // Sugerir ramo baseado na descrição
+  // Sugerir ramo baseado na descrição usando utilitário
   useEffect(() => {
     if (formData.description && !formData.ramoId && ramos.length > 0) {
-      const suggestedRamo = inferRamoFromDescription(formData.description, ramos);
-      if (suggestedRamo) {
-        setFormData(prev => ({ ...prev, ramoId: suggestedRamo }));
+      const suggestedRamoId = inferRamoFromDescription(formData.description, ramos);
+      if (suggestedRamoId) {
+        setFormData(prev => ({ ...prev, ramoId: suggestedRamoId }));
+        toast({
+          title: "Ramo sugerido automaticamente",
+          description: `Baseado na descrição, sugerimos: ${ramos.find(r => r.id === suggestedRamoId)?.nome}`,
+          duration: 3000,
+        });
       }
     }
-  }, [formData.description, ramos]);
+  }, [formData.description, ramos, toast]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
