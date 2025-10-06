@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History, Link as LinkIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calendar, Check, ExternalLink, History, Pencil } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -22,7 +22,7 @@ import { ModalBaixaParcial } from '@/components/faturamento/ModalBaixaParcial';
 import { HistoricoPagamentos } from '@/components/faturamento/HistoricoPagamentos';
 import { FiltrosFaturamento } from '@/components/faturamento/FiltrosFaturamento';
 import { BackfillCommissionsButton } from '@/components/faturamento/BackfillCommissionsButton';
-import { EnrichTransactionsModal } from '@/components/faturamento/EnrichTransactionsModal';
+import { EditTransactionModal } from '@/components/faturamento/EditTransactionModal';
 import { TransactionTableSkeleton } from '@/components/faturamento/TransactionTableSkeleton';
 import { MetricsSkeleton } from '@/components/faturamento/MetricsSkeleton';
 import { useSupabaseTransactionsPaginated } from '@/hooks/useSupabaseTransactionsPaginated';
@@ -44,7 +44,8 @@ export default function Faturamento() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getCurrentMonthRange());
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [isEnrichModalOpen, setIsEnrichModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
 
   const pageSize = 20;
   const [searchParams] = useSearchParams();
@@ -105,6 +106,24 @@ export default function Faturamento() {
     setSelectedTransaction(null);
   };
 
+  const handleEditTransaction = (transactionId: string) => {
+    setEditingTransactionId(transactionId);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingTransactionId(null);
+  };
+
+  const handleEditSuccess = () => {
+    // Refetch será automático pelo React Query
+    toast({
+      title: "Sucesso!",
+      description: "Transação atualizada. Recarregando dados...",
+    });
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalCount);
@@ -118,14 +137,6 @@ export default function Faturamento() {
             <p className="text-slate-400">Acompanhe todas as transações financeiras da corretora</p>
           </div>
           <div className="flex gap-4">
-            <Button
-              onClick={() => setIsEnrichModalOpen(true)}
-              variant="outline"
-              className="bg-white/10 border-white/20 text-slate-200 hover:bg-white/20"
-            >
-              <LinkIcon className="w-4 h-4 mr-2" />
-              Vincular Transações Manualmente
-            </Button>
             <BackfillCommissionsButton />
             <ModalNovaTransacao />
           </div>
@@ -302,7 +313,7 @@ export default function Faturamento() {
                     <TableHead className="text-white">Data</TableHead>
                     <TableHead className="text-white">Status</TableHead>
                     <TableHead className="text-right text-white">Valor</TableHead>
-                    <TableHead className="text-white">Ações</TableHead>
+                    <TableHead className="text-white w-[140px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -391,6 +402,22 @@ export default function Faturamento() {
 
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {/* Botão de Editar - Sempre visível */}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditTransaction(transaction.id);
+                              }}
+                              className="flex items-center gap-1 text-blue-400 hover:text-blue-300 hover:bg-blue-400/10"
+                              title="Editar transação"
+                            >
+                              <Pencil size={14} />
+                              Editar
+                            </Button>
+
+                            {/* Ações para transações pendentes */}
                             {transaction.status === 'PENDENTE' && (
                               <>
                                 <Button 
@@ -403,7 +430,7 @@ export default function Faturamento() {
                                   className="flex items-center gap-2 bg-white/10 border-white/20 text-slate-200 hover:bg-white/20"
                                 >
                                   <Check size={14} />
-                                  Pagar Total
+                                  Pagar
                                 </Button>
                                 
                                 <ModalBaixaParcial 
@@ -418,6 +445,7 @@ export default function Faturamento() {
                               </>
                             )}
 
+                            {/* Botão de Histórico */}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -426,9 +454,9 @@ export default function Faturamento() {
                                 handleOpenHistorico(transaction);
                               }}
                               className="flex items-center gap-2 text-slate-400 hover:text-white"
+                              title="Ver histórico"
                             >
                               <History size={14} />
-                              Histórico
                             </Button>
                           </div>
                         </TableCell>
@@ -496,9 +524,11 @@ export default function Faturamento() {
           />
         )}
 
-        <EnrichTransactionsModal 
-          isOpen={isEnrichModalOpen} 
-          onClose={() => setIsEnrichModalOpen(false)} 
+        <EditTransactionModal 
+          transactionId={editingTransactionId}
+          isOpen={isEditModalOpen} 
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
         />
       </div>
     </div>
