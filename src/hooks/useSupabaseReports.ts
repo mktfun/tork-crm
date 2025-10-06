@@ -24,7 +24,7 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
         .from('apolices')
         .select(`
           *,
-          clientes!inner(*),
+          clientes(*),
           producers(*),
           companies(id, name)
         `);
