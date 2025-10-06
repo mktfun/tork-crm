@@ -20,6 +20,8 @@ import PreviewCard from '@/components/PreviewCard';
 import { KpiCard } from '@/components/reports/KpiCard';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
+import { BranchDistributionChart } from '@/components/dashboard/charts/BranchDistributionChart';
+import { CompanyDistributionChart } from '@/components/dashboard/charts/CompanyDistributionChart';
 
 interface FiltrosGlobais {
   intervalo: DateRange | undefined;
@@ -60,6 +62,8 @@ export default function Reports() {
     dadosEvolucaoCarteira,
     dadosPerformanceProdutor,
     dadosVencimentosCriticos,
+    branchDistributionDataFromTransactions,
+    companyDistributionDataFromTransactions,
     totalGanhos,
     totalPerdas,
     saldoLiquido,
@@ -141,6 +145,21 @@ export default function Reports() {
                   icon={DollarSign}
                   trend={saldoLiquido > 0 ? 'up' : saldoLiquido < 0 ? 'down' : 'neutral'}
                   trendValue={saldoLiquido > 0 ? 'Positivo' : saldoLiquido < 0 ? 'Negativo' : 'Neutro'}
+                />
+              </div>
+              
+              {/* Gráficos de Distribuição */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <BranchDistributionChart 
+                  data={branchDistributionDataFromTransactions}
+                  dateRange={filtrosGlobais.intervalo}
+                  insight="Distribuição de comissões realizadas por ramo no período selecionado."
+                />
+                
+                <CompanyDistributionChart 
+                  data={companyDistributionDataFromTransactions}
+                  dateRange={filtrosGlobais.intervalo}
+                  insight="Distribuição de comissões realizadas por seguradora no período selecionado."
                 />
               </div>
             </div>

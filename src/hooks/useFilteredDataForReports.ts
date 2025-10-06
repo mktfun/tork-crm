@@ -267,6 +267,136 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     return { data: dataFormatada, insight };
   }, [apolicesFiltradas]);
 
+  // 📊 DISTRIBUIÇÃO POR RAMOS (baseada em transações pagas)
+  const branchDistributionDataFromTransactions = useMemo(() => {
+    if (!transacoesFiltradas) return [];
+    
+    // Filtrar apenas transações de receita pagas
+    const filteredTransactions = transacoesFiltradas.filter(t => 
+      t.nature === 'RECEITA' && 
+      (t.status === 'PAGO' || t.status === 'REALIZADO')
+    );
+    
+    // Agrupar por ramo_id
+    const ramoData: { [key: string]: { count: number; value: number } } = {};
+    
+    filteredTransactions.forEach(t => {
+      const ramoId = t.ramo_id || 'Não informado';
+      
+      if (!ramoData[ramoId]) {
+        ramoData[ramoId] = { count: 0, value: 0 };
+      }
+      
+      ramoData[ramoId].count += 1;
+      ramoData[ramoId].value += (t.amount || 0);
+    });
+    
+    // Helper para obter nome do ramo
+    const getRamoName = (ramoId: string) => {
+      if (ramoId === 'Não informado') return 'Não informado';
+      // ramosDisponiveis é um array de strings, então retornamos o ramoId diretamente
+      return ramoId;
+    };
+    
+    // Converter para array e mapear nomes dos ramos
+    let distribution = Object.entries(ramoData).map(([ramoId, data]) => ({
+      ramo: getRamoName(ramoId),
+      total: data.count,
+      valor: data.value,
+      valorComissao: data.value,
+      taxaMediaComissao: 0
+    })).sort((a, b) => b.valor - a.valor);
+    
+    // Agrupar itens pequenos em "Outros" (< 5% do total)
+    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+    const threshold = totalValue * 0.05;
+    
+    const mainItems = distribution.filter(item => item.valor >= threshold);
+    const smallItems = distribution.filter(item => item.valor < threshold);
+    
+    if (smallItems.length > 0 && mainItems.length > 0) {
+      const othersData = smallItems.reduce(
+        (acc, item) => ({
+          ramo: 'Outros',
+          total: acc.total + item.total,
+          valor: acc.valor + item.valor,
+          valorComissao: acc.valorComissao + item.valorComissao,
+          taxaMediaComissao: 0
+        }),
+        { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
+      );
+      
+      distribution = [...mainItems.slice(0, 7), othersData];
+    }
+    
+    return distribution;
+  }, [transacoesFiltradas, ramosDisponiveis]);
+
+  // 📊 DISTRIBUIÇÃO POR SEGURADORAS (baseada em transações pagas)
+  const companyDistributionDataFromTransactions = useMemo(() => {
+    if (!transacoesFiltradas) return [];
+    
+    // Filtrar apenas transações de receita pagas
+    const filteredTransactions = transacoesFiltradas.filter(t => 
+      t.nature === 'RECEITA' && 
+      (t.status === 'PAGO' || t.status === 'REALIZADO')
+    );
+    
+    // Agrupar por company_id
+    const companyData: { [key: string]: { count: number; value: number } } = {};
+    
+    filteredTransactions.forEach(t => {
+      const companyId = t.company_id || 'Não informado';
+      
+      if (!companyData[companyId]) {
+        companyData[companyId] = { count: 0, value: 0 };
+      }
+      
+      companyData[companyId].count += 1;
+      companyData[companyId].value += (t.amount || 0);
+    });
+    
+    // Helper para obter nome da seguradora
+    const getCompanyName = (companyId: string) => {
+      if (companyId === 'Não informado') return 'Não informado';
+      const company = seguradoras.find(c => c.id === companyId);
+      return company?.name || 'Não informado';
+    };
+    
+    // Converter para array e mapear nomes das seguradoras
+    let distribution = Object.entries(companyData).map(([companyId, data]) => ({
+      seguradora: getCompanyName(companyId),
+      total: data.count,
+      valor: data.value,
+      valorComissao: data.value,
+      taxaMediaComissao: 0
+    })).sort((a, b) => b.valor - a.valor);
+    
+    // Agrupar itens pequenos em "Outros" (< 5% do total)
+    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+    const threshold = totalValue * 0.05;
+    
+    const mainItems = distribution.filter(item => item.valor >= threshold);
+    const smallItems = distribution.filter(item => item.valor < threshold);
+    
+    if (smallItems.length > 0 && mainItems.length > 0) {
+      const othersData = smallItems.reduce(
+        (acc, item) => ({
+          seguradora: 'Outros',
+          total: acc.total + item.total,
+          valor: acc.valor + item.valor,
+          valorComissao: acc.valorComissao + item.valorComissao,
+          taxaMediaComissao: 0
+        }),
+        { seguradora: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
+      );
+      
+      distribution = [...mainItems.slice(0, 7), othersData];
+    }
+    
+    return distribution;
+  }, [transacoesFiltradas, seguradoras]);
+
   console.log('📊 Hook useFilteredDataForReports - NOVA ARQUITETURA:', {
     apolices: apolicesFiltradas.length,
     clientes: clientesFiltrados.length,
@@ -286,6 +416,8 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     dadosPerformanceProdutor,
     dadosRenovacoesPorStatus,
     dadosVencimentosCriticos,
+    branchDistributionDataFromTransactions,
+    companyDistributionDataFromTransactions,
     totalGanhos,
     totalPerdas,
     saldoLiquido,
