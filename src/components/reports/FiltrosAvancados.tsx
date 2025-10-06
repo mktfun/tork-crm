@@ -22,7 +22,7 @@ interface FiltrosAvancadosProps {
   filtros: FiltrosGlobais;
   onFiltrosChange: (filtros: FiltrosGlobais) => void;
   seguradoras: Array<{ id: string; name: string }>;
-  ramos: string[];
+  ramos: Array<{ id: string; nome: string }>;
   produtores: Array<{ id: string; name: string }>;
   statusDisponiveis: string[];
 }
@@ -178,19 +178,19 @@ export function FiltrosAvancados({
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {ramos && ramos.length > 0 ? (
                   ramos.map((ramo) => (
-                    <div key={ramo} className="flex items-center space-x-2">
+                    <div key={ramo.id} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`ramo-${ramo}`}
-                        checked={filtros.ramos.includes(ramo)}
+                        id={`ramo-${ramo.id}`}
+                        checked={filtros.ramos.includes(ramo.id)}
                         onCheckedChange={(checked) => 
-                          handleMultiSelectChange('ramos', ramo, checked as boolean)
+                          handleMultiSelectChange('ramos', ramo.id, checked as boolean)
                         }
                       />
                       <Label 
-                        htmlFor={`ramo-${ramo}`}
+                        htmlFor={`ramo-${ramo.id}`}
                         className="text-sm text-white cursor-pointer flex-1"
                       >
-                        {ramo}
+                        {ramo.nome}
                       </Label>
                     </div>
                   ))

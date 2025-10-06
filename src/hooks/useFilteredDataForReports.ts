@@ -292,10 +292,10 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     });
     
     // Helper para obter nome do ramo
-    const getRamoName = (ramoId: string) => {
+    const getRamoName = (ramoId: string): string => {
       if (ramoId === 'Não informado') return 'Não informado';
-      // ramosDisponiveis é um array de strings, então retornamos o ramoId diretamente
-      return ramoId;
+      const ramo = ramosDisponiveis.find((r: any) => r.id === ramoId);
+      return ramo?.nome || 'Ramo Desconhecido';
     };
     
     // Converter para array e mapear nomes dos ramos

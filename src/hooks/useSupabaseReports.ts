@@ -113,15 +113,17 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
     queryFn: async () => {
       console.log('🔍 Carregando metadados do sistema');
       
-      const [apolicesResult, produtoresResult, seguradorasResult] = await Promise.all([
-        supabase.from('apolices').select('type, status'),
+      const [produtoresResult, seguradorasResult, ramosResult, apolicesResult] = await Promise.all([
         supabase.from('producers').select('id, name'),
-        supabase.from('companies').select('id, name')
+        supabase.from('companies').select('id, name'),
+        supabase.from('ramos').select('id, nome'),
+        supabase.from('apolices').select('status')
       ]);
 
-      if (apolicesResult.error) throw apolicesResult.error;
       if (produtoresResult.error) throw produtoresResult.error;
       if (seguradorasResult.error) throw seguradorasResult.error;
+      if (ramosResult.error) throw ramosResult.error;
+      if (apolicesResult.error) throw apolicesResult.error;
 
       // Garantir que seguradoras retorne array de objetos com id e name
       const seguradoras = (seguradorasResult.data || []).map(seguradora => ({
@@ -129,9 +131,11 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
         name: seguradora.name
       }));
 
-      const ramos = [...new Set(
-        apolicesResult.data?.map(p => p.type || 'Não especificado').filter(Boolean) || []
-      )];
+      // Garantir que ramos retorne array de objetos com id e nome
+      const ramos = (ramosResult.data || []).map(ramo => ({
+        id: ramo.id,
+        nome: ramo.nome
+      }));
 
       const status = [...new Set(
         apolicesResult.data?.map(p => p.status).filter(Boolean) || []
