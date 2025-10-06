@@ -31,8 +31,8 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   const { appointments } = useAppointments();
   const { clients, loading: clientsLoading } = useClients();
   const { transactions, loading: transactionsLoading } = useTransactions();
-  const { getCompanyName } = useCompanyNames();
-  const { data: ramos = [] } = useSupabaseRamos();
+  const { getCompanyName, loading: companiesLoading } = useCompanyNames();
+  const { data: ramos = [], isLoading: ramosLoading } = useSupabaseRamos();
 
   // Hook para taxas de comissão reais baseadas nos dados da corretora
   const {
@@ -74,6 +74,13 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     },
     enabled: !!user
   });
+
+  // 🛡️ GUARD CLAUSE CENTRAL - Dados prontos para cálculos
+  const isDataReady = useMemo(() => 
+    !transactionsLoading && !ramosLoading && !companiesLoading && 
+    Array.isArray(transactions) && Array.isArray(ramos),
+    [transactionsLoading, ramosLoading, companiesLoading, transactions, ramos]
+  );
 
   // 🔥 KPI 1: CLIENTES ATIVOS - MEMOIZAÇÃO INDIVIDUAL
   const activeClients = useMemo(() => {
@@ -363,7 +370,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
 
   // 📊 GRÁFICOS DE PIZZA COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
   const branchDistributionData = useMemo(() => {
-    if (transactionsLoading) return [];
+    if (!isDataReady) return []; // 🛡️ GUARD CLAUSE: Aguardar todos os dados
     
     // ✅ USAR TRANSAÇÕES ao invés de apólices (mesma lógica dos Relatórios)
     let filteredTransactions = transactions;
@@ -451,11 +458,11 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     
     console.log('📊 Dashboard - Distribuição por ramos (transações pagas):', distribution);
     return distribution;
-  }, [transactions, transactionsLoading, dateRange, ramos]);
+  }, [isDataReady, transactions, ramos, dateRange]);
 
   // 📊 DISTRIBUIÇÃO POR SEGURADORAS COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
   const companyDistributionData = useMemo(() => {
-    if (transactionsLoading) return [];
+    if (!isDataReady) return []; // 🛡️ GUARD CLAUSE: Aguardar todos os dados
     
     // ✅ USAR TRANSAÇÕES ao invés de apólices (mesma lógica dos Relatórios)
     let filteredTransactions = transactions;
@@ -527,7 +534,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     
     console.log('📊 Dashboard - Distribuição por seguradoras (transações pagas):', distribution);
     return distribution;
-  }, [policies, policiesLoading, getCompanyName, dateRange]);
+  }, [isDataReady, transactions, getCompanyName, dateRange]);
 
   // 🆕 INSIGHTS DINÂMICOS - ANÁLISE INTELIGENTE DOS DADOS
   const insightRamoPrincipal = useMemo(() => {
@@ -653,7 +660,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   ]);
 
   // 🔥 ESTADO DE LOADING GERAL
-  const isLoading = policiesLoading || clientsLoading || transactionsLoading || greetingsLoading;
+  const isLoading = policiesLoading || clientsLoading || transactionsLoading || greetingsLoading || ramosLoading || companiesLoading;
 
   // 🔥 LOG FINAL DE VALIDAÇÃO
   console.log('🎯 RESUMO DOS KPIS CALCULADOS COM FILTRO:', {
