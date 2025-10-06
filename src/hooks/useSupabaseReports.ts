@@ -42,7 +42,7 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
       }
 
       if (filtros.ramos.length > 0) {
-        query = query.in('type', filtros.ramos);
+        query = query.in('ramo_id', filtros.ramos); // ✅ CORREÇÃO: Usar ramo_id ao invés de type
       }
 
       if (filtros.produtorIds.length > 0) {

@@ -332,6 +332,11 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       (t.status === 'PAGO' || t.status === 'REALIZADO')
     );
     
+    // 🔍 LOG TEMPORÁRIO: Validar ramo_id nas transações
+    console.log('🔍 [branchDistribution] Sample ramo_ids:', 
+      filteredTransactions.slice(0, 3).map(t => ({ ramo_id: t.ramo_id, amount: t.amount }))
+    );
+    
     // Agrupar por ramo_id
     const ramoData: { [key: string]: { count: number; value: number } } = {};
     

@@ -87,6 +87,7 @@ export function transformTransactionData(transaction: Tables<'transactions'>): a
     producerId: transaction.producer_id,
     brokerageId: transaction.brokerage_id,
     companyId: transaction.company_id,
+    ramoId: transaction.ramo_id, // ✅ CORREÇÃO: Adicionar ramo_id
     createdAt: transaction.created_at,
     updatedAt: transaction.updated_at,
     // Keep original snake_case properties for backward compatibility
@@ -98,6 +99,7 @@ export function transformTransactionData(transaction: Tables<'transactions'>): a
     producer_id: transaction.producer_id,
     brokerage_id: transaction.brokerage_id,
     company_id: transaction.company_id,
+    ramo_id: transaction.ramo_id, // ✅ CORREÇÃO: Adicionar ramo_id
     created_at: transaction.created_at,
     updated_at: transaction.updated_at
   };
