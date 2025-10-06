@@ -138,7 +138,7 @@ export function ModalNovaTransacao() {
               required
             >
               <option value="">Selecione um tipo</option>
-              {transactionTypes.map(type => (
+              {(transactionTypes || []).map(type => (
                 <option key={type.id} value={type.id}>
                   {type.name} ({type.nature})
                 </option>
@@ -214,7 +214,7 @@ export function ModalNovaTransacao() {
                   className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
                 >
                   <option value="">Selecione</option>
-                  {ramos.map(ramo => (
+                  {(ramos || []).map(ramo => (
                     <option key={ramo.id} value={ramo.nome}>
                       {ramo.nome}
                     </option>
@@ -231,7 +231,7 @@ export function ModalNovaTransacao() {
                   className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
                 >
                   <option value="">Nenhum produtor</option>
-                  {producers.map(producer => (
+                  {(producers || []).map(producer => (
                     <option key={producer.id} value={producer.id}>
                       {producer.name}
                     </option>
@@ -249,7 +249,7 @@ export function ModalNovaTransacao() {
                 className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
                 <option value="">Nenhum cliente</option>
-                {clients.map(client => (
+                {(clients || []).map(client => (
                   <option key={client.id} value={client.id}>
                     {client.name}
                   </option>
@@ -266,9 +266,9 @@ export function ModalNovaTransacao() {
                 className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
                 <option value="">Nenhuma apólice</option>
-                {policies.map(policy => (
+                {(policies || []).map(policy => (
                   <option key={policy.id} value={policy.id}>
-                    {policy.policyNumber} - {clients.find(c => c.id === policy.clientId)?.name}
+                    {policy.policyNumber} - {(clients || []).find(c => c.id === policy.clientId)?.name}
                   </option>
                 ))}
               </select>
@@ -283,7 +283,7 @@ export function ModalNovaTransacao() {
                 className="w-full h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
               >
                 <option value="">Nenhuma seguradora</option>
-                {companies.map(company => (
+                {(companies || []).map(company => (
                   <option key={company.id} value={company.id}>
                     {company.name}
                   </option>
