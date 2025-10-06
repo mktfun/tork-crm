@@ -62,31 +62,6 @@ export function useSupabaseTransactions() {
     mutationFn: async (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
       if (!user) throw new Error('Usuário não autenticado');
 
-      // 🆕 ETAPA DE ENRIQUECIMENTO DE DADOS
-      // Se houver policy_id e faltarem dados, buscar da apólice
-      if (transactionData.policyId && (!transactionData.producerId || !transactionData.companyId)) {
-        const { data: policy, error: policyError } = await supabase
-          .from('apolices')
-          .select('insurance_company, producer_id, type')
-          .eq('id', transactionData.policyId)
-          .single();
-
-        if (!policyError && policy) {
-          // Preenche os campos apenas se não foram fornecidos manualmente
-          if (!transactionData.companyId && policy.insurance_company) {
-            transactionData.companyId = policy.insurance_company;
-          }
-          if (!transactionData.producerId && policy.producer_id) {
-            transactionData.producerId = policy.producer_id;
-          }
-          
-          console.log('✅ Transação enriquecida com dados da apólice:', {
-            companyId: transactionData.companyId,
-            producerId: transactionData.producerId
-          });
-        }
-      }
-
       const { data, error } = await supabase
         .from('transactions')
         .insert([
