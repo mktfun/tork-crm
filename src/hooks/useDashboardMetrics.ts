@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useClients, usePolicies, useTransactions, useAppointments } from '@/hooks/useAppData';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { useProfile } from '@/hooks/useProfile';
@@ -31,7 +31,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   const { appointments } = useAppointments();
   const { clients, loading: clientsLoading } = useClients();
   const { transactions, loading: transactionsLoading } = useTransactions();
-  const { getCompanyName, loading: companiesLoading } = useCompanyNames();
+  const { getCompanyName, companies, loading: companiesLoading } = useCompanyNames();
   const { data: ramos = [], isLoading: ramosLoading } = useSupabaseRamos();
 
   // Hook para taxas de comissão reais baseadas nos dados da corretora
@@ -676,6 +676,41 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     monthlyGrowthDataLength: monthlyGrowthData.length,
     isLoading
   });
+
+  // ====================== INÍCIO DO BLOCO DE DIAGNÓSTICO ======================
+  useEffect(() => {
+    // Este log só vai rodar QUANDO a guarda 'isDataReady' permitir a execução dos cálculos.
+    if (isDataReady) {
+      console.log('✅ DADOS PRONTOS. Inspecionando o que os gráficos estão recebendo...');
+      
+      console.log('🚚 INSUMO 1: Lista de RAMOS para mapeamento:', ramos);
+
+      console.log('🚚 INSUMO 2: Lista de SEGURADORAS para mapeamento:', companies);
+      
+      const paidTransactions = transactions.filter(t =>
+        t.nature === 'RECEITA' && (t.status === 'PAGO' || t.status === 'REALIZADO')
+      );
+      
+      console.log('🚚 INSUMO 3: Amostra de TRANSAÇÕES PAGAS a serem processadas:', paidTransactions.slice(0, 5));
+
+      // Verificação explícita do mapeamento
+      const firstTransaction = paidTransactions[0];
+      if (firstTransaction) {
+        const ramoId = firstTransaction.ramoId;
+        const companyId = firstTransaction.companyId;
+        
+        console.log(`🕵️ Verificando a primeira transação (ID: ${firstTransaction.id})...`);
+        console.log(`   - Ramo ID da Transação: ${ramoId}`);
+        const foundRamo = ramos.find(r => r.id === ramoId);
+        console.log(`   - Ramo encontrado na lista 'ramos':`, foundRamo || 'NENHUM');
+        
+        console.log(`   - Seguradora ID da Transação: ${companyId}`);
+        const foundCompany = companies.find(c => c.id === companyId);
+        console.log(`   - Seguradora encontrada na lista 'companies':`, foundCompany || 'NENHUMA');
+      }
+    }
+  }, [isDataReady, transactions, ramos, companies]);
+  // ======================= FIM DO BLOCO DE DIAGNÓSTICO ========================
 
   return {
     renewals90Days,
