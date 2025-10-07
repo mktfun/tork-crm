@@ -23,16 +23,16 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, fileName } = await req.json();
+    const { fileUrl } = await req.json();
 
-    if (!pdfBase64) {
-      throw new Error('PDF base64 é obrigatório');
+    if (!fileUrl) {
+      throw new Error('URL do arquivo é obrigatória');
     }
 
-    console.log('📄 Processando arquivo:', fileName || 'sem nome');
+    console.log('📄 Processando arquivo da URL:', fileUrl);
 
     // 1️⃣ EXTRAIR TEXTO DO PDF
-    const pdfText = await extractTextFromPDF(pdfBase64);
+    const pdfText = await extractTextFromPDF(fileUrl);
     
     console.log(`📊 Texto extraído: ${pdfText.length} caracteres`);
     
@@ -52,8 +52,7 @@ serve(async (req) => {
         success: true,
         data: extractedData,
         metadata: {
-          textLength: pdfText.length,
-          fileName: fileName || 'unknown'
+          textLength: pdfText.length
         }
       }),
       {
@@ -81,7 +80,7 @@ serve(async (req) => {
  * Extrai texto do PDF usando PDF.co com OCR automático
  * Suporta PDFs complexos e escaneados
  */
-async function extractTextFromPDF(base64: string): Promise<string> {
+async function extractTextFromPDF(fileUrl: string): Promise<string> {
   const PDF_PARSER_API_KEY = Deno.env.get('PDF_PARSER_API_KEY');
   
   if (!PDF_PARSER_API_KEY) {
@@ -98,7 +97,7 @@ async function extractTextFromPDF(base64: string): Promise<string> {
         'x-api-key': PDF_PARSER_API_KEY
       },
       body: JSON.stringify({
-        url: `data:application/pdf;base64,${base64}`,
+        url: fileUrl, // ✅ URL pública do Storage
         inline: true, // Receber resposta imediata
         profiles: "{ 'ocrMode': 'auto' }" // Ativar OCR automático para PDFs escaneados
       })

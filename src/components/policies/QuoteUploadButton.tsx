@@ -44,18 +44,38 @@ export function QuoteUploadButton({ onDataExtracted, disabled }: QuoteUploadButt
     setStatus('idle');
 
     try {
-      // Converter PDF para base64
-      const base64 = await fileToBase64(file);
+      console.log('📤 Fazendo upload do PDF:', file.name);
 
-      console.log('📄 Enviando PDF para processamento:', file.name);
+      // ETAPA 1: Upload para o Supabase Storage
+      const filePath = `${crypto.randomUUID()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('quote-uploads')
+        .upload(filePath, file, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
 
-      // Chamar edge function
+      if (uploadError) {
+        console.error('❌ Erro no upload:', uploadError);
+        throw new Error(`Erro no upload: ${uploadError.message}`);
+      }
+
+      // ETAPA 2: Obter URL pública do arquivo
+      const { data: { publicUrl } } = supabase.storage
+        .from('quote-uploads')
+        .getPublicUrl(filePath);
+
+      console.log('📄 Enviando URL para processamento:', publicUrl);
+
+      // ETAPA 3: Chamar edge function com a URL
       const { data, error } = await supabase.functions.invoke('extract-quote-data', {
-        body: {
-          pdfBase64: base64,
-          fileName: file.name
-        }
+        body: { fileUrl: publicUrl }
       });
+
+      // ETAPA 4: Limpar arquivo temporário do storage
+      await supabase.storage
+        .from('quote-uploads')
+        .remove([filePath]);
 
       if (error) {
         console.error('❌ Erro ao processar PDF:', error);
@@ -97,19 +117,6 @@ export function QuoteUploadButton({ onDataExtracted, disabled }: QuoteUploadButt
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remover o prefixo "data:application/pdf;base64,"
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsDataURL(file);
-    });
-  };
 
   const getButtonIcon = () => {
     if (isProcessing) return <Loader2 className="h-4 w-4 animate-spin" />;
