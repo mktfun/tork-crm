@@ -202,74 +202,70 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
-  // Handler para dados extraídos do PDF
+  // Handler para dados extraídos do PDF com RAG v3.0
   const handleQuoteDataExtracted = async (data: ExtractedQuoteData) => {
-    console.log('📋 Preenchendo formulário com dados extraídos:', data);
+    console.log('📋 Preenchendo formulário com dados RAG:', data);
 
-    // 1. Bem Segurado
+    // 1. Nome do Cliente (novo campo - por enquanto só logamos)
+    if (data.clientName) {
+      console.log('👤 Cliente identificado:', data.clientName);
+      // Futuramente: buscar cliente pelo nome ou criar campo no form
+    }
+
+    // 2. Bem Segurado
     if (data.insuredItem) {
       setValue('insuredAsset', data.insuredItem);
     }
 
-    // 2. Número da Apólice/Orçamento
+    // 3. Número da Apólice/Orçamento
     if (data.policyNumber) {
       setValue('policyNumber', data.policyNumber);
     }
 
-    // 3. Valor do Prêmio
+    // 4. Valor do Prêmio
     if (data.premiumValue) {
       setValue('premiumValue', data.premiumValue);
     }
 
-    // 4. Taxa de Comissão
+    // 5. Taxa de Comissão
     if (data.commissionPercentage) {
       setValue('commissionRate', data.commissionPercentage);
     }
 
-    // 5. Data de Início
+    // 6. Data de Início + Vencimento
     if (data.startDate) {
       setValue('startDate', data.startDate);
-      
-      // Calcular automaticamente a data de vencimento (1 ano depois)
-      const startDate = new Date(data.startDate);
-      const expirationDate = addYears(startDate, 1);
+      const expirationDate = addYears(new Date(data.startDate), 1);
       setValue('expirationDate', format(expirationDate, 'yyyy-MM-dd'));
     }
 
-    // 6. Renovação Automática (baseado em shouldGenerateRenewal)
+    // 7. Renovação Automática
     setValue('automaticRenewal', data.shouldGenerateRenewal);
 
-    // 7. Mapear Seguradora por nome (buscar no array de companies)
+    // 8. Mapear Seguradora (MATCH EXATO - RAG garante)
     if (data.insurerName) {
-      const matchedCompany = companies.find(c => 
-        c.name.toLowerCase().includes(data.insurerName!.toLowerCase()) ||
-        data.insurerName!.toLowerCase().includes(c.name.toLowerCase())
-      );
+      const company = companies.find(c => c.name === data.insurerName);
       
-      if (matchedCompany) {
-        setValue('insuranceCompany', matchedCompany.id);
-        console.log('✅ Seguradora mapeada:', matchedCompany.name);
+      if (company) {
+        setValue('insuranceCompany', company.id);
+        console.log('✅ Seguradora mapeada (RAG):', company.name);
       } else {
-        console.warn('⚠️ Seguradora não encontrada no cadastro:', data.insurerName);
+        console.warn('⚠️ Seguradora não encontrada (RAG falhou?):', data.insurerName);
       }
     }
 
-    // 8. Mapear Ramo por nome (buscar no array de ramos)
+    // 9. Mapear Ramo (MATCH EXATO - RAG garante)
     if (data.insuranceLine) {
-      // Aguardar um pouco para garantir que availableBranches foi carregado
       setTimeout(() => {
-        const matchedBranch = availableBranches.find(r => 
-          r.nome.toLowerCase().includes(data.insuranceLine!.toLowerCase()) ||
-          data.insuranceLine!.toLowerCase().includes(r.nome.toLowerCase())
-        );
+        const ramo = availableBranches.find(r => r.nome === data.insuranceLine);
         
-        if (matchedBranch) {
-          setValue('type', matchedBranch.nome);
-          console.log('✅ Ramo mapeado:', matchedBranch.nome);
+        if (ramo) {
+          setValue('type', ramo.nome);
+          console.log('✅ Ramo mapeado (RAG):', ramo.nome);
         } else {
-          console.warn('⚠️ Ramo não encontrado no cadastro:', data.insuranceLine);
+          console.warn('⚠️ Ramo não encontrado (RAG falhou?):', data.insuranceLine);
         }
-      }, 500);
+      }, 1000);
     }
 
     // Validar os campos preenchidos

@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +8,7 @@ const corsHeaders = {
 };
 
 interface ExtractedQuoteData {
+  clientName: string | null;
   insuredItem: string | null;
   insurerName: string | null;
   insuranceLine: string | null;
@@ -42,8 +44,11 @@ serve(async (req) => {
 
     console.log('✅ Texto extraído do PDF (primeiros 500 chars):', pdfText.substring(0, 500) + '...');
 
-    // 2️⃣ CHAMAR GEMINI PARA EXTRAÇÃO ESTRUTURADA
-    const extractedData = await extractDataWithAI(pdfText);
+    // 2️⃣ BUSCAR CONTEXTO DO BANCO DE DADOS (RAG)
+    const dbContext = await fetchDatabaseContext();
+
+    // 3️⃣ CHAMAR GEMINI COM CONTEXTO RAG
+    const extractedData = await extractDataWithAI(pdfText, dbContext);
 
     console.log('✅ Dados extraídos com sucesso:', extractedData);
 
@@ -52,7 +57,9 @@ serve(async (req) => {
         success: true,
         data: extractedData,
         metadata: {
-          textLength: pdfText.length
+          textLength: pdfText.length,
+          availableRamos: dbContext.ramos.length,
+          availableCompanies: dbContext.companies.length
         }
       }),
       {
@@ -129,32 +136,126 @@ async function extractTextFromPDF(fileUrl: string): Promise<string> {
 
 
 /**
- * Usa Gemini via Lovable AI Gateway para extrair dados estruturados
+ * Busca contexto do banco de dados (Ramos e Seguradoras)
  */
-async function extractDataWithAI(pdfText: string): Promise<ExtractedQuoteData> {
+async function fetchDatabaseContext() {
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+
+  console.log('🔍 Buscando contexto do banco de dados...');
+
+  const [ramosResult, companiesResult] = await Promise.all([
+    supabaseAdmin.from('ramos').select('id, nome'),
+    supabaseAdmin.from('companies').select('id, name')
+  ]);
+
+  if (ramosResult.error) {
+    console.error('❌ Erro ao buscar ramos:', ramosResult.error);
+    throw new Error('Falha ao buscar ramos do banco de dados');
+  }
+
+  if (companiesResult.error) {
+    console.error('❌ Erro ao buscar seguradoras:', companiesResult.error);
+    throw new Error('Falha ao buscar seguradoras do banco de dados');
+  }
+
+  console.log(`✅ Contexto carregado: ${ramosResult.data.length} ramos, ${companiesResult.data.length} seguradoras`);
+
+  return {
+    ramos: ramosResult.data || [],
+    companies: companiesResult.data || []
+  };
+}
+
+/**
+ * Gera prompt RAG v3.0 com contexto do banco de dados
+ */
+function buildRAGPrompt(pdfText: string, ramos: any[], companies: any[]): string {
+  const ramosList = ramos.map(r => r.nome).join(', ');
+  const companiesList = companies.map(c => c.name).join(', ');
+
+  return `# PERSONA
+Você é um assistente de IA sênior especializado em conciliar documentos de seguros com sistemas de gestão de corretoras.
+
+# CONTEXTO
+Você recebeu um texto extraído de um orçamento de seguro em PDF, além de listas de dados que JÁ EXISTEM no sistema do usuário.
+
+Sua principal missão é fazer o "match" inteligente entre o que está escrito no PDF e os dados cadastrados no sistema.
+
+# LISTAS DO SISTEMA (USE ESSES VALORES EXATOS NA RESPOSTA):
+
+**Ramos Cadastrados:**
+${ramosList}
+
+**Seguradoras Cadastradas:**
+${companiesList}
+
+# INSTRUÇÕES DE EXTRAÇÃO
+
+Para cada campo abaixo, analise o texto do PDF e extraia os dados. Para os campos "insuranceLine" e "insurerName", você DEVE retornar o nome EXATO que consta nas listas acima.
+
+## Campos a extrair:
+
+1. **clientName**: Nome completo da pessoa ou empresa segurada (o cliente).
+   - Exemplo: "THAIS MAIA", "João da Silva Transportes LTDA"
+
+2. **insuredItem**: O bem ou objeto principal do seguro.
+   - Para Automóvel: "Honda Civic LXR 2023"
+   - Para Residencial: "Residência - Rua X, 123"
+   - Para RC Profissional: "Médico" ou "Advogado" (a profissão)
+
+3. **insurerName**: Nome da seguradora.
+   - ⚠️ IMPORTANTE: Retorne o nome EXATO da lista "Seguradoras Cadastradas".
+   - Se o PDF mencionar "Porto Seguro Companhia" e na lista tiver "Porto Seguro", retorne "Porto Seguro".
+   - Se não encontrar correspondência, retorne null.
+
+4. **insuranceLine**: Ramo do seguro.
+   - ⚠️ IMPORTANTE: Retorne o nome EXATO da lista "Ramos Cadastrados".
+   - Se o PDF mencionar "Responsabilidade Civil Profissional" e na lista tiver "RC Profissional", retorne "RC Profissional".
+   - Se o PDF mencionar "Seguro de Automóvel" e na lista tiver "Auto", retorne "Auto".
+   - Se não encontrar correspondência, retorne null.
+
+5. **policyNumber**: Número completo do orçamento ou proposta.
+
+6. **premiumValue**: Valor do **prêmio líquido**.
+   - ⚠️ IGNORE o prêmio bruto. Se o documento mencionar ambos, extraia APENAS o líquido.
+   - Retorne apenas o número, sem "R$".
+
+7. **commissionPercentage**: Taxa de comissão em porcentagem.
+   - Retorne apenas o número (ex: 20, não "20%").
+
+8. **shouldGenerateRenewal**: 
+   - Retorne true se o documento indicar "Seguro Novo" ou "Renovação".
+   - Retorne false se indicar "Endosso" ou não especificar.
+
+9. **startDate**: Data de início de vigência.
+   - Formato: YYYY-MM-DD
+
+# FORMATO DE SAÍDA
+Retorne APENAS um objeto JSON válido. Não inclua explicações. Se um campo não for encontrado, use null.
+
+# TEXTO EXTRAÍDO DO ORÇAMENTO:
+${pdfText.substring(0, 8000)}
+
+${pdfText.length > 8000 ? '\n[TEXTO TRUNCADO - PDF MUITO LONGO]' : ''}`;
+}
+
+/**
+ * Usa Gemini via Lovable AI Gateway para extrair dados estruturados com contexto RAG
+ */
+async function extractDataWithAI(
+  pdfText: string, 
+  dbContext: { ramos: any[], companies: any[] }
+): Promise<ExtractedQuoteData> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
   if (!LOVABLE_API_KEY) {
     throw new Error('LOVABLE_API_KEY não configurada');
   }
 
-  const systemPrompt = `Você é um assistente especialista em processamento de documentos para corretoras de seguro.
-Sua única função é extrair informações específicas de textos de orçamento de seguro e retorná-las em formato estruturado.
-
-CONTEXTO: O texto fornecido foi extraído de um PDF de orçamento. O layout original foi perdido.
-
-IMPORTANTE:
-- Seja preciso e conservador. Se não tiver certeza, retorne null.
-- Para "shouldGenerateRenewal": retorne true APENAS se encontrar "Seguro Novo" ou "Renovação". Para "Endosso" ou qualquer outra coisa, retorne false.
-- Para "insuranceLine": deduza o ramo genérico (Automóvel, Residencial, Vida, Empresarial, etc.)
-- Para valores monetários: extraia apenas números, sem símbolos.`;
-
-  const userPrompt = `Analise o texto abaixo e extraia os campos solicitados:
-
-TEXTO DO ORÇAMENTO:
-${pdfText.substring(0, 8000)}
-
-${pdfText.length > 8000 ? '\n[TEXTO TRUNCADO - PDF MUITO LONGO]' : ''}`;
+  const ragPrompt = buildRAGPrompt(pdfText, dbContext.ramos, dbContext.companies);
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -166,55 +267,59 @@ ${pdfText.length > 8000 ? '\n[TEXTO TRUNCADO - PDF MUITO LONGO]' : ''}`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: ragPrompt }
         ],
         tools: [
           {
             type: 'function',
             function: {
               name: 'extract_quote_fields',
-              description: 'Extrai campos estruturados de um orçamento de seguro',
+              description: 'Extrai campos estruturados de um orçamento de seguro usando dados do sistema',
               parameters: {
                 type: 'object',
                 properties: {
+                  clientName: {
+                    type: 'string',
+                    description: 'Nome completo do segurado/cliente',
+                    nullable: true
+                  },
                   insuredItem: {
                     type: 'string',
-                    description: 'O bem principal sendo segurado (ex: Honda Civic, Residência)',
+                    description: 'Bem ou objeto segurado',
                     nullable: true
                   },
                   insurerName: {
                     type: 'string',
-                    description: 'Nome da seguradora (ex: Porto Seguro, Allianz)',
+                    description: 'Nome EXATO da seguradora da lista fornecida',
                     nullable: true
                   },
                   insuranceLine: {
                     type: 'string',
-                    description: 'Ramo do seguro (ex: Automóvel, Residencial, Vida)',
+                    description: 'Nome EXATO do ramo da lista fornecida',
                     nullable: true
                   },
                   policyNumber: {
                     type: 'string',
-                    description: 'Número do orçamento ou proposta',
+                    description: 'Número do orçamento/proposta',
                     nullable: true
                   },
                   premiumValue: {
                     type: 'number',
-                    description: 'Valor total do prêmio em reais (apenas número)',
+                    description: 'Valor do prêmio líquido (apenas número)',
                     nullable: true
                   },
                   commissionPercentage: {
                     type: 'number',
-                    description: 'Comissão em porcentagem (apenas número)',
+                    description: 'Comissão em porcentagem',
                     nullable: true
                   },
                   shouldGenerateRenewal: {
                     type: 'boolean',
-                    description: 'true se for Seguro Novo ou Renovação, false caso contrário'
+                    description: 'true para Seguro Novo/Renovação'
                   },
                   startDate: {
                     type: 'string',
-                    description: 'Data de início de vigência no formato YYYY-MM-DD',
+                    description: 'Data de início (YYYY-MM-DD)',
                     nullable: true
                   }
                 },
@@ -254,6 +359,7 @@ ${pdfText.length > 8000 ? '\n[TEXTO TRUNCADO - PDF MUITO LONGO]' : ''}`;
     const extractedData = JSON.parse(toolCall.function.arguments);
     
     return {
+      clientName: extractedData.clientName || null,
       insuredItem: extractedData.insuredItem || null,
       insurerName: extractedData.insurerName || null,
       insuranceLine: extractedData.insuranceLine || null,

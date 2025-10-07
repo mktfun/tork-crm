@@ -19,6 +19,7 @@ const sanitizeFilename = (filename: string): string => {
 };
 
 export interface ExtractedQuoteData {
+  clientName: string | null;
   insuredItem: string | null;
   insurerName: string | null;
   insuranceLine: string | null;
