@@ -4,6 +4,20 @@ import { FileUp, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Helper para limpar nomes de arquivos para serem seguros para URL/Storage
+const sanitizeFilename = (filename: string): string => {
+  const extension = filename.split('.').pop() || '';
+  const nameWithoutExtension = filename.substring(0, filename.lastIndexOf('.') || filename.length);
+
+  return nameWithoutExtension
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais, exceto espaços e hífens
+    .replace(/\s+/g, '-') // Substitui espaços por hífens
+    .replace(/-+/g, '-')   // Remove hífens duplicados
+    + '.' + extension.toLowerCase();
+};
+
 export interface ExtractedQuoteData {
   insuredItem: string | null;
   insurerName: string | null;
@@ -47,7 +61,11 @@ export function QuoteUploadButton({ onDataExtracted, disabled }: QuoteUploadButt
       console.log('📤 Fazendo upload do PDF:', file.name);
 
       // ETAPA 1: Upload para o Supabase Storage
-      const filePath = `${crypto.randomUUID()}-${file.name}`;
+      const sanitizedName = sanitizeFilename(file.name);
+      const filePath = `${crypto.randomUUID()}-${sanitizedName}`;
+      
+      console.log('🔧 Nome sanitizado:', sanitizedName, '| Caminho:', filePath);
+      
       const { error: uploadError } = await supabase.storage
         .from('quote-uploads')
         .upload(filePath, file, {
