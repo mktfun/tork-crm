@@ -14,6 +14,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Stepper } from '@/components/ui/stepper';
 import { Edit3, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { QuoteUploadButton, ExtractedQuoteData } from './QuoteUploadButton';
 import { useClients, usePolicies } from '@/hooks/useAppData';
 import { QuickAddClientModal } from '@/components/clients/QuickAddClientModal';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
@@ -201,11 +202,103 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
+  // Handler para dados extraídos do PDF
+  const handleQuoteDataExtracted = async (data: ExtractedQuoteData) => {
+    console.log('📋 Preenchendo formulário com dados extraídos:', data);
+
+    // 1. Bem Segurado
+    if (data.insuredItem) {
+      setValue('insuredAsset', data.insuredItem);
+    }
+
+    // 2. Número da Apólice/Orçamento
+    if (data.policyNumber) {
+      setValue('policyNumber', data.policyNumber);
+    }
+
+    // 3. Valor do Prêmio
+    if (data.premiumValue) {
+      setValue('premiumValue', data.premiumValue);
+    }
+
+    // 4. Taxa de Comissão
+    if (data.commissionPercentage) {
+      setValue('commissionRate', data.commissionPercentage);
+    }
+
+    // 5. Data de Início
+    if (data.startDate) {
+      setValue('startDate', data.startDate);
+      
+      // Calcular automaticamente a data de vencimento (1 ano depois)
+      const startDate = new Date(data.startDate);
+      const expirationDate = addYears(startDate, 1);
+      setValue('expirationDate', format(expirationDate, 'yyyy-MM-dd'));
+    }
+
+    // 6. Renovação Automática (baseado em shouldGenerateRenewal)
+    setValue('automaticRenewal', data.shouldGenerateRenewal);
+
+    // 7. Mapear Seguradora por nome (buscar no array de companies)
+    if (data.insurerName) {
+      const matchedCompany = companies.find(c => 
+        c.name.toLowerCase().includes(data.insurerName!.toLowerCase()) ||
+        data.insurerName!.toLowerCase().includes(c.name.toLowerCase())
+      );
+      
+      if (matchedCompany) {
+        setValue('insuranceCompany', matchedCompany.id);
+        console.log('✅ Seguradora mapeada:', matchedCompany.name);
+      } else {
+        console.warn('⚠️ Seguradora não encontrada no cadastro:', data.insurerName);
+      }
+    }
+
+    // 8. Mapear Ramo por nome (buscar no array de ramos)
+    if (data.insuranceLine) {
+      // Aguardar um pouco para garantir que availableBranches foi carregado
+      setTimeout(() => {
+        const matchedBranch = availableBranches.find(r => 
+          r.nome.toLowerCase().includes(data.insuranceLine!.toLowerCase()) ||
+          data.insuranceLine!.toLowerCase().includes(r.nome.toLowerCase())
+        );
+        
+        if (matchedBranch) {
+          setValue('type', matchedBranch.nome);
+          console.log('✅ Ramo mapeado:', matchedBranch.nome);
+        } else {
+          console.warn('⚠️ Ramo não encontrado no cadastro:', data.insuranceLine);
+        }
+      }, 500);
+    }
+
+    // Validar os campos preenchidos
+    await trigger();
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
+            {/* Botão de Upload de Orçamento PDF */}
+            {!isEditing && (
+              <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                <h3 className="text-sm font-medium text-white mb-2">
+                  Importação Rápida com IA
+                </h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Faça upload de um orçamento em PDF e a IA preencherá automaticamente os campos do formulário.
+                </p>
+                <QuoteUploadButton 
+                  onDataExtracted={handleQuoteDataExtracted}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
+            <Separator className="bg-white/10" />
+
             {/* Cliente Selection */}
             <div>
               <Label htmlFor="clientId" className="text-white">Cliente *</Label>
