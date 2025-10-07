@@ -34,11 +34,13 @@ serve(async (req) => {
     // 1️⃣ EXTRAIR TEXTO DO PDF
     const pdfText = await extractTextFromPDF(pdfBase64);
     
-    if (!pdfText || pdfText.trim().length < 50) {
-      throw new Error('Não foi possível extrair texto suficiente do PDF. Verifique se o arquivo não está corrompido ou protegido.');
+    console.log(`📊 Texto extraído: ${pdfText.length} caracteres`);
+    
+    if (!pdfText || pdfText.trim().length < 100) {
+      throw new Error('Não foi possível extrair texto suficiente do PDF (mínimo: 100 caracteres). Verifique se o arquivo não está corrompido ou protegido.');
     }
 
-    console.log('✅ Texto extraído do PDF:', pdfText.substring(0, 200) + '...');
+    console.log('✅ Texto extraído do PDF (primeiros 500 chars):', pdfText.substring(0, 500) + '...');
 
     // 2️⃣ CHAMAR GEMINI PARA EXTRAÇÃO ESTRUTURADA
     const extractedData = await extractDataWithAI(pdfText);
@@ -76,40 +78,49 @@ serve(async (req) => {
 });
 
 /**
- * Extrai texto do PDF usando pdf-parse
- * Para produção, considere usar serviços como PDFCo ou Adobe PDF Services
+ * Extrai texto do PDF usando PDF.co com OCR automático
+ * Suporta PDFs complexos e escaneados
  */
 async function extractTextFromPDF(base64: string): Promise<string> {
-  try {
-    // Decodificar base64
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+  const PDF_PARSER_API_KEY = Deno.env.get('PDF_PARSER_API_KEY');
+  
+  if (!PDF_PARSER_API_KEY) {
+    throw new Error('PDF_PARSER_API_KEY não configurada. Configure a secret no Supabase.');
+  }
 
-    // Para esta primeira versão, vamos usar uma API externa simples
-    // TODO: Substituir por pdf-parse quando disponível no Deno
+  console.log('🔄 Chamando PDF.co API com OCR habilitado...');
+
+  try {
     const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/text', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': Deno.env.get('PDFCO_API_KEY') || 'demo' // Usar chave demo se não configurada
+        'x-api-key': PDF_PARSER_API_KEY
       },
       body: JSON.stringify({
-        url: `data:application/pdf;base64,${base64}`,
-        async: false
+        base64Data: `data:application/pdf;base64,${base64}`,
+        inline: true, // Receber resposta imediata
+        profiles: "{ 'ocrMode': 'auto' }" // Ativar OCR automático para PDFs escaneados
       })
     });
 
     if (!response.ok) {
-      // Fallback: extrair texto básico (pode não funcionar para PDFs complexos)
-      console.warn('⚠️ API PDFCo falhou, usando fallback básico');
-      return extractBasicText(bytes);
+      const errorText = await response.text();
+      console.error('❌ Erro na API PDF.co:', response.status, errorText);
+      throw new Error(`PDF.co API falhou (${response.status}): ${errorText}`);
     }
 
     const result = await response.json();
-    return result.text || '';
+    
+    if (result.error) {
+      console.error('❌ Erro retornado pela PDF.co:', result.message);
+      throw new Error(`Erro no serviço PDF.co: ${result.message}`);
+    }
+
+    const extractedText = result.body || '';
+    console.log(`✅ PDF.co extraiu ${extractedText.length} caracteres com sucesso`);
+    
+    return extractedText;
 
   } catch (error) {
     console.error('❌ Erro ao extrair texto do PDF:', error);
@@ -117,23 +128,6 @@ async function extractTextFromPDF(base64: string): Promise<string> {
   }
 }
 
-/**
- * Fallback básico para extrair texto de PDFs simples
- */
-function extractBasicText(pdfBytes: Uint8Array): string {
-  const decoder = new TextDecoder('utf-8', { fatal: false });
-  const text = decoder.decode(pdfBytes);
-  
-  // Regex básico para extrair strings de texto entre parênteses (formato PDF)
-  const matches = text.match(/\(([^)]+)\)/g);
-  if (!matches) return text.substring(0, 5000); // Fallback para texto bruto
-  
-  return matches
-    .map(m => m.slice(1, -1)) // Remove parênteses
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 /**
  * Usa Gemini via Lovable AI Gateway para extrair dados estruturados
