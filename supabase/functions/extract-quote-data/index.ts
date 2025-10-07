@@ -98,7 +98,7 @@ async function extractTextFromPDF(base64: string): Promise<string> {
         'x-api-key': PDF_PARSER_API_KEY
       },
       body: JSON.stringify({
-        base64Data: `data:application/pdf;base64,${base64}`,
+        url: `data:application/pdf;base64,${base64}`,
         inline: true, // Receber resposta imediata
         profiles: "{ 'ocrMode': 'auto' }" // Ativar OCR automático para PDFs escaneados
       })
