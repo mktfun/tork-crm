@@ -14,6 +14,7 @@ interface Policy {
   start_date: string;
   producer_id?: string;
   brokerage_id?: number;
+  ramo_id?: string;
 }
 
 // 🔧 Função robusta para obter o ID do tipo de transação "Comissão"
@@ -82,6 +83,7 @@ async function generateCommissionTransaction(supabaseClient: any, policy: Policy
       company_id: policy.insurance_company,
       producer_id: policy.producer_id || null,
       brokerage_id: policy.brokerage_id || null,
+      ramo_id: policy.ramo_id || null,
       amount: commissionAmount,
       date: policy.start_date || new Date().toISOString().split('T')[0],
       transaction_date: policy.start_date || new Date().toISOString().split('T')[0],
@@ -138,7 +140,7 @@ serve(async (req) => {
     // 2. Buscar todas as apólices ativas do usuário
     const { data: policies, error: policiesError } = await supabaseAdmin
       .from('apolices')
-      .select('*')
+      .select('*, ramo_id')
       .eq('user_id', userId)
       .eq('status', 'Ativa')
       .order('created_at', { ascending: false });
