@@ -1,4 +1,4 @@
-// ✅ NOVA VERSÃO: Extração com Gemini 2.0 Flash Vision (sem PDF.co)
+// ✅ VERSÃO CORRIGIDA: Gemini 2.5 Flash com Vision (sem PDF.co)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -87,7 +87,7 @@ async function fetchDatabaseContext() {
 }
 
 // ============================================
-// EXTRAIR DADOS COM GEMINI 2.0 FLASH VISION
+// EXTRAIR DADOS COM GEMINI 2.5 FLASH VISION
 // ============================================
 async function extractDataWithGeminiVision(pdfBase64: string, dbContext: any) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -98,7 +98,7 @@ async function extractDataWithGeminiVision(pdfBase64: string, dbContext: any) {
 
   const prompt = buildVisionPrompt(dbContext);
 
-  console.log('🤖 Chamando Gemini Vision...');
+  console.log('🤖 Chamando Gemini 2.5 Flash Vision...');
 
   const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -107,7 +107,7 @@ async function extractDataWithGeminiVision(pdfBase64: string, dbContext: any) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-exp',
+      model: 'google/gemini-2.5-flash',
       messages: [
         {
           role: 'user',
