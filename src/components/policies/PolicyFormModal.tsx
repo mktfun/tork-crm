@@ -203,7 +203,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
-  // ✅ VERSÃO SUPER MELHORADA com MATCHING FUZZY INTELIGENTE
+  // ✅ VERSÃO FINAL CORRIGIDA - Com retry para carregamento de ramos
   const handleQuoteDataExtracted = async (data: ExtractedQuoteData) => {
     console.log('📋 Preenchendo formulário com dados extraídos:', data);
 
@@ -215,27 +215,22 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       
       const normalizedSearchName = data.clientName.toLowerCase().trim();
       
-      // Tentar matching exato primeiro
       let foundClient = clients.find(c => 
         c.name.toLowerCase().trim() === normalizedSearchName
       );
       
-      // Se não encontrou, tentar matching parcial
       if (!foundClient) {
         foundClient = clients.find(c => {
           const clientName = c.name.toLowerCase().trim();
-          // Match se um contém o outro
           return clientName.includes(normalizedSearchName) || 
                  normalizedSearchName.includes(clientName);
         });
       }
       
-      // Se ainda não encontrou, tentar por palavras-chave
       if (!foundClient) {
         const searchWords = normalizedSearchName.split(' ').filter(w => w.length > 2);
         foundClient = clients.find(c => {
           const clientWords = c.name.toLowerCase().split(' ');
-          // Match se pelo menos 2 palavras batem
           const matchCount = searchWords.filter(sw => 
             clientWords.some(cw => cw.includes(sw) || sw.includes(cw))
           ).length;
@@ -314,12 +309,10 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       
       const normalizedInsurerName = data.insurerName.toLowerCase().trim();
       
-      // Tentar matching exato
       let foundCompany = companies.find(c => 
         c.name.toLowerCase().trim() === normalizedInsurerName
       );
       
-      // Matching parcial (um contém o outro)
       if (!foundCompany) {
         foundCompany = companies.find(c => {
           const companyName = c.name.toLowerCase().trim();
@@ -328,12 +321,10 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
         });
       }
       
-      // Matching por palavras-chave (ex: "Porto Seguro" vs "Porto Seguro Cia")
       if (!foundCompany) {
         const searchWords = normalizedInsurerName.split(' ').filter(w => w.length > 2);
         foundCompany = companies.find(c => {
           const companyWords = c.name.toLowerCase().split(' ');
-          // Match se todas as palavras principais batem
           return searchWords.every(sw => 
             companyWords.some(cw => cw.includes(sw) || sw.includes(cw))
           );
@@ -356,76 +347,100 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     }
 
     // ============================================
-    // 9. RAMO - Matching Fuzzy com delay para carregar ramos da seguradora
+    // 9. RAMO - Com RETRY até os ramos carregarem
     // ============================================
     if (data.insuranceLine) {
       console.log('🏷️ Buscando ramo:', data.insuranceLine);
       
-      // Aguardar 1.5s para os ramos da seguradora carregarem
-      setTimeout(() => {
-        console.log('📋 Ramos disponíveis para esta seguradora:', availableBranches.map(r => r.nome));
-        
-        const normalizedRamoName = data.insuranceLine!.toLowerCase().trim();
-        
-        // Tentar matching exato
-        let foundRamo = availableBranches.find(r => 
-          r.nome.toLowerCase().trim() === normalizedRamoName
-        );
-        
-        // Matching parcial
-        if (!foundRamo) {
-          foundRamo = availableBranches.find(r => {
-            const ramoName = r.nome.toLowerCase().trim();
-            return ramoName.includes(normalizedRamoName) || 
-                   normalizedRamoName.includes(ramoName);
-          });
-        }
-        
-        // Matching por palavras-chave
-        if (!foundRamo) {
-          const searchWords = normalizedRamoName.split(' ').filter(w => w.length > 2);
-          foundRamo = availableBranches.find(r => {
-            const ramoWords = r.nome.toLowerCase().split(' ');
-            return searchWords.some(sw => 
-              ramoWords.some(rw => rw.includes(sw) || sw.includes(rw))
-            );
-          });
-        }
-        
-        // Matching especial para abreviações comuns
-        if (!foundRamo) {
-          const abreviacoes: Record<string, string[]> = {
-            'auto': ['automóvel', 'veículo', 'carro'],
-            'residencial': ['residência', 'casa', 'imóvel'],
-            'vida': ['seguro de vida', 'vida individual'],
-            'rc': ['responsabilidade civil', 'resp civil'],
-            'empresarial': ['empresa', 'comercial']
-          };
+      // ✅ CORREÇÃO: Função recursiva que tenta até 5 vezes
+      const tryFindRamo = (attempt: number = 1, maxAttempts: number = 5) => {
+        setTimeout(() => {
+          console.log(`📋 Tentativa ${attempt}/${maxAttempts} - Ramos disponíveis:`, availableBranches.length);
           
-          for (const [key, variants] of Object.entries(abreviacoes)) {
-            if (normalizedRamoName.includes(key) || variants.some(v => normalizedRamoName.includes(v))) {
-              foundRamo = availableBranches.find(r => {
-                const ramoLower = r.nome.toLowerCase();
-                return ramoLower.includes(key) || variants.some(v => ramoLower.includes(v));
-              });
-              if (foundRamo) break;
+          // Se ainda não carregou e não atingiu o máximo de tentativas, tenta novamente
+          if (availableBranches.length === 0 && attempt < maxAttempts) {
+            console.log('⏳ Aguardando ramos carregarem...');
+            tryFindRamo(attempt + 1, maxAttempts);
+            return;
+          }
+          
+          // Se não carregou após todas as tentativas
+          if (availableBranches.length === 0) {
+            console.error('❌ Ramos não carregaram após', maxAttempts, 'tentativas');
+            toast.warning('Erro ao carregar ramos', {
+              description: 'Selecione o ramo manualmente'
+            });
+            return;
+          }
+          
+          // Agora sim, fazer o matching
+          console.log('📋 Ramos disponíveis:', availableBranches.map(r => r.nome));
+          
+          const normalizedRamoName = data.insuranceLine!.toLowerCase().trim();
+          
+          // Matching exato
+          let foundRamo = availableBranches.find(r => 
+            r.nome.toLowerCase().trim() === normalizedRamoName
+          );
+          
+          // Matching parcial
+          if (!foundRamo) {
+            foundRamo = availableBranches.find(r => {
+              const ramoName = r.nome.toLowerCase().trim();
+              return ramoName.includes(normalizedRamoName) || 
+                     normalizedRamoName.includes(ramoName);
+            });
+          }
+          
+          // Matching por palavras-chave
+          if (!foundRamo) {
+            const searchWords = normalizedRamoName.split(' ').filter(w => w.length > 2);
+            foundRamo = availableBranches.find(r => {
+              const ramoWords = r.nome.toLowerCase().split(' ');
+              return searchWords.some(sw => 
+                ramoWords.some(rw => rw.includes(sw) || sw.includes(rw))
+              );
+            });
+          }
+          
+          // Matching por abreviações
+          if (!foundRamo) {
+            const abreviacoes: Record<string, string[]> = {
+              'auto': ['automóvel', 'veículo', 'carro', 'automóveis'],
+              'residencial': ['residência', 'casa', 'imóvel'],
+              'vida': ['seguro de vida', 'vida individual'],
+              'rc': ['responsabilidade civil', 'resp civil'],
+              'empresarial': ['empresa', 'comercial']
+            };
+            
+            for (const [key, variants] of Object.entries(abreviacoes)) {
+              if (normalizedRamoName.includes(key) || variants.some(v => normalizedRamoName.includes(v))) {
+                foundRamo = availableBranches.find(r => {
+                  const ramoLower = r.nome.toLowerCase();
+                  return ramoLower.includes(key) || variants.some(v => ramoLower.includes(v));
+                });
+                if (foundRamo) break;
+              }
             }
           }
-        }
-        
-        if (foundRamo) {
-          setValue('type', foundRamo.nome);
-          console.log('✅ Ramo encontrado:', foundRamo.nome);
-          toast.success('Ramo identificado', {
-            description: `${foundRamo.nome} selecionado automaticamente`
-          });
-        } else {
-          console.warn('⚠️ Ramo não encontrado para esta seguradora:', data.insuranceLine);
-          toast.warning('Ramo não disponível', {
-            description: `${data.insuranceLine} não está cadastrado para esta seguradora`
-          });
-        }
-      }, 1500);
+          
+          if (foundRamo) {
+            setValue('type', foundRamo.nome);
+            console.log('✅ Ramo encontrado:', foundRamo.nome);
+            toast.success('Ramo identificado', {
+              description: `${foundRamo.nome} selecionado automaticamente`
+            });
+          } else {
+            console.warn('⚠️ Ramo não encontrado para esta seguradora:', data.insuranceLine);
+            toast.warning('Ramo não disponível', {
+              description: `${data.insuranceLine} não está cadastrado para esta seguradora`
+            });
+          }
+        }, attempt * 800); // Aumenta o delay a cada tentativa (800ms, 1600ms, 2400ms...)
+      };
+      
+      // Iniciar tentativas
+      tryFindRamo();
     }
 
     // ============================================
@@ -433,7 +448,6 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     // ============================================
     await trigger();
     
-    // Verificar se conseguiu preencher os dados principais
     setTimeout(() => {
       const hasClient = !!watch('clientId');
       const hasInsurer = !!watch('insuranceCompany');
@@ -446,7 +460,6 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           });
         }
       } else {
-        // Avisar o que faltou
         const missing = [];
         if (!hasClient) missing.push('Cliente');
         if (!hasInsurer) missing.push('Seguradora');
@@ -457,7 +470,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           });
         }
       }
-    }, 2000);
+    }, 3000); // Aguarda 3s para dar tempo de todos os dados carregarem
 
     console.log('✅ Processamento concluído');
   };
