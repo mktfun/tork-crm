@@ -203,154 +203,276 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
-  // ✅ HANDLER FINAL COM FORCE UPDATE
-  const handleQuoteDataExtracted = async (data: any) => {
+  // ✅ VERSÃO FINAL CORRIGIDA - Com retry para carregamento de ramos
+  const handleQuoteDataExtracted = async (data: ExtractedQuoteData) => {
     console.log('📋 Preenchendo formulário com dados extraídos:', data);
 
-    try {
-      // 1️⃣ CLIENTE
-      if (data.clientId) {
-        setValue('clientId', data.clientId, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Cliente selecionado:', data.clientName);
-      } else if (data.clientName) {
-        console.log('⚠️ Cliente não encontrado na base:', data.clientName);
+    // ============================================
+    // 1. CLIENTE - Matching Inteligente
+    // ============================================
+    if (data.clientName) {
+      console.log('👤 Buscando cliente:', data.clientName);
+      
+      const normalizedSearchName = data.clientName.toLowerCase().trim();
+      
+      let foundClient = clients.find(c => 
+        c.name.toLowerCase().trim() === normalizedSearchName
+      );
+      
+      if (!foundClient) {
+        foundClient = clients.find(c => {
+          const clientName = c.name.toLowerCase().trim();
+          return clientName.includes(normalizedSearchName) || 
+                 normalizedSearchName.includes(clientName);
+        });
       }
-
-      // 2️⃣ BEM SEGURADO
-      if (data.insuredItem) {
-        setValue('insuredAsset', data.insuredItem, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Bem segurado:', data.insuredItem);
+      
+      if (!foundClient) {
+        const searchWords = normalizedSearchName.split(' ').filter(w => w.length > 2);
+        foundClient = clients.find(c => {
+          const clientWords = c.name.toLowerCase().split(' ');
+          const matchCount = searchWords.filter(sw => 
+            clientWords.some(cw => cw.includes(sw) || sw.includes(cw))
+          ).length;
+          return matchCount >= Math.min(2, searchWords.length);
+        });
       }
-
-      // 3️⃣ STATUS
-      setValue('status', data.shouldGenerateRenewal ? 'Ativa' : 'Orçamento', { shouldValidate: true });
-
-      // 4️⃣ AVANÇAR PARA PRÓXIMO STEP
-      setCurrentStep(1);
-      console.log('➡️ Avançando para step 2 (Detalhes do Seguro)');
-
-      // 5️⃣ AGUARDAR RENDER DO STEP 2
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // 6️⃣ SEGURADORA (usa ID direto)
-      if (data.insurerId) {
-        setValue('insuranceCompany', data.insurerId, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Seguradora selecionada:', data.insurerName);
-        
-        // Trigger onChange manualmente para carregar ramos
-        const companySelect = document.querySelector('select[name="insuranceCompany"]') as HTMLSelectElement;
-        if (companySelect) {
-          companySelect.value = data.insurerId;
-          const event = new Event('change', { bubbles: true });
-          companySelect.dispatchEvent(event);
-        }
-      }
-
-      // 7️⃣ AGUARDAR RAMOS CARREGAREM
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 8️⃣ RAMO (usa ID direto)
-      if (data.insuranceLineId) {
-        setValue('type', data.insuranceLineId, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Ramo selecionado:', data.insuranceLine);
-        
-        // Force update do select de ramo
-        const ramoSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
-        if (ramoSelect) {
-          ramoSelect.value = data.insuranceLineId;
-          const event = new Event('change', { bubbles: true });
-          ramoSelect.dispatchEvent(event);
-        }
+      
+      if (foundClient) {
+        setValue('clientId', foundClient.id);
+        console.log('✅ Cliente encontrado:', foundClient.name);
+        toast.success('Cliente identificado', {
+          description: `${foundClient.name} selecionado automaticamente`
+        });
       } else {
-        console.log('⚠️ Ramo não encontrado:', data.insuranceLine);
+        console.warn('⚠️ Cliente não encontrado na base:', data.clientName);
+        toast.warning('Cliente não cadastrado', {
+          description: `${data.clientName} não foi encontrado. Considere cadastrá-lo primeiro.`
+        });
       }
-
-      // 9️⃣ NÚMERO DA APÓLICE
-      if (data.policyNumber) {
-        setValue('policyNumber', data.policyNumber, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Número da apólice:', data.policyNumber);
-      }
-
-      // 🔟 AVANÇAR PARA STEP 3 (Valores)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCurrentStep(2);
-      console.log('➡️ Avançando para step 3 (Valores e Vigência)');
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // 1️⃣1️⃣ PRÊMIO (CORRIGIDO)
-      if (data.premiumValue && data.premiumValue > 0) {
-        setValue('premiumValue', data.premiumValue, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Prêmio:', data.premiumValue);
-        
-        // Force update do input de prêmio
-        const premiumInput = document.querySelector('input[name="premiumValue"]') as HTMLInputElement;
-        if (premiumInput) {
-          premiumInput.value = data.premiumValue.toString();
-          const event = new Event('input', { bubbles: true });
-          premiumInput.dispatchEvent(event);
-        }
-      } else {
-        console.log('⚠️ Prêmio não identificado no PDF');
-      }
-
-      // 1️⃣2️⃣ COMISSÃO (CORRIGIDO)
-      if (data.commissionPercentage && data.commissionPercentage > 0) {
-        setValue('commissionRate', data.commissionPercentage, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Comissão:', data.commissionPercentage + '%');
-        
-        // Force update do input de comissão
-        const commissionInput = document.querySelector('input[name="commissionRate"]') as HTMLInputElement;
-        if (commissionInput) {
-          commissionInput.value = data.commissionPercentage.toString();
-          const event = new Event('input', { bubbles: true });
-          commissionInput.dispatchEvent(event);
-        }
-      } else {
-        console.log('⚠️ Comissão não identificada no PDF');
-      }
-
-      // 1️⃣3️⃣ DATA DE INÍCIO
-      if (data.startDate && data.startDate !== 'null') {
-        setValue('startDate', data.startDate, { shouldValidate: true, shouldDirty: true });
-        console.log('✅ Data de início:', data.startDate);
-        
-        // Force update do input de data
-        const dateInput = document.querySelector('input[name="startDate"]') as HTMLInputElement;
-        if (dateInput) {
-          dateInput.value = data.startDate;
-          const event = new Event('input', { bubbles: true });
-          dateInput.dispatchEvent(event);
-        }
-      } else {
-        console.log('⚠️ Data de início não identificada');
-      }
-
-      // 1️⃣4️⃣ RENOVAÇÃO AUTOMÁTICA
-      setValue('automaticRenewal', data.shouldGenerateRenewal || false, { shouldValidate: true });
-
-      // 1️⃣5️⃣ FORCE RE-RENDER (CRÍTICO)
-      // Isso força o React Hook Form a atualizar a UI
-      setTimeout(() => {
-        const form = document.querySelector('form');
-        if (form) {
-          const event = new Event('change', { bubbles: true });
-          form.dispatchEvent(event);
-        }
-      }, 100);
-
-      console.log('✅ Processamento concluído');
-
-      toast.success("Dados extraídos com sucesso!", {
-        description: "Revise os campos preenchidos antes de salvar.",
-      });
-
-    } catch (error) {
-      console.error('❌ Erro ao preencher formulário:', error);
-      toast.error("Erro ao preencher formulário", {
-        description: "Alguns campos podem não ter sido preenchidos corretamente.",
-      });
     }
+
+    // ============================================
+    // 2. BEM SEGURADO
+    // ============================================
+    if (data.insuredItem) {
+      setValue('insuredAsset', data.insuredItem);
+      console.log('✅ Bem segurado:', data.insuredItem);
+    }
+
+    // ============================================
+    // 3. NÚMERO DA APÓLICE
+    // ============================================
+    if (data.policyNumber) {
+      setValue('policyNumber', data.policyNumber);
+      console.log('✅ Número da apólice:', data.policyNumber);
+    }
+
+    // ============================================
+    // 4. VALOR DO PRÊMIO
+    // ============================================
+    if (data.premiumValue) {
+      setValue('premiumValue', data.premiumValue);
+      console.log('✅ Prêmio:', data.premiumValue);
+    }
+
+    // ============================================
+    // 5. TAXA DE COMISSÃO
+    // ============================================
+    if (data.commissionPercentage) {
+      setValue('commissionRate', data.commissionPercentage);
+      console.log('✅ Comissão:', data.commissionPercentage);
+    } else {
+      console.log('⚠️ Comissão não identificada no PDF');
+    }
+
+    // ============================================
+    // 6. DATA DE INÍCIO
+    // ============================================
+    if (data.startDate && data.startDate !== 'null' && data.startDate !== 'undefined' && !isNaN(new Date(data.startDate).getTime())) {
+      setValue('startDate', data.startDate);
+      const expirationDate = addYears(new Date(data.startDate), 1);
+      setValue('expirationDate', format(expirationDate, 'yyyy-MM-dd'));
+      console.log('✅ Data de início:', data.startDate);
+    }
+
+    // ============================================
+    // 7. RENOVAÇÃO AUTOMÁTICA
+    // ============================================
+    setValue('automaticRenewal', data.shouldGenerateRenewal);
+
+    // ============================================
+    // 8. SEGURADORA - Matching Fuzzy Inteligente
+    // ============================================
+    if (data.insurerName) {
+      console.log('🏢 Buscando seguradora:', data.insurerName);
+      
+      const normalizedInsurerName = data.insurerName.toLowerCase().trim();
+      
+      let foundCompany = companies.find(c => 
+        c.name.toLowerCase().trim() === normalizedInsurerName
+      );
+      
+      if (!foundCompany) {
+        foundCompany = companies.find(c => {
+          const companyName = c.name.toLowerCase().trim();
+          return companyName.includes(normalizedInsurerName) || 
+                 normalizedInsurerName.includes(companyName);
+        });
+      }
+      
+      if (!foundCompany) {
+        const searchWords = normalizedInsurerName.split(' ').filter(w => w.length > 2);
+        foundCompany = companies.find(c => {
+          const companyWords = c.name.toLowerCase().split(' ');
+          return searchWords.every(sw => 
+            companyWords.some(cw => cw.includes(sw) || sw.includes(cw))
+          );
+        });
+      }
+      
+      if (foundCompany) {
+        setValue('insuranceCompany', foundCompany.id);
+        console.log('✅ Seguradora encontrada:', foundCompany.name);
+        toast.success('Seguradora identificada', {
+          description: `${foundCompany.name} selecionada automaticamente`
+        });
+      } else {
+        console.warn('⚠️ Seguradora não encontrada na base:', data.insurerName);
+        console.log('📋 Seguradoras disponíveis:', companies.map(c => c.name));
+        toast.warning('Seguradora não cadastrada', {
+          description: `${data.insurerName} não foi encontrada. Cadastre-a primeiro.`
+        });
+      }
+    }
+
+    // ============================================
+    // 9. RAMO - Com RETRY até os ramos carregarem
+    // ============================================
+    if (data.insuranceLine) {
+      console.log('🏷️ Buscando ramo:', data.insuranceLine);
+      
+      // ✅ CORREÇÃO: Função recursiva que tenta até 5 vezes
+      const tryFindRamo = (attempt: number = 1, maxAttempts: number = 5) => {
+        setTimeout(() => {
+          console.log(`📋 Tentativa ${attempt}/${maxAttempts} - Ramos disponíveis:`, availableBranches.length);
+          
+          // Se ainda não carregou e não atingiu o máximo de tentativas, tenta novamente
+          if (availableBranches.length === 0 && attempt < maxAttempts) {
+            console.log('⏳ Aguardando ramos carregarem...');
+            tryFindRamo(attempt + 1, maxAttempts);
+            return;
+          }
+          
+          // Se não carregou após todas as tentativas
+          if (availableBranches.length === 0) {
+            console.error('❌ Ramos não carregaram após', maxAttempts, 'tentativas');
+            toast.warning('Erro ao carregar ramos', {
+              description: 'Selecione o ramo manualmente'
+            });
+            return;
+          }
+          
+          // Agora sim, fazer o matching
+          console.log('📋 Ramos disponíveis:', availableBranches.map(r => r.nome));
+          
+          const normalizedRamoName = data.insuranceLine!.toLowerCase().trim();
+          
+          // Matching exato
+          let foundRamo = availableBranches.find(r => 
+            r.nome.toLowerCase().trim() === normalizedRamoName
+          );
+          
+          // Matching parcial
+          if (!foundRamo) {
+            foundRamo = availableBranches.find(r => {
+              const ramoName = r.nome.toLowerCase().trim();
+              return ramoName.includes(normalizedRamoName) || 
+                     normalizedRamoName.includes(ramoName);
+            });
+          }
+          
+          // Matching por palavras-chave
+          if (!foundRamo) {
+            const searchWords = normalizedRamoName.split(' ').filter(w => w.length > 2);
+            foundRamo = availableBranches.find(r => {
+              const ramoWords = r.nome.toLowerCase().split(' ');
+              return searchWords.some(sw => 
+                ramoWords.some(rw => rw.includes(sw) || sw.includes(rw))
+              );
+            });
+          }
+          
+          // Matching por abreviações
+          if (!foundRamo) {
+            const abreviacoes: Record<string, string[]> = {
+              'auto': ['automóvel', 'veículo', 'carro', 'automóveis'],
+              'residencial': ['residência', 'casa', 'imóvel'],
+              'vida': ['seguro de vida', 'vida individual'],
+              'rc': ['responsabilidade civil', 'resp civil'],
+              'empresarial': ['empresa', 'comercial']
+            };
+            
+            for (const [key, variants] of Object.entries(abreviacoes)) {
+              if (normalizedRamoName.includes(key) || variants.some(v => normalizedRamoName.includes(v))) {
+                foundRamo = availableBranches.find(r => {
+                  const ramoLower = r.nome.toLowerCase();
+                  return ramoLower.includes(key) || variants.some(v => ramoLower.includes(v));
+                });
+                if (foundRamo) break;
+              }
+            }
+          }
+          
+          if (foundRamo) {
+            setValue('type', foundRamo.nome);
+            console.log('✅ Ramo encontrado:', foundRamo.nome);
+            toast.success('Ramo identificado', {
+              description: `${foundRamo.nome} selecionado automaticamente`
+            });
+          } else {
+            console.warn('⚠️ Ramo não encontrado para esta seguradora:', data.insuranceLine);
+            toast.warning('Ramo não disponível', {
+              description: `${data.insuranceLine} não está cadastrado para esta seguradora`
+            });
+          }
+        }, attempt * 800); // Aumenta o delay a cada tentativa (800ms, 1600ms, 2400ms...)
+      };
+      
+      // Iniciar tentativas
+      tryFindRamo();
+    }
+
+    // ============================================
+    // 10. VALIDAÇÃO E NAVEGAÇÃO AUTOMÁTICA
+    // ============================================
+    await trigger();
+    
+    setTimeout(() => {
+      const hasClient = !!watch('clientId');
+      const hasInsurer = !!watch('insuranceCompany');
+      
+      if (hasClient && hasInsurer) {
+        if (currentStep === 1) {
+          setCurrentStep(2);
+          toast.success('Formulário preenchido!', {
+            description: 'Dados principais identificados. Revise e continue.'
+          });
+        }
+      } else {
+        const missing = [];
+        if (!hasClient) missing.push('Cliente');
+        if (!hasInsurer) missing.push('Seguradora');
+        
+        if (missing.length > 0) {
+          toast.warning('Atenção', {
+            description: `Não foi possível identificar: ${missing.join(', ')}. Selecione manualmente.`
+          });
+        }
+      }
+    }, 3000); // Aguarda 3s para dar tempo de todos os dados carregarem
+
+    console.log('✅ Processamento concluído');
   };
 
   const renderStepContent = () => {
