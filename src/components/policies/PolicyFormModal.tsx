@@ -203,276 +203,110 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
-  // ✅ VERSÃO FINAL CORRIGIDA - Com retry para carregamento de ramos
+  // ✅ VERSÃO FINAL - Usa IDs diretos da Edge Function (sem retry de ramos)
   const handleQuoteDataExtracted = async (data: ExtractedQuoteData) => {
-    console.log('📋 Preenchendo formulário com dados extraídos:', data);
+    console.log('📋 Preenchendo formulário com dados extraídos (IDs diretos):', data);
 
-    // ============================================
-    // 1. CLIENTE - Matching Inteligente
-    // ============================================
-    if (data.clientName) {
-      console.log('👤 Buscando cliente:', data.clientName);
-      
-      const normalizedSearchName = data.clientName.toLowerCase().trim();
-      
-      let foundClient = clients.find(c => 
-        c.name.toLowerCase().trim() === normalizedSearchName
-      );
-      
-      if (!foundClient) {
-        foundClient = clients.find(c => {
-          const clientName = c.name.toLowerCase().trim();
-          return clientName.includes(normalizedSearchName) || 
-                 normalizedSearchName.includes(clientName);
-        });
+    try {
+      // ============================================
+      // STEP 1: INFORMAÇÕES PRINCIPAIS
+      // ============================================
+      if (data.clientId) {
+        setValue('clientId', data.clientId, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Cliente selecionado (ID):', data.clientId);
+      } else if (data.clientName) {
+        console.log('⚠️ Cliente extraído mas sem ID:', data.clientName);
       }
-      
-      if (!foundClient) {
-        const searchWords = normalizedSearchName.split(' ').filter(w => w.length > 2);
-        foundClient = clients.find(c => {
-          const clientWords = c.name.toLowerCase().split(' ');
-          const matchCount = searchWords.filter(sw => 
-            clientWords.some(cw => cw.includes(sw) || sw.includes(cw))
-          ).length;
-          return matchCount >= Math.min(2, searchWords.length);
-        });
+
+      if (data.insuredItem) {
+        setValue('insuredAsset', data.insuredItem, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Bem segurado:', data.insuredItem);
       }
-      
-      if (foundClient) {
-        setValue('clientId', foundClient.id);
-        console.log('✅ Cliente encontrado:', foundClient.name);
-        toast.success('Cliente identificado', {
-          description: `${foundClient.name} selecionado automaticamente`
-        });
+
+      setValue('status', 'Orçamento', { shouldValidate: true, shouldDirty: true });
+
+      // Dar tempo para render das mudanças
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Avançar para Step 2
+      setCurrentStep(2);
+      console.log('➡️ Avançando para step 2 (Detalhes do Seguro)');
+
+      // ============================================
+      // STEP 2: DETALHES DO SEGURO
+      // ============================================
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Seguradora (usa ID direto)
+      if (data.insurerId) {
+        setValue('insuranceCompany', data.insurerId, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Seguradora selecionada (ID):', data.insurerId);
+      } else if (data.insurerName) {
+        console.log('⚠️ Seguradora extraída mas sem ID:', data.insurerName);
+      }
+
+      // Ramo (usa ID direto - não depende do hook useRamosByCompany)
+      if (data.insuranceLineId) {
+        setValue('type', data.insuranceLineId, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Ramo selecionado (ID):', data.insuranceLineId);
+      } else if (data.insuranceLine) {
+        console.log('⚠️ Ramo extraído mas sem ID:', data.insuranceLine);
+      }
+
+      if (data.policyNumber) {
+        setValue('policyNumber', data.policyNumber, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Número da apólice/orçamento:', data.policyNumber);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Avançar para Step 3
+      setCurrentStep(3);
+      console.log('➡️ Avançando para step 3 (Valores e Vigência)');
+
+      // ============================================
+      // STEP 3: VALORES E VIGÊNCIA
+      // ============================================
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      if (typeof data.premiumValue === 'number' && data.premiumValue > 0) {
+        setValue('premiumValue', data.premiumValue, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Prêmio:', data.premiumValue);
       } else {
-        console.warn('⚠️ Cliente não encontrado na base:', data.clientName);
-        toast.warning('Cliente não cadastrado', {
-          description: `${data.clientName} não foi encontrado. Considere cadastrá-lo primeiro.`
-        });
+        console.log('⚠️ Prêmio não identificado no PDF');
       }
-    }
 
-    // ============================================
-    // 2. BEM SEGURADO
-    // ============================================
-    if (data.insuredItem) {
-      setValue('insuredAsset', data.insuredItem);
-      console.log('✅ Bem segurado:', data.insuredItem);
-    }
-
-    // ============================================
-    // 3. NÚMERO DA APÓLICE
-    // ============================================
-    if (data.policyNumber) {
-      setValue('policyNumber', data.policyNumber);
-      console.log('✅ Número da apólice:', data.policyNumber);
-    }
-
-    // ============================================
-    // 4. VALOR DO PRÊMIO
-    // ============================================
-    if (data.premiumValue) {
-      setValue('premiumValue', data.premiumValue);
-      console.log('✅ Prêmio:', data.premiumValue);
-    }
-
-    // ============================================
-    // 5. TAXA DE COMISSÃO
-    // ============================================
-    if (data.commissionPercentage) {
-      setValue('commissionRate', data.commissionPercentage);
-      console.log('✅ Comissão:', data.commissionPercentage);
-    } else {
-      console.log('⚠️ Comissão não identificada no PDF');
-    }
-
-    // ============================================
-    // 6. DATA DE INÍCIO
-    // ============================================
-    if (data.startDate && data.startDate !== 'null' && data.startDate !== 'undefined' && !isNaN(new Date(data.startDate).getTime())) {
-      setValue('startDate', data.startDate);
-      const expirationDate = addYears(new Date(data.startDate), 1);
-      setValue('expirationDate', format(expirationDate, 'yyyy-MM-dd'));
-      console.log('✅ Data de início:', data.startDate);
-    }
-
-    // ============================================
-    // 7. RENOVAÇÃO AUTOMÁTICA
-    // ============================================
-    setValue('automaticRenewal', data.shouldGenerateRenewal);
-
-    // ============================================
-    // 8. SEGURADORA - Matching Fuzzy Inteligente
-    // ============================================
-    if (data.insurerName) {
-      console.log('🏢 Buscando seguradora:', data.insurerName);
-      
-      const normalizedInsurerName = data.insurerName.toLowerCase().trim();
-      
-      let foundCompany = companies.find(c => 
-        c.name.toLowerCase().trim() === normalizedInsurerName
-      );
-      
-      if (!foundCompany) {
-        foundCompany = companies.find(c => {
-          const companyName = c.name.toLowerCase().trim();
-          return companyName.includes(normalizedInsurerName) || 
-                 normalizedInsurerName.includes(companyName);
-        });
-      }
-      
-      if (!foundCompany) {
-        const searchWords = normalizedInsurerName.split(' ').filter(w => w.length > 2);
-        foundCompany = companies.find(c => {
-          const companyWords = c.name.toLowerCase().split(' ');
-          return searchWords.every(sw => 
-            companyWords.some(cw => cw.includes(sw) || sw.includes(cw))
-          );
-        });
-      }
-      
-      if (foundCompany) {
-        setValue('insuranceCompany', foundCompany.id);
-        console.log('✅ Seguradora encontrada:', foundCompany.name);
-        toast.success('Seguradora identificada', {
-          description: `${foundCompany.name} selecionada automaticamente`
-        });
+      if (typeof data.commissionPercentage === 'number' && data.commissionPercentage >= 0) {
+        setValue('commissionRate', data.commissionPercentage, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Comissão:', data.commissionPercentage + '%');
       } else {
-        console.warn('⚠️ Seguradora não encontrada na base:', data.insurerName);
-        console.log('📋 Seguradoras disponíveis:', companies.map(c => c.name));
-        toast.warning('Seguradora não cadastrada', {
-          description: `${data.insurerName} não foi encontrada. Cadastre-a primeiro.`
-        });
+        console.log('⚠️ Comissão não identificada no PDF');
       }
-    }
 
-    // ============================================
-    // 9. RAMO - Com RETRY até os ramos carregarem
-    // ============================================
-    if (data.insuranceLine) {
-      console.log('🏷️ Buscando ramo:', data.insuranceLine);
-      
-      // ✅ CORREÇÃO: Função recursiva que tenta até 5 vezes
-      const tryFindRamo = (attempt: number = 1, maxAttempts: number = 5) => {
-        setTimeout(() => {
-          console.log(`📋 Tentativa ${attempt}/${maxAttempts} - Ramos disponíveis:`, availableBranches.length);
-          
-          // Se ainda não carregou e não atingiu o máximo de tentativas, tenta novamente
-          if (availableBranches.length === 0 && attempt < maxAttempts) {
-            console.log('⏳ Aguardando ramos carregarem...');
-            tryFindRamo(attempt + 1, maxAttempts);
-            return;
-          }
-          
-          // Se não carregou após todas as tentativas
-          if (availableBranches.length === 0) {
-            console.error('❌ Ramos não carregaram após', maxAttempts, 'tentativas');
-            toast.warning('Erro ao carregar ramos', {
-              description: 'Selecione o ramo manualmente'
-            });
-            return;
-          }
-          
-          // Agora sim, fazer o matching
-          console.log('📋 Ramos disponíveis:', availableBranches.map(r => r.nome));
-          
-          const normalizedRamoName = data.insuranceLine!.toLowerCase().trim();
-          
-          // Matching exato
-          let foundRamo = availableBranches.find(r => 
-            r.nome.toLowerCase().trim() === normalizedRamoName
-          );
-          
-          // Matching parcial
-          if (!foundRamo) {
-            foundRamo = availableBranches.find(r => {
-              const ramoName = r.nome.toLowerCase().trim();
-              return ramoName.includes(normalizedRamoName) || 
-                     normalizedRamoName.includes(ramoName);
-            });
-          }
-          
-          // Matching por palavras-chave
-          if (!foundRamo) {
-            const searchWords = normalizedRamoName.split(' ').filter(w => w.length > 2);
-            foundRamo = availableBranches.find(r => {
-              const ramoWords = r.nome.toLowerCase().split(' ');
-              return searchWords.some(sw => 
-                ramoWords.some(rw => rw.includes(sw) || sw.includes(rw))
-              );
-            });
-          }
-          
-          // Matching por abreviações
-          if (!foundRamo) {
-            const abreviacoes: Record<string, string[]> = {
-              'auto': ['automóvel', 'veículo', 'carro', 'automóveis'],
-              'residencial': ['residência', 'casa', 'imóvel'],
-              'vida': ['seguro de vida', 'vida individual'],
-              'rc': ['responsabilidade civil', 'resp civil'],
-              'empresarial': ['empresa', 'comercial']
-            };
-            
-            for (const [key, variants] of Object.entries(abreviacoes)) {
-              if (normalizedRamoName.includes(key) || variants.some(v => normalizedRamoName.includes(v))) {
-                foundRamo = availableBranches.find(r => {
-                  const ramoLower = r.nome.toLowerCase();
-                  return ramoLower.includes(key) || variants.some(v => ramoLower.includes(v));
-                });
-                if (foundRamo) break;
-              }
-            }
-          }
-          
-          if (foundRamo) {
-            setValue('type', foundRamo.nome);
-            console.log('✅ Ramo encontrado:', foundRamo.nome);
-            toast.success('Ramo identificado', {
-              description: `${foundRamo.nome} selecionado automaticamente`
-            });
-          } else {
-            console.warn('⚠️ Ramo não encontrado para esta seguradora:', data.insuranceLine);
-            toast.warning('Ramo não disponível', {
-              description: `${data.insuranceLine} não está cadastrado para esta seguradora`
-            });
-          }
-        }, attempt * 800); // Aumenta o delay a cada tentativa (800ms, 1600ms, 2400ms...)
-      };
-      
-      // Iniciar tentativas
-      tryFindRamo();
-    }
-
-    // ============================================
-    // 10. VALIDAÇÃO E NAVEGAÇÃO AUTOMÁTICA
-    // ============================================
-    await trigger();
-    
-    setTimeout(() => {
-      const hasClient = !!watch('clientId');
-      const hasInsurer = !!watch('insuranceCompany');
-      
-      if (hasClient && hasInsurer) {
-        if (currentStep === 1) {
-          setCurrentStep(2);
-          toast.success('Formulário preenchido!', {
-            description: 'Dados principais identificados. Revise e continue.'
-          });
-        }
-      } else {
-        const missing = [];
-        if (!hasClient) missing.push('Cliente');
-        if (!hasInsurer) missing.push('Seguradora');
-        
-        if (missing.length > 0) {
-          toast.warning('Atenção', {
-            description: `Não foi possível identificar: ${missing.join(', ')}. Selecione manualmente.`
-          });
-        }
+      if (data.startDate && data.startDate !== 'null' && data.startDate !== 'undefined' && !isNaN(new Date(data.startDate).getTime())) {
+        setValue('startDate', data.startDate, { shouldValidate: true, shouldDirty: true });
+        // Também ajusta a vigência automaticamente
+        const expiration = format(addYears(new Date(data.startDate), 1), 'yyyy-MM-dd');
+        setValue('expirationDate', expiration, { shouldValidate: true, shouldDirty: true });
+        console.log('✅ Data de início:', data.startDate);
       }
-    }, 3000); // Aguarda 3s para dar tempo de todos os dados carregarem
 
-    console.log('✅ Processamento concluído');
+      if (typeof data.shouldGenerateRenewal === 'boolean') {
+        setValue('automaticRenewal', data.shouldGenerateRenewal, { shouldValidate: true, shouldDirty: true });
+      }
+
+      await trigger();
+      toast.success('PDF processado com sucesso!', {
+        description: 'Revise os dados e salve a apólice.'
+      });
+
+      console.log('✅ Processamento concluído');
+    } catch (error) {
+      console.error('❌ Erro ao preencher formulário:', error);
+      toast.warning('Erro ao processar dados', {
+        description: 'Alguns campos podem não ter sido preenchidos. Verifique e complete manualmente.'
+      });
+    }
   };
 
   const renderStepContent = () => {
