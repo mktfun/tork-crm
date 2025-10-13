@@ -215,9 +215,17 @@ Ao analisar 'clientName', 'insurerName' e 'insuranceLine', você DEVE seguir est
 
 # CAMPOS PARA EXTRAIR
 
-1. **clientName**: Nome do Segurado EXATO da lista "Clientes Cadastrados".
-   - Procure por campos como "Segurado:", "Proponente:" ou "Cliente:".
-   - ⚠️ **IMPORTANTE: Retorne o nome EXATO da lista "Clientes Cadastrados".**
+1. **clientName**: Nome completo do Segurado (pessoa ou empresa).
+   - ⚠️ **CRÍTICO:** Procure especificamente por:
+     * "Proponente / Segurado(a):" seguido do nome completo
+     * "Segurado:" ou "Proponente:" seguido do nome
+     * "Cliente:" seguido do nome
+   - Extraia APENAS o nome completo da pessoa/empresa, SEM incluir:
+     * CPF, CNPJ ou outros documentos
+     * Profissão, endereço ou outros dados
+   - Exemplo: Se o PDF diz "LUCIANA GIMENES BAYSZAR", extraia "LUCIANA GIMENES BAYSZAR"
+   - Depois de extrair, encontre a correspondência MAIS PRÓXIMA na lista "Clientes Cadastrados"
+   - Se não encontrar o campo no PDF, retorne \`null\`
 
 2. **insuredItem**: O bem segurado com DETALHES.
    - Para Automóvel: "Honda Civic LXR 2023 - Placa ABC1234"
