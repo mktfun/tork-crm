@@ -203,14 +203,14 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
-  // ✅ HANDLER ULTRA SIMPLIFICADO - Usa IDs diretos da edge function
+  // ✅ HANDLER FINAL COM FORCE UPDATE
   const handleQuoteDataExtracted = async (data: any) => {
     console.log('📋 Preenchendo formulário com dados extraídos:', data);
 
     try {
       // 1️⃣ CLIENTE
       if (data.clientId) {
-        setValue('clientId', data.clientId);
+        setValue('clientId', data.clientId, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Cliente selecionado:', data.clientName);
       } else if (data.clientName) {
         console.log('⚠️ Cliente não encontrado na base:', data.clientName);
@@ -218,12 +218,12 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
       // 2️⃣ BEM SEGURADO
       if (data.insuredItem) {
-        setValue('insuredAsset', data.insuredItem);
+        setValue('insuredAsset', data.insuredItem, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Bem segurado:', data.insuredItem);
       }
 
       // 3️⃣ STATUS
-      setValue('status', data.shouldGenerateRenewal ? 'Ativa' : 'Orçamento');
+      setValue('status', data.shouldGenerateRenewal ? 'Ativa' : 'Orçamento', { shouldValidate: true });
 
       // 4️⃣ AVANÇAR PARA PRÓXIMO STEP
       setCurrentStep(1);
@@ -234,13 +234,14 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
       // 6️⃣ SEGURADORA (usa ID direto)
       if (data.insurerId) {
-        setValue('insuranceCompany', data.insurerId);
+        setValue('insuranceCompany', data.insurerId, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Seguradora selecionada:', data.insurerName);
         
-        // Trigger onChange para carregar ramos
-        const event = new Event('change', { bubbles: true });
-        const companySelect = document.querySelector('select[name="insuranceCompany"]');
+        // Trigger onChange manualmente para carregar ramos
+        const companySelect = document.querySelector('select[name="insuranceCompany"]') as HTMLSelectElement;
         if (companySelect) {
+          companySelect.value = data.insurerId;
+          const event = new Event('change', { bubbles: true });
           companySelect.dispatchEvent(event);
         }
       }
@@ -250,15 +251,23 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
       // 8️⃣ RAMO (usa ID direto)
       if (data.insuranceLineId) {
-        setValue('type', data.insuranceLineId);
+        setValue('type', data.insuranceLineId, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Ramo selecionado:', data.insuranceLine);
+        
+        // Force update do select de ramo
+        const ramoSelect = document.querySelector('select[name="type"]') as HTMLSelectElement;
+        if (ramoSelect) {
+          ramoSelect.value = data.insuranceLineId;
+          const event = new Event('change', { bubbles: true });
+          ramoSelect.dispatchEvent(event);
+        }
       } else {
         console.log('⚠️ Ramo não encontrado:', data.insuranceLine);
       }
 
       // 9️⃣ NÚMERO DA APÓLICE
       if (data.policyNumber) {
-        setValue('policyNumber', data.policyNumber);
+        setValue('policyNumber', data.policyNumber, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Número da apólice:', data.policyNumber);
       }
 
@@ -269,32 +278,72 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 1️⃣1️⃣ PRÊMIO
-      if (data.premiumValue) {
-        setValue('premiumValue', data.premiumValue);
+      // 1️⃣1️⃣ PRÊMIO (CORRIGIDO)
+      if (data.premiumValue && data.premiumValue > 0) {
+        setValue('premiumValue', data.premiumValue, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Prêmio:', data.premiumValue);
+        
+        // Force update do input de prêmio
+        const premiumInput = document.querySelector('input[name="premiumValue"]') as HTMLInputElement;
+        if (premiumInput) {
+          premiumInput.value = data.premiumValue.toString();
+          const event = new Event('input', { bubbles: true });
+          premiumInput.dispatchEvent(event);
+        }
+      } else {
+        console.log('⚠️ Prêmio não identificado no PDF');
       }
 
-      // 1️⃣2️⃣ COMISSÃO
-      if (data.commissionPercentage) {
-        setValue('commissionRate', data.commissionPercentage);
+      // 1️⃣2️⃣ COMISSÃO (CORRIGIDO)
+      if (data.commissionPercentage && data.commissionPercentage > 0) {
+        setValue('commissionRate', data.commissionPercentage, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Comissão:', data.commissionPercentage + '%');
+        
+        // Force update do input de comissão
+        const commissionInput = document.querySelector('input[name="commissionRate"]') as HTMLInputElement;
+        if (commissionInput) {
+          commissionInput.value = data.commissionPercentage.toString();
+          const event = new Event('input', { bubbles: true });
+          commissionInput.dispatchEvent(event);
+        }
       } else {
         console.log('⚠️ Comissão não identificada no PDF');
       }
 
       // 1️⃣3️⃣ DATA DE INÍCIO
       if (data.startDate && data.startDate !== 'null') {
-        setValue('startDate', data.startDate);
+        setValue('startDate', data.startDate, { shouldValidate: true, shouldDirty: true });
         console.log('✅ Data de início:', data.startDate);
+        
+        // Force update do input de data
+        const dateInput = document.querySelector('input[name="startDate"]') as HTMLInputElement;
+        if (dateInput) {
+          dateInput.value = data.startDate;
+          const event = new Event('input', { bubbles: true });
+          dateInput.dispatchEvent(event);
+        }
       } else {
         console.log('⚠️ Data de início não identificada');
       }
 
       // 1️⃣4️⃣ RENOVAÇÃO AUTOMÁTICA
-      setValue('automaticRenewal', data.shouldGenerateRenewal || false);
+      setValue('automaticRenewal', data.shouldGenerateRenewal || false, { shouldValidate: true });
+
+      // 1️⃣5️⃣ FORCE RE-RENDER (CRÍTICO)
+      // Isso força o React Hook Form a atualizar a UI
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        if (form) {
+          const event = new Event('change', { bubbles: true });
+          form.dispatchEvent(event);
+        }
+      }, 100);
 
       console.log('✅ Processamento concluído');
+
+      toast.success("Dados extraídos com sucesso!", {
+        description: "Revise os campos preenchidos antes de salvar.",
+      });
 
     } catch (error) {
       console.error('❌ Erro ao preencher formulário:', error);
