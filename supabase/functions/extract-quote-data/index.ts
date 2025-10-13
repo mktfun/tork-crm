@@ -1,4 +1,4 @@
-// ✅ VERSÃO CORRIGIDA: Gemini 2.5 Flash com Vision (sem PDF.co)
+// ✅ SOLUÇÃO FINAL: PDF → PNG → Gemini Vision
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -21,22 +21,16 @@ serve(async (req) => {
 
     console.log('📄 Processando PDF com Gemini Vision:', fileUrl);
 
-    // 1️⃣ BAIXAR O PDF
-    const pdfResponse = await fetch(fileUrl);
-    if (!pdfResponse.ok) {
-      throw new Error(`Erro ao baixar PDF: ${pdfResponse.statusText}`);
-    }
-    
-    const pdfBuffer = await pdfResponse.arrayBuffer();
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
-    console.log('✅ PDF baixado:', pdfBuffer.byteLength, 'bytes');
+    // 1️⃣ CONVERTER PDF PARA IMAGEM (PNG)
+    const imageUrl = await convertPdfToImage(fileUrl);
+    console.log('✅ PDF convertido para imagem:', imageUrl);
 
     // 2️⃣ BUSCAR CONTEXTO DO BANCO
     const dbContext = await fetchDatabaseContext();
     console.log(`✅ Contexto: ${dbContext.ramos.length} ramos, ${dbContext.companies.length} seguradoras, ${dbContext.clients.length} clientes`);
 
     // 3️⃣ EXTRAIR DADOS COM GEMINI VISION
-    const extractedData = await extractDataWithGeminiVision(pdfBase64, dbContext);
+    const extractedData = await extractDataWithGeminiVision(imageUrl, dbContext);
     console.log('✅ Dados extraídos:', extractedData);
 
     return new Response(
@@ -65,6 +59,54 @@ serve(async (req) => {
 });
 
 // ============================================
+// CONVERTER PDF PARA IMAGEM COM PDF.CO
+// ============================================
+async function convertPdfToImage(pdfUrl: string): Promise<string> {
+  const PDF_PARSER_API_KEY = Deno.env.get('PDF_PARSER_API_KEY');
+  
+  if (!PDF_PARSER_API_KEY) {
+    throw new Error('PDF_PARSER_API_KEY não configurada');
+  }
+
+  console.log('🔄 Convertendo PDF para PNG com PDF.co...');
+
+  const response = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': PDF_PARSER_API_KEY
+    },
+    body: JSON.stringify({
+      url: pdfUrl,
+      pages: '0',  // Apenas primeira página
+      async: false
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ Erro na API PDF.co:', response.status, errorText);
+    throw new Error(`PDF.co falhou: ${response.status}`);
+  }
+
+  const result = await response.json();
+  
+  if (result.error) {
+    console.error('❌ Erro retornado pela PDF.co:', result.message);
+    throw new Error(`Erro no PDF.co: ${result.message}`);
+  }
+
+  // PDF.co retorna array de URLs de imagens
+  const imageUrl = result.urls?.[0];
+  if (!imageUrl) {
+    throw new Error('PDF.co não retornou URL da imagem');
+  }
+
+  console.log('✅ Imagem gerada:', imageUrl);
+  return imageUrl;
+}
+
+// ============================================
 // BUSCAR CONTEXTO DO BANCO DE DADOS
 // ============================================
 async function fetchDatabaseContext() {
@@ -89,7 +131,7 @@ async function fetchDatabaseContext() {
 // ============================================
 // EXTRAIR DADOS COM GEMINI 2.5 FLASH VISION
 // ============================================
-async function extractDataWithGeminiVision(pdfBase64: string, dbContext: any) {
+async function extractDataWithGeminiVision(imageUrl: string, dbContext: any) {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
   if (!LOVABLE_API_KEY) {
@@ -119,7 +161,7 @@ async function extractDataWithGeminiVision(pdfBase64: string, dbContext: any) {
             {
               type: 'image_url',
               image_url: {
-                url: `data:application/pdf;base64,${pdfBase64}`
+                url: imageUrl
               }
             }
           ]
@@ -233,7 +275,7 @@ function buildVisionPrompt(dbContext: any): string {
 Você é um assistente especialista em extrair dados de orçamentos e apólices de seguro.
 
 # CONTEXTO
-Você está visualizando um documento de seguro (PDF/imagem). Extraia os dados estruturados conforme as regras abaixo.
+Você está visualizando um documento de seguro (imagem). Extraia os dados estruturados conforme as regras abaixo.
 
 # LISTAS DO SISTEMA (FONTE DA VERDADE)
 
