@@ -332,18 +332,23 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       (t.status === 'PAGO' || t.status === 'REALIZADO')
     );
     
-    // Agrupar por ramoId
-    const ramoData: { [key: string]: { count: number; value: number } } = {};
+    // Agrupar por ramoId COM SUPORTE A PRÊMIO E COMISSÃO
+    const ramoData: { [key: string]: { count: number; premium: number; commission: number } } = {};
     
     filteredTransactions.forEach(t => {
       const ramoId = t.ramoId || 'Não informado';
       
+      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
+      const premiumValue = t.premiumValue || t.amount || 0;
+      const commissionValue = t.commissionValue || t.amount || 0;
+      
       if (!ramoData[ramoId]) {
-        ramoData[ramoId] = { count: 0, value: 0 };
+        ramoData[ramoId] = { count: 0, premium: 0, commission: 0 };
       }
       
       ramoData[ramoId].count += 1;
-      ramoData[ramoId].value += (t.amount || 0);
+      ramoData[ramoId].premium += premiumValue;
+      ramoData[ramoId].commission += commissionValue;
     });
     
     // ✅ CORREÇÃO: Helper usando dados locais do hook
@@ -353,14 +358,18 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       return ramo?.nome || 'Ramo Desconhecido';
     };
     
-    // Converter para array e mapear nomes dos ramos
-    let distribution = Object.entries(ramoData).map(([ramoId, data]) => ({
-      ramo: getRamoName(ramoId),
-      total: data.count,
-      valor: data.value,
-      valorComissao: data.value,
-      taxaMediaComissao: 0
-    })).sort((a, b) => b.valor - a.valor);
+    // Converter para array e mapear nomes dos ramos COM PRÊMIO E COMISSÃO
+    let distribution = Object.entries(ramoData).map(([ramoId, data]) => {
+      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
+      
+      return {
+        ramo: getRamoName(ramoId),
+        total: data.count,
+        valor: data.premium, // Valor TOTAL é o prêmio
+        valorComissao: data.commission,
+        taxaMediaComissao: avgCommissionRate
+      };
+    }).sort((a, b) => b.valor - a.valor);
     
     // Agrupar itens pequenos em "Outros" (< 5% do total)
     const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
@@ -401,18 +410,23 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       (t.status === 'PAGO' || t.status === 'REALIZADO')
     );
     
-    // Agrupar por company_id
-    const companyData: { [key: string]: { count: number; value: number } } = {};
+    // Agrupar por company_id COM SUPORTE A PRÊMIO E COMISSÃO
+    const companyData: { [key: string]: { count: number; premium: number; commission: number } } = {};
     
     filteredTransactions.forEach(t => {
       const companyId = t.company_id || 'Não informado';
       
+      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
+      const premiumValue = t.premiumValue || t.amount || 0;
+      const commissionValue = t.commissionValue || t.amount || 0;
+      
       if (!companyData[companyId]) {
-        companyData[companyId] = { count: 0, value: 0 };
+        companyData[companyId] = { count: 0, premium: 0, commission: 0 };
       }
       
       companyData[companyId].count += 1;
-      companyData[companyId].value += (t.amount || 0);
+      companyData[companyId].premium += premiumValue;
+      companyData[companyId].commission += commissionValue;
     });
     
     // ✅ CORREÇÃO: Helper usando dados locais do hook
@@ -422,14 +436,18 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       return company?.name || 'Não informado';
     };
     
-    // Converter para array e mapear nomes das seguradoras
-    let distribution = Object.entries(companyData).map(([companyId, data]) => ({
-      seguradora: getCompanyName(companyId),
-      total: data.count,
-      valor: data.value,
-      valorComissao: data.value,
-      taxaMediaComissao: 0
-    })).sort((a, b) => b.valor - a.valor);
+    // Converter para array e mapear nomes das seguradoras COM PRÊMIO E COMISSÃO
+    let distribution = Object.entries(companyData).map(([companyId, data]) => {
+      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
+      
+      return {
+        seguradora: getCompanyName(companyId),
+        total: data.count,
+        valor: data.premium, // Valor TOTAL é o prêmio
+        valorComissao: data.commission,
+        taxaMediaComissao: avgCommissionRate
+      };
+    }).sort((a, b) => b.valor - a.valor);
     
     // Agrupar itens pequenos em "Outros" (< 5% do total)
     const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);

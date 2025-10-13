@@ -396,12 +396,10 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       });
     }
     
-    // Agrupar por ramo_id
-    const branchData: { [key: string]: { count: number; value: number; commission: number } } = {};
+    // Agrupar por ramo_id COM SUPORTE A PRÊMIO E COMISSÃO
+    const branchData: { [key: string]: { count: number; premium: number; commission: number } } = {};
     
     paidTransactions.forEach(transaction => {
-      // 🔍 DIAGNÓSTICO: Verificar presença de ramoId
-      console.log('🔍 [Dashboard] ramoId:', transaction.ramoId, 'ramo_id:', (transaction as any).ramo_id);
       const ramoId = transaction.ramoId || 'Não informado';
       
       // Buscar nome do ramo com fallback seguro
@@ -409,24 +407,26 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         ? ramoById.get(ramoId)! 
         : 'Não informado';
       
-      const value = transaction.amount || 0;
+      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
+      const premiumValue = transaction.premiumValue || transaction.amount || 0;
+      const commissionValue = transaction.commissionValue || transaction.amount || 0;
 
       if (!branchData[branch]) {
-        branchData[branch] = { count: 0, value: 0, commission: 0 };
+        branchData[branch] = { count: 0, premium: 0, commission: 0 };
       }
       branchData[branch].count += 1;
-      branchData[branch].value += value;
-      branchData[branch].commission += value; // Transação já é a comissão
+      branchData[branch].premium += premiumValue;
+      branchData[branch].commission += commissionValue;
     });
 
-    // Converter para array e ordenar por valor
+    // Converter para array e ordenar por valor COM PRÊMIO E COMISSÃO
     let distribution = Object.entries(branchData).map(([ramo, data]) => {
-      const avgCommissionRate = data.value > 0 ? (data.commission / data.value) * 100 : 0;
+      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
 
       return {
         ramo,
         total: data.count,
-        valor: data.value,
+        valor: data.premium, // Valor TOTAL é o prêmio
         valorComissao: data.commission,
         taxaMediaComissao: avgCommissionRate
       };
@@ -480,29 +480,32 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       (t.status === 'PAGO' || t.status === 'REALIZADO')
     );
     
-    // Agrupar por company_id
-    const companyData: { [key: string]: { count: number; value: number; commission: number } } = {};
+    // Agrupar por company_id COM SUPORTE A PRÊMIO E COMISSÃO
+    const companyData: { [key: string]: { count: number; premium: number; commission: number } } = {};
     
     paidTransactions.forEach(transaction => {
       const companyId = transaction.companyId || 'Não informado';
-      const value = transaction.amount || 0;
+      
+      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
+      const premiumValue = transaction.premiumValue || transaction.amount || 0;
+      const commissionValue = transaction.commissionValue || transaction.amount || 0;
 
       if (!companyData[companyId]) {
-        companyData[companyId] = { count: 0, value: 0, commission: 0 };
+        companyData[companyId] = { count: 0, premium: 0, commission: 0 };
       }
       companyData[companyId].count += 1;
-      companyData[companyId].value += value;
-      companyData[companyId].commission += value; // Transação já é a comissão
+      companyData[companyId].premium += premiumValue;
+      companyData[companyId].commission += commissionValue;
     });
 
-    // Converter para array e ordenar por valor
+    // Converter para array e ordenar por valor COM PRÊMIO E COMISSÃO
     let distribution = Object.entries(companyData).map(([companyId, data]) => {
-      const avgCommissionRate = data.value > 0 ? (data.commission / data.value) * 100 : 0;
+      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
 
       return {
         seguradora: companyId === 'Não informado' ? 'Não informado' : getCompanyName(companyId),
         total: data.count,
-        valor: data.value,
+        valor: data.premium, // Valor TOTAL é o prêmio
         valorComissao: data.commission,
         taxaMediaComissao: avgCommissionRate
       };

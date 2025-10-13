@@ -98,7 +98,7 @@ export interface TransactionType {
   createdAt: string;
 }
 
-// ✅ INTERFACE ATUALIZADA PARA O NOVO MÓDULO FINANCEIRO + DNA DA CORRETAGEM + PAGAMENTOS PARCIAIS
+// ✅ INTERFACE ATUALIZADA PARA O NOVO MÓDULO FINANCEIRO + DNA DA CORRETAGEM + PAGAMENTOS PARCIAIS + PRÊMIO VS COMISSÃO
 export interface Transaction {
   id: string;
   typeId: string; // UUID do tipo de transação
@@ -116,6 +116,12 @@ export interface Transaction {
   brokerageId?: number; // ID da corretora
   producerId?: string; // ID do produtor
   ramoId?: string; // ID do ramo de seguro
+  
+  // 🆕 CAMPOS PARA PRÊMIO VS COMISSÃO (calculados via JOIN com apolices)
+  premiumValue?: number; // Valor do prêmio da apólice (ou amount se for bônus manual)
+  commissionValue?: number; // Valor da comissão (sempre amount)
+  commissionRate?: number; // Taxa de comissão da apólice (ou 100% se for bônus)
+  transactionType?: 'policy_commission' | 'manual_bonus'; // Tipo discriminado
   
   // Associações opcionais
   clientId?: string;

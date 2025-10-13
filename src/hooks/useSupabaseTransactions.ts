@@ -9,15 +9,22 @@ export function useSupabaseTransactions() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 🚀 **ETAPA 1: MIGRAÇÃO PARA REACT QUERY** - Query principal
+  // 🚀 **ETAPA 1: MIGRAÇÃO PARA REACT QUERY** - Query principal COM JOIN DE APÓLICES
   const { data: transactions = [], isLoading: loading, error } = useQuery({
     queryKey: ['transactions', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
+      // ✅ NOVA QUERY: JOIN com apolices para buscar premium_value
       const { data, error } = await supabase
         .from('transactions')
-        .select('*')
+        .select(`
+          *,
+          apolices:policy_id (
+            premium_value,
+            commission_rate
+          )
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -26,10 +33,25 @@ export function useSupabaseTransactions() {
         throw error;
       }
 
-      // ✅ USAR transformTransactionData PARA GARANTIR CONSISTÊNCIA
-      const formattedTransactions: Transaction[] = data?.map(transformTransactionData) || [];
+      // ✅ TRANSFORMAR DADOS COM CÁLCULO DE PRÊMIO E COMISSÃO
+      const formattedTransactions: Transaction[] = data?.map(row => {
+        const baseTransaction = transformTransactionData(row);
+        
+        // 📊 ENRIQUECER COM DADOS DA APÓLICE
+        const policyData = row.apolices as any;
+        
+        return {
+          ...baseTransaction,
+          // Se tem apólice vinculada, usar premium_value e commission_value calculada
+          premiumValue: policyData?.premium_value || baseTransaction.amount,
+          commissionValue: baseTransaction.amount, // amount já É a comissão
+          commissionRate: policyData?.commission_rate || 100,
+          // Flag para identificar tipo
+          transactionType: row.policy_id ? 'policy_commission' : 'manual_bonus'
+        } as Transaction;
+      }) || [];
 
-      console.log('✅ Transações carregadas:', formattedTransactions.length);
+      console.log('✅ Transações carregadas com dados de apólices:', formattedTransactions.length);
       return formattedTransactions;
     },
     enabled: !!user,
