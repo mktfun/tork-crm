@@ -53,6 +53,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isManualDueDate, setIsManualDueDate] = useState(false);
+  const [pendingRamo, setPendingRamo] = useState<{ id?: string; name?: string } | null>(null);
 
   // Preparar valores default baseado no modo (criar ou editar)
   const getDefaultValues = (): Partial<PolicyFormData> => {
@@ -98,6 +99,90 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
   const selectedCompanyId = watch('insuranceCompany');
   const { data: availableBranches = [] } = useRamosByCompany(selectedCompanyId);
+  
+  // Seleção reativa do ramo assim que os ramos da seguradora estiverem disponíveis
+  React.useEffect(() => {
+    if (!pendingRamo) return;
+    if (!selectedCompanyId) return;
+    if (!availableBranches || availableBranches.length === 0) return;
+  
+    console.log('📋 useEffect: Tentando selecionar ramo:', pendingRamo);
+    console.log('📋 useEffect: Ramos disponíveis:', availableBranches.map(r => r.nome));
+  
+    let foundRamo: { id: string; nome: string } | null = null;
+  
+    // 1) Preferência por ID se veio da edge function
+    if (pendingRamo.id) {
+      foundRamo = availableBranches.find(r => r.id === pendingRamo.id) || null;
+      if (foundRamo) {
+        console.log('✅ Ramo encontrado por ID:', foundRamo.nome);
+      }
+    }
+  
+    // 2) Se não achou por ID, tentar por nome
+    if (!foundRamo && pendingRamo.name) {
+      const normalized = pendingRamo.name.toLowerCase().trim();
+  
+      // Exact match
+      foundRamo = availableBranches.find(r => r.nome.toLowerCase().trim() === normalized) || null;
+  
+      // Partial match
+      if (!foundRamo) {
+        foundRamo = availableBranches.find(r => {
+          const n = r.nome.toLowerCase().trim();
+          return n.includes(normalized) || normalized.includes(n);
+        }) || null;
+      }
+  
+      // Word match
+      if (!foundRamo) {
+        foundRamo = availableBranches.find(r => {
+          const words = normalized.split(' ').filter(w => w.length > 2);
+          const ramoWords = r.nome.toLowerCase().split(' ');
+          return words.some(sw => ramoWords.some(rw => rw.includes(sw) || sw.includes(rw)));
+        }) || null;
+      }
+  
+      // Abreviações
+      if (!foundRamo) {
+        const abreviacoes: Record<string, string[]> = {
+          'auto': ['automóvel', 'veículo', 'carro', 'automóveis'],
+          'residencial': ['residência', 'casa', 'imóvel'],
+          'vida': ['seguro de vida', 'vida individual'],
+          'rc': ['responsabilidade civil', 'resp civil'],
+          'empresarial': ['empresa', 'comercial']
+        };
+  
+        for (const [key, variants] of Object.entries(abreviacoes)) {
+          if (normalized.includes(key) || variants.some(v => normalized.includes(v))) {
+            foundRamo = availableBranches.find(r => {
+              const rl = r.nome.toLowerCase();
+              return rl.includes(key) || variants.some(v => rl.includes(v));
+            }) || null;
+            if (foundRamo) break;
+          }
+        }
+      }
+  
+      if (foundRamo) {
+        console.log('✅ Ramo encontrado por nome:', foundRamo.nome);
+      }
+    }
+  
+    if (foundRamo) {
+      setValue('type', foundRamo.nome);
+      setPendingRamo(null);
+      toast.success('Ramo identificado', {
+        description: `${foundRamo.nome} selecionado automaticamente`
+      });
+    } else {
+      console.warn('⚠️ Ramo não encontrado para esta seguradora:', pendingRamo.name || pendingRamo.id);
+      toast.warning('Ramo não disponível', {
+        description: 'Selecione o ramo manualmente'
+      });
+      setPendingRamo(null);
+    }
+  }, [pendingRamo, availableBranches, selectedCompanyId, setValue]);
   
   // Reset branch when company changes
   React.useEffect(() => {
@@ -347,100 +432,14 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     }
 
     // ============================================
-    // 9. RAMO - Com RETRY até os ramos carregarem
+    // 9. RAMO - Seleção Reativa via useEffect
     // ============================================
-    if (data.insuranceLine) {
-      console.log('🏷️ Buscando ramo:', data.insuranceLine);
-      
-      // ✅ CORREÇÃO: Função recursiva que tenta até 5 vezes
-      const tryFindRamo = (attempt: number = 1, maxAttempts: number = 5) => {
-        setTimeout(() => {
-          console.log(`📋 Tentativa ${attempt}/${maxAttempts} - Ramos disponíveis:`, availableBranches.length);
-          
-          // Se ainda não carregou e não atingiu o máximo de tentativas, tenta novamente
-          if (availableBranches.length === 0 && attempt < maxAttempts) {
-            console.log('⏳ Aguardando ramos carregarem...');
-            tryFindRamo(attempt + 1, maxAttempts);
-            return;
-          }
-          
-          // Se não carregou após todas as tentativas
-          if (availableBranches.length === 0) {
-            console.error('❌ Ramos não carregaram após', maxAttempts, 'tentativas');
-            toast.warning('Erro ao carregar ramos', {
-              description: 'Selecione o ramo manualmente'
-            });
-            return;
-          }
-          
-          // Agora sim, fazer o matching
-          console.log('📋 Ramos disponíveis:', availableBranches.map(r => r.nome));
-          
-          const normalizedRamoName = data.insuranceLine!.toLowerCase().trim();
-          
-          // Matching exato
-          let foundRamo = availableBranches.find(r => 
-            r.nome.toLowerCase().trim() === normalizedRamoName
-          );
-          
-          // Matching parcial
-          if (!foundRamo) {
-            foundRamo = availableBranches.find(r => {
-              const ramoName = r.nome.toLowerCase().trim();
-              return ramoName.includes(normalizedRamoName) || 
-                     normalizedRamoName.includes(ramoName);
-            });
-          }
-          
-          // Matching por palavras-chave
-          if (!foundRamo) {
-            const searchWords = normalizedRamoName.split(' ').filter(w => w.length > 2);
-            foundRamo = availableBranches.find(r => {
-              const ramoWords = r.nome.toLowerCase().split(' ');
-              return searchWords.some(sw => 
-                ramoWords.some(rw => rw.includes(sw) || sw.includes(rw))
-              );
-            });
-          }
-          
-          // Matching por abreviações
-          if (!foundRamo) {
-            const abreviacoes: Record<string, string[]> = {
-              'auto': ['automóvel', 'veículo', 'carro', 'automóveis'],
-              'residencial': ['residência', 'casa', 'imóvel'],
-              'vida': ['seguro de vida', 'vida individual'],
-              'rc': ['responsabilidade civil', 'resp civil'],
-              'empresarial': ['empresa', 'comercial']
-            };
-            
-            for (const [key, variants] of Object.entries(abreviacoes)) {
-              if (normalizedRamoName.includes(key) || variants.some(v => normalizedRamoName.includes(v))) {
-                foundRamo = availableBranches.find(r => {
-                  const ramoLower = r.nome.toLowerCase();
-                  return ramoLower.includes(key) || variants.some(v => ramoLower.includes(v));
-                });
-                if (foundRamo) break;
-              }
-            }
-          }
-          
-          if (foundRamo) {
-            setValue('type', foundRamo.nome);
-            console.log('✅ Ramo encontrado:', foundRamo.nome);
-            toast.success('Ramo identificado', {
-              description: `${foundRamo.nome} selecionado automaticamente`
-            });
-          } else {
-            console.warn('⚠️ Ramo não encontrado para esta seguradora:', data.insuranceLine);
-            toast.warning('Ramo não disponível', {
-              description: `${data.insuranceLine} não está cadastrado para esta seguradora`
-            });
-          }
-        }, attempt * 800); // Aumenta o delay a cada tentativa (800ms, 1600ms, 2400ms...)
-      };
-      
-      // Iniciar tentativas
-      tryFindRamo();
+    if (data.insuranceLine || data.insuranceLineId) {
+      setPendingRamo({ 
+        id: data.insuranceLineId, 
+        name: data.insuranceLine || undefined 
+      });
+      console.log('🏷️ Ramo pendente:', { id: data.insuranceLineId, name: data.insuranceLine });
     }
 
     // ============================================
