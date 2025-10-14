@@ -169,9 +169,9 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       }
     }
   
-    if (foundRamo) {
-      setValue('type', foundRamo.nome);
-      setPendingRamo(null);
+  if (foundRamo) {
+    setValue('type', foundRamo.id);
+    setPendingRamo(null);
       toast.success('Ramo identificado', {
         description: `${foundRamo.nome} selecionado automaticamente`
       });

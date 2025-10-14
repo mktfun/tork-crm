@@ -263,6 +263,15 @@ async function extractDataWithGeminiVision(imageUrls: string[], dbContext: any) 
 
   const extractedData = JSON.parse(toolCall.function.arguments);
   
+  // Log dos dados brutos extraídos
+  console.log('📊 Dados brutos extraídos pelo Gemini:', {
+    premiumValue: extractedData.premiumValue,
+    commissionPercentage: extractedData.commissionPercentage,
+    clientName: extractedData.clientName,
+    insuranceLine: extractedData.insuranceLine,
+    policyNumber: extractedData.policyNumber
+  });
+  
   // Fazer matching inteligente
   const matchedData = await performIntelligentMatching(extractedData, dbContext);
   
@@ -335,16 +344,37 @@ Você está visualizando um documento de seguro em MÚLTIPLAS PÁGINAS (imagens 
 - Extraia APENAS os números (sem pontos, traços ou espaços)
 - Exemplo: Se vir "Apólice: 333.523.267" → retorne "333523267"
 
-## 6. **premiumValue** (Prêmio Líquido)
-- Procure por "Prêmio Líquido:", "Valor do Prêmio:", "Prêmio Total:"
-- Extraia APENAS o número (sem "R$", sem pontos de milhar)
-- Exemplo: Se vir "R$ 5.848,43" → retorne 5848.43
-- NÃO confunda com IOF ou outros valores
+## 6. **premiumValue** (Prêmio Líquido) ⚠️ CRÍTICO
+- ⚠️ **PROCURE EM TODAS AS PÁGINAS** (geralmente está na página 2 ou 3)
+- ⚠️ **PROCURE POR ESTES TERMOS EXATOS:**
+  * "Prêmio Líquido" ou "Premio Liquido"
+  * "Prêmio Total" ou "Premio Total"
+  * "Valor do Prêmio" ou "Valor do Premio"
+  * "Prêmio" (sozinho, perto de um valor em R$)
+- **FORMATO:** Extraia APENAS o número decimal (sem "R$", sem pontos de milhar)
+- **CONVERSÃO:** 
+  * "R$ 5.848,43" → retorne 5848.43
+  * "R$ 3.456,78" → retorne 3456.78
+  * "R$ 1.234.567,89" → retorne 1234567.89
+- **NÃO CONFUNDA COM:**
+  * "Prêmio Bruto" (inclui impostos)
+  * "IOF" (imposto separado)
+  * "Custo Total" (pode incluir outras taxas)
+  * "Prêmio com IOF"
+- Se não encontrar em nenhuma página, retorne \`null\`
 
-## 7. **commissionPercentage** (Comissão)
-- Procure por "Comissão:", "Taxa de Comissão:", "% Comissão"
-- Extraia APENAS o número percentual
-- Exemplo: Se vir "15%" → retorne 15
+## 7. **commissionPercentage** (Comissão) ⚠️ CRÍTICO
+- ⚠️ **PROCURE EM TODAS AS PÁGINAS** (geralmente está na página 2 ou 3)
+- ⚠️ **PROCURE POR:**
+  * "Comissão:" ou "Comissao:"
+  * "Taxa de Comissão" ou "Taxa de Comissao"
+  * "% Comissão" ou "% Comissao"
+  * "Percentual de Comissão"
+- **FORMATO:** Extraia APENAS o número percentual (sem símbolo %)
+- **EXEMPLOS:**
+  * "Comissão: 20%" → retorne 20
+  * "15% de comissão" → retorne 15
+  * "Comissão 12,5%" → retorne 12.5
 - Se não encontrar, retorne \`null\`
 
 ## 8. **shouldGenerateRenewal** (Gerar Renovação?)
