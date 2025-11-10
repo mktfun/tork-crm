@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addDays, isWithinInterval, differenceInDays } from 'date-fns';
 import { PolicyFilters } from '@/hooks/useFilteredPolicies';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
 import { AutoRenewalIndicator } from '@/components/policies/AutoRenewalIndicator';
 import { useSupabasePoliciesPaginated } from '@/hooks/useSupabasePoliciesPaginated';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
+import { usePolicyKPIs } from '@/hooks/usePolicyKPIs';
+import { KpiCard } from '@/components/policies/KpiCard';
 
 export default function Policies() {
   const { clients } = useClients();
@@ -47,6 +49,9 @@ export default function Policies() {
     limit: 10,
     filters
   });
+
+  // Buscar KPIs dinâmicos
+  const { kpis, isLoading: kpisLoading } = usePolicyKPIs(filters);
 
   // Pegar seguradoras únicas dos dados carregados
   const uniqueInsuranceCompanies = useMemo(() => {
@@ -112,6 +117,42 @@ export default function Policies() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Seção de KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="Apólices Ativas"
+          value={kpis.totalActive}
+          icon={FileText}
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          title="Prêmio Total"
+          value={kpis.totalPremium.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })}
+          icon={DollarSign}
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          title="Comissão Estimada"
+          value={kpis.estimatedCommission.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          })}
+          icon={TrendingUp}
+          subtitle="Anual"
+          isLoading={kpisLoading}
+        />
+        <KpiCard
+          title="Vencendo em 30 dias"
+          value={kpis.expiringSoon}
+          icon={AlertCircle}
+          variant={kpis.expiringSoon > 0 ? 'warning' : 'default'}
+          isLoading={kpisLoading}
+        />
+      </div>
+
       {/* Header e Filtros */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
         <div className="text-2xl font-bold text-white">
