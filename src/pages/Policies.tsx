@@ -178,7 +178,7 @@ export default function Policies() {
       </div>
 
       {/* Filtros Avançados */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
         {/* Status */}
         <div>
           <Label htmlFor="status" className="text-slate-300">Status</Label>
@@ -243,7 +243,13 @@ export default function Policies() {
           <Label htmlFor="period" className="text-slate-300">Vencimento</Label>
           <Select
             value={filters.period}
-            onValueChange={(value) => setFilters({ ...filters, period: value })}
+            onValueChange={(value) => setFilters({ 
+              ...filters, 
+              period: value,
+              // Limpar datas customizadas se selecionar um preset
+              customStart: value !== 'custom' ? null : filters.customStart,
+              customEnd: value !== 'custom' ? null : filters.customEnd
+            })}
           >
             <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
               <SelectValue placeholder="Todos" />
@@ -258,14 +264,47 @@ export default function Policies() {
           </Select>
         </div>
 
+        {/* Data Início */}
+        <div>
+          <Label htmlFor="customStart" className="text-slate-300">Vencimento (Início)</Label>
+          <Input
+            type="date"
+            id="customStart"
+            className="bg-slate-800 border-slate-700 text-white"
+            value={filters.customStart || ''}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              customStart: e.target.value || null,
+              period: e.target.value || prev.customEnd ? 'custom' : 'todos'
+            }))}
+          />
+        </div>
+
+        {/* Data Fim */}
+        <div>
+          <Label htmlFor="customEnd" className="text-slate-300">Vencimento (Fim)</Label>
+          <Input
+            type="date"
+            id="customEnd"
+            className="bg-slate-800 border-slate-700 text-white"
+            value={filters.customEnd || ''}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              customEnd: e.target.value || null,
+              period: e.target.value || prev.customStart ? 'custom' : 'todos'
+            }))}
+          />
+        </div>
+
         {/* Resetar Filtros */}
         <div className="flex items-end">
-          <button
+          <Button
             onClick={resetFilters}
-            className="bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded"
+            variant="outline"
+            className="w-full bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
           >
             Limpar Filtros
-          </button>
+          </Button>
         </div>
       </div>
 
