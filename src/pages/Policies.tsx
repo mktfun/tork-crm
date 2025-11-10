@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
-import { useClients, usePolicies } from '@/hooks/useAppData';
+import { useClients } from '@/hooks/useAppData';
 import { PolicyFormModal } from '@/components/policies/PolicyFormModal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,30 +9,55 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Plus } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, addDays, isWithinInterval, differenceInDays } from 'date-fns';
-import { useFilteredPolicies, PolicyFilters, SortConfig } from '@/hooks/useFilteredPolicies';
+import { PolicyFilters } from '@/hooks/useFilteredPolicies';
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
 import { AutoRenewalIndicator } from '@/components/policies/AutoRenewalIndicator';
+import { useSupabasePoliciesPaginated } from '@/hooks/useSupabasePoliciesPaginated';
+import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
 
 export default function Policies() {
   const { clients } = useClients();
   const { producers } = useSupabaseProducers();
+  const { companies } = useSupabaseCompanies();
   const navigate = useNavigate();
   const [isNewPolicyModalOpen, setIsNewPolicyModalOpen] = useState(false);
   
-  const {
-    filters,
-    setFilters,
-    filteredPolicies,
-    uniqueInsuranceCompanies,
-    resetFilters,
-    totalPolicies,
-    isLoading,
-    sortConfig,
-    handleSort
-  } = useFilteredPolicies();
+  // Estado de paginação e filtros
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<PolicyFilters>({
+    searchTerm: '',
+    status: 'todos',
+    insuranceCompany: 'todas',
+    period: 'todos',
+    producerId: 'todos',
+    ramo: 'todos',
+    customStart: null,
+    customEnd: null,
+  });
 
-  const { getCompanyName } = useCompanyNames();
+  // Usar o novo hook de paginação server-side
+  const {
+    policies: filteredPolicies,
+    totalCount,
+    totalPages,
+    isLoading
+  } = useSupabasePoliciesPaginated({
+    page,
+    limit: 10,
+    filters
+  });
+
+  // Pegar seguradoras únicas dos dados carregados
+  const uniqueInsuranceCompanies = useMemo(() => {
+    const companyIds = new Set(companies.map(c => c.id));
+    return Array.from(companyIds);
+  }, [companies]);
+
+  // Resetar para página 1 quando os filtros mudarem
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -52,6 +77,19 @@ export default function Policies() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: '',
+      status: 'todos',
+      insuranceCompany: 'todas',
+      period: 'todos',
+      producerId: 'todos',
+      ramo: 'todos',
+      customStart: null,
+      customEnd: null,
+    });
+  };
 
 
 
@@ -77,7 +115,7 @@ export default function Policies() {
       {/* Header e Filtros */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
         <div className="text-2xl font-bold text-white">
-          Apólices <span className="text-sm text-slate-400">({totalPolicies} total)</span>
+          Apólices <span className="text-sm text-slate-400">({totalCount} total)</span>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -133,8 +171,8 @@ export default function Policies() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
-              {uniqueInsuranceCompanies.map(companyId => (
-                <SelectItem key={companyId} value={companyId}>{getCompanyName(companyId)}</SelectItem>
+              {companies.map(company => (
+                <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
