@@ -96,7 +96,7 @@ export function PolicyPDFTemplate({ policy, client }: PolicyPDFTemplateProps) {
           </div>
           <div>
             <p className="text-sm text-slate-400">Ramo</p>
-            <p className="font-semibold text-slate-50">{policy.type}</p>
+            <p className="font-semibold text-slate-50">{policy.ramos?.nome || policy.type || 'Ramo não especificado'}</p>
           </div>
           <div>
             <p className="text-sm text-slate-400">Seguradora</p>

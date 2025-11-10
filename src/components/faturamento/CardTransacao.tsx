@@ -116,7 +116,7 @@ export function CardTransacao({ transaction, onMarkAsRealized }: CardTransacaoPr
                 {associatedData.policy && (
                   <div className="inline-flex items-center gap-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-md text-xs">
                     <span>
-                      Apólice: {associatedData.policy.policyNumber} - {associatedData.policy.type} ({associatedData.policy.insuranceCompany})
+                      Apólice: {associatedData.policy.policyNumber} - {associatedData.policy.ramos?.nome || associatedData.policy.type} ({associatedData.policy.insuranceCompany})
                     </span>
                   </div>
                 )}

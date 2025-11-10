@@ -152,7 +152,7 @@ export function AppointmentModal({
     { value: 'none', label: 'Nenhuma apólice específica' },
     ...selectedClientPolicies.map(policy => ({
       value: policy.id,
-      label: `${policy.type || 'Sem tipo'} - ${companiesLoading ? '...' : getCompanyName(policy.insuranceCompany)} ${policy.policyNumber ? `(${policy.policyNumber})` : ''}`
+      label: `${policy.ramos?.nome || policy.type || 'Sem tipo'} - ${companiesLoading ? '...' : getCompanyName(policy.insuranceCompany)} ${policy.policyNumber ? `(${policy.policyNumber})` : ''}`
     }))
   ];
 

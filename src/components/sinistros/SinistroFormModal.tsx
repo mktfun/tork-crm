@@ -375,7 +375,7 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
                                     </span>
                                   </div>
                                   <div className="text-xs text-muted-foreground">
-                                    {policy.insuranceCompany} • {policy.type}
+                                    {policy.insuranceCompany} • {policy.ramos?.nome || policy.type}
                                   </div>
                                 </div>
                               </SelectItem>
@@ -442,7 +442,7 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
                       </div>
                       <div>
                         <span className="text-white/60 text-sm">Tipo:</span>
-                        <p className="text-white">{selectedPolicy.type}</p>
+                        <p className="text-white">{selectedPolicy.ramos?.nome || selectedPolicy.type}</p>
                       </div>
                     </div>
                     <div className="space-y-2">

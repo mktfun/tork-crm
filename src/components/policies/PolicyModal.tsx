@@ -213,7 +213,7 @@ export function PolicyModal({ policy, isOpen, onClose, onEdit, onRenew }: Policy
                     Seguradora & Produto
                   </h3>
                   <p className="text-white font-medium">{policy.companies?.name || 'Não especificada'}</p>
-                  <p className="text-slate-400 text-sm mt-1">{policy.type || 'Ramo não especificado'}</p>
+                  <p className="text-slate-400 text-sm mt-1">{policy.ramos?.nome || policy.type || 'Ramo não especificado'}</p>
                   <p className="text-slate-300 text-sm mt-2">
                     <strong>Bem Segurado:</strong> {policy.insuredAsset}
                   </p>

@@ -47,7 +47,7 @@ export function SearchCommand({ open, onOpenChange }: SearchCommandProps) {
             return (
               <CommandItem
                 key={policy.id}
-                value={`${policy.policyNumber || ''} ${policy.type || ''} ${client?.name || ''}`}
+                value={`${policy.policyNumber || ''} ${policy.ramos?.nome || policy.type || ''} ${client?.name || ''}`}
                 keywords={[policy.policyNumber || '', policy.type || '', client?.name || '', 'apolice', 'seguro']}
                 onSelect={() => runCommand(() => navigate(`/policies/${policy.id}`))}
                 className="flex items-center gap-2"

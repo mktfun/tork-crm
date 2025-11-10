@@ -181,7 +181,7 @@ export default function PolicyDetails() {
                   {isBudget ? 'Orçamento' : 'Apólice'} {policy.policyNumber || `ORÇ-${policy.id.slice(-8)}`}
                 </h1>
               </div>
-              <p className="text-slate-400">{getCompanyName(policy.insuranceCompany)} • {policy.type}</p>
+              <p className="text-slate-400">{getCompanyName(policy.insuranceCompany)} • {policy.ramos?.nome || policy.type || 'Ramo não especificado'}</p>
             </div>
           </div>
           
@@ -249,7 +249,7 @@ export default function PolicyDetails() {
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Ramo</p>
-                    <p className="font-medium text-white">{policy.type}</p>
+                    <p className="font-medium text-white">{policy.ramos?.nome || policy.type || 'Ramo não especificado'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-400">Status</p>
