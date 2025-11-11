@@ -81,7 +81,8 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
         p_client_id: filters.clientId || null,
         p_page: filters.page,
         p_page_size: filters.pageSize,
-      });
+        p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      } as any);
 
       if (rpcError) {
         console.error('Erro ao buscar dados de faturamento:', rpcError);
