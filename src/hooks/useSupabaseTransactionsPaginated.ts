@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Transaction } from '@/types';
 import { DateRange } from 'react-day-picker';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 export interface TransactionFilters {
   companyId: string;
@@ -31,146 +31,102 @@ interface TransactionResponse {
   markAllPendingCommissionsAsPaid: () => Promise<number>;
 }
 
+// Interface para o retorno da RPC
+interface RPCFaturamentoData {
+  transactions: any[];
+  totalCount: number;
+  metrics: {
+    totalGanhos: number;
+    totalPerdas: number;
+    saldoLiquido: number;
+    totalPrevisto: number;
+  };
+}
+
 export function useSupabaseTransactionsPaginated(filters: TransactionFilters): TransactionResponse {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 🚀 QUERY PRINCIPAL COM PAGINAÇÃO E FILTROS NO BACKEND
+  // 🚀 ÚNICA QUERY: Usa RPC para buscar transações + métricas (sem conversão de timezone)
   const { data, isLoading, error } = useQuery({
     queryKey: ['transactions-paginated', user?.id, filters],
     queryFn: async () => {
-      if (!user) return { transactions: [], totalCount: 0, metrics: { totalGanhos: 0, totalPerdas: 0, saldoLiquido: 0, totalPrevisto: 0 } };
-
-      // 🎯 CONSTRUIR QUERY COM FILTROS NO BACKEND
-      let query = supabase
-        .from('transactions')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-
-      // 📅 FILTRO POR INTERVALO PERSONALIZADO NO BACKEND
-      if (filters.dateRange?.from && filters.dateRange?.to) {
-        // Pega o início do dia (local) e converte pra UTC (ex: 2025-10-01T03:00:00Z)
-        const from = startOfDay(filters.dateRange.from).toISOString();
-        // Pega o FIM do dia (local) e converte pra UTC (ex: 2025-11-01T02:59:59Z)
-        const to = endOfDay(filters.dateRange.to).toISOString();
-        query = query.gte('date', from).lte('date', to);
+      if (!user) {
+        return {
+          transactions: [],
+          totalCount: 0,
+          metrics: {
+            totalGanhos: 0,
+            totalPerdas: 0,
+            saldoLiquido: 0,
+            totalPrevisto: 0,
+          },
+        };
       }
 
-      // 🏢 FILTRO POR SEGURADORA NO BACKEND
-      if (filters.companyId !== 'all') {
-        query = query.eq('company_id', filters.companyId);
-      }
+      // 📅 CONVERTER DATAS PARA STRING (yyyy-MM-dd) - Backend faz o resto
+      const startDate = filters.dateRange?.from 
+        ? format(filters.dateRange.from, 'yyyy-MM-dd') 
+        : format(new Date(), 'yyyy-MM-01');
+      const endDate = filters.dateRange?.to 
+        ? format(filters.dateRange.to, 'yyyy-MM-dd') 
+        : format(new Date(), 'yyyy-MM-dd');
 
-      if (filters.clientId) {
-        query = query.eq('client_id', filters.clientId);
-      }
-
-      // 📄 APLICAR PAGINAÇÃO
-      const from = (filters.page - 1) * filters.pageSize;
-      const to = from + filters.pageSize - 1;
-      query = query.range(from, to);
-
-      const { data: transactionsData, error: transactionsError, count } = await query;
-
-      if (transactionsError) {
-        console.error('Erro ao buscar transações:', transactionsError);
-        throw transactionsError;
-      }
-
-      // 🔄 CONVERTER PARA FORMATO DA APLICAÇÃO
-      const formattedTransactions: Transaction[] = transactionsData?.map((transaction: any) => ({
-        id: transaction.id,
-        typeId: transaction.type_id,
-        description: transaction.description,
-        amount: typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount,
-        status: transaction.status as Transaction['status'],
-        date: transaction.date,
-        nature: transaction.nature as Transaction['nature'],
-        transactionDate: transaction.transaction_date,
-        dueDate: transaction.due_date,
-        brokerageId: transaction.brokerage_id || undefined,
-        producerId: transaction.producer_id || undefined,
-        clientId: transaction.client_id,
-        policyId: transaction.policy_id,
-        companyId: transaction.company_id,
-        createdAt: transaction.created_at,
-      })) || [];
-
-      // 📊 BUSCAR MÉTRICAS SEPARADAMENTE (SEM PAGINAÇÃO)
-      let metricsQuery = supabase
-        .from('transactions')
-        .select('amount, status, nature')
-        .eq('user_id', user.id);
-
-      // Aplicar os mesmos filtros de intervalo e empresa nas métricas
-      if (filters.dateRange?.from && filters.dateRange?.to) {
-        const from = startOfDay(filters.dateRange.from).toISOString();
-        const to = endOfDay(filters.dateRange.to).toISOString();
-        metricsQuery = metricsQuery.gte('date', from).lte('date', to);
-      }
-
-      // 🔧 FILTRO DE NATURE - Resiliência para RECEITA/DESPESA e GANHO/PERDA
-      if (filters.nature) {
-        const natureValues = filters.nature === 'receita'
-          ? ['GANHO', 'RECEITA']
-          : ['PERDA', 'DESPESA'];
-        query = query.in('nature', natureValues);
-      }
-
-      if (filters.companyId !== 'all') {
-        metricsQuery = metricsQuery.eq('company_id', filters.companyId);
-      }
-
-      if (filters.clientId) {
-        metricsQuery = metricsQuery.eq('client_id', filters.clientId);
-      }
-
-      const { data: metricsData, error: metricsError } = await metricsQuery;
-
-      if (metricsError) {
-        console.error('Erro ao buscar métricas:', metricsError);
-        throw metricsError;
-      }
-
-      // 💰 CALCULAR MÉTRICAS
-      let totalGanhos = 0;
-      let totalPerdas = 0;
-      let totalPrevisto = 0;
-
-      metricsData?.forEach((transaction: any) => {
-        const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount;
-        
-        if (transaction.status === 'REALIZADO' || transaction.status === 'PAGO') {
-          if (['GANHO', 'RECEITA'].includes(transaction.nature)) {
-            totalGanhos += amount;
-          } else if (['PERDA', 'DESPESA'].includes(transaction.nature)) {
-            totalPerdas += amount;
-          }
-        } else if (transaction.status === 'PREVISTO' || transaction.status === 'PENDENTE' || transaction.status === 'PARCIALMENTE_PAGO') {
-          if (['GANHO', 'RECEITA'].includes(transaction.nature)) {
-            totalPrevisto += amount;
-          } else if (['PERDA', 'DESPESA'].includes(transaction.nature)) {
-            totalPrevisto -= amount;
-          }
-        }
+      // 🎯 CHAMADA À RPC (Backend faz comparação DATE com DATE)
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_faturamento_data', {
+        p_user_id: user.id,
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_company_id: filters.companyId || 'all',
+        p_client_id: filters.clientId || null,
+        p_page: filters.page,
+        p_page_size: filters.pageSize,
       });
 
-      const saldoLiquido = totalGanhos - totalPerdas;
+      if (rpcError) {
+        console.error('Erro ao buscar dados de faturamento:', rpcError);
+        throw rpcError;
+      }
+
+      // Type assertion para o retorno da RPC
+      const typedData = rpcData as unknown as RPCFaturamentoData;
+
+      // 🔄 MAPEAR PARA FORMATO TypeScript
+      const formattedTransactions: Transaction[] = (typedData.transactions || []).map((t: any) => ({
+        id: t.id,
+        typeId: t.type_id,
+        description: t.description,
+        amount: parseFloat(t.amount),
+        status: t.status,
+        date: t.date,
+        nature: t.nature,
+        userId: t.user_id,
+        policyId: t.policy_id,
+        clientId: t.client_id,
+        producerId: t.producer_id,
+        brokerageId: t.brokerage_id,
+        companyId: t.company_id,
+        ramoId: t.ramo_id,
+        dueDate: t.due_date,
+        transactionDate: t.transaction_date,
+        paidDate: t.paid_date,
+        createdAt: t.created_at,
+        updatedAt: t.updated_at,
+      }));
 
       return {
         transactions: formattedTransactions,
-        totalCount: count || 0,
+        totalCount: typedData.totalCount || 0,
         metrics: {
-          totalGanhos,
-          totalPerdas,
-          saldoLiquido,
-          totalPrevisto
-        }
+          totalGanhos: parseFloat(String(typedData.metrics?.totalGanhos || 0)),
+          totalPerdas: parseFloat(String(typedData.metrics?.totalPerdas || 0)),
+          saldoLiquido: parseFloat(String(typedData.metrics?.saldoLiquido || 0)),
+          totalPrevisto: parseFloat(String(typedData.metrics?.totalPrevisto || 0)),
+        },
       };
     },
     enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutos
+    staleTime: 2 * 60 * 1000,
   });
 
   // 🔄 MUTATION PARA ATUALIZAR TRANSAÇÃO
@@ -190,7 +146,6 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
       if (error) throw error;
     },
     onSuccess: () => {
-      // 🎯 INVALIDAÇÃO AUTOMÁTICA - Invalida todas as queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['reports-transacoes'] });
@@ -201,23 +156,33 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
   const markAllPendingCommissionsAsPaid = async (): Promise<number> => {
     if (!user) return 0;
 
+    // 🔧 USAR FORMATO 'yyyy-MM-dd' (comparação DATE com DATE)
+    const startDate = filters.dateRange?.from 
+      ? format(filters.dateRange.from, 'yyyy-MM-dd')
+      : null;
+    const endDate = filters.dateRange?.to 
+      ? format(filters.dateRange.to, 'yyyy-MM-dd')
+      : null;
+
     let updateQuery = supabase
       .from('transactions')
-      .update({ status: 'PAGO', paid_date: new Date().toISOString() })
+      .update({ 
+        status: 'PAGO',
+        paid_date: new Date().toISOString() 
+      })
       .eq('user_id', user.id)
       .eq('status', 'PENDENTE')
       .in('nature', ['GANHO', 'RECEITA'])
       .not('policy_id', 'is', null);
 
-    if (filters.dateRange?.from && filters.dateRange?.to) {
-      const from = startOfDay(filters.dateRange.from).toISOString();
-      const to = endOfDay(filters.dateRange.to).toISOString();
-      updateQuery = updateQuery.gte('date', from).lte('date', to);
+    if (startDate && endDate) {
+      updateQuery = updateQuery.gte('date', startDate).lte('date', endDate);
     }
 
     if (filters.companyId !== 'all') {
       updateQuery = updateQuery.eq('company_id', filters.companyId);
     }
+
     if (filters.clientId) {
       updateQuery = updateQuery.eq('client_id', filters.clientId);
     }
