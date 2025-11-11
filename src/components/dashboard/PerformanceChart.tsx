@@ -67,9 +67,10 @@ export function PerformanceChart() {
       return dataTransacao >= dataInicio && dataTransacao <= dataFim;
     });
 
-    // 3. FILTRAR APÓLICES POR PERÍODO (usando startOfDay/endOfDay para incluir dia 1)
+    // 3. FILTRAR APÓLICES POR PERÍODO - ✅ USANDO start_date (VIGÊNCIA)
     const apolicesFiltradas = policies.filter(p => {
-      const dataApolice = startOfDay(new Date(p.createdAt));
+      if (!p.startDate) return false; // Proteção contra dado nulo
+      const dataApolice = startOfDay(new Date(p.startDate));
       return dataApolice >= dataInicio && 
              dataApolice <= dataFim &&
              p.status !== 'Orçamento'; // Só apólices efetivas
@@ -95,10 +96,11 @@ export function PerformanceChart() {
       dadosAgrupados.get(chave)!.comissao += Number(t.amount);
     });
 
-    // Processar novas apólices
+    // Processar novas apólices - ✅ USANDO start_date (VIGÊNCIA)
     apolicesFiltradas.forEach(p => {
-      const chave = format(new Date(p.createdAt), formatoChave);
-      const nomeAmigavel = format(new Date(p.createdAt), formatoNome);
+      if (!p.startDate) return; // Proteção contra dado nulo
+      const chave = format(new Date(p.startDate), formatoChave);
+      const nomeAmigavel = format(new Date(p.startDate), formatoNome);
       
       if (!dadosAgrupados.has(chave)) {
         dadosAgrupados.set(chave, { nome: nomeAmigavel, comissao: 0, novasApolices: 0 });
