@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, FileText, DollarSign } from 'lucide-react';
+import { Users, UserPlus, FileText, DollarSign, Search } from 'lucide-react';
 import { useSupabaseClientsPaginated, ClientFilters } from '@/hooks/useSupabaseClientsPaginated';
 import { useClientKPIs } from '@/hooks/useClientKPIs';
+import { useDebounce } from '@/hooks/useDebounce';
 import { KpiCard } from '@/components/policies/KpiCard';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { ClientRowCard } from '@/components/clients/ClientRowCard';
@@ -30,6 +31,17 @@ export default function Clients() {
     status: 'todos',
   });
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Estado local para busca (rápido, sem delay)
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+  
+  // Debounce da busca (500ms de atraso)
+  const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
+
+  // Atualizar filtro server-side com o valor debounced
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, searchTerm: debouncedSearchTerm }));
+  }, [debouncedSearchTerm]);
 
   // Usar o novo hook de paginação server-side
   const {
@@ -57,10 +69,13 @@ export default function Clients() {
   }, [filters, limit]);
 
   const resetFilters = () => {
+    setLocalSearchTerm(''); // Limpa a busca local
     setFilters({
       searchTerm: '',
       status: 'todos',
     });
+    setLimit(10);
+    setPage(1);
   };
 
 
@@ -104,20 +119,23 @@ export default function Clients() {
         />
       </div>
 
-      {/* Header e Filtros */}
+      {/* Header e Busca Principal */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
         <div className="text-2xl font-bold text-white">
           Clientes <span className="text-sm text-slate-400">({totalCount} total)</span>
         </div>
 
         <div className="flex items-center space-x-4">
-          <Input
-            type="search"
-            placeholder="Buscar por nome, email, CPF..."
-            className="bg-slate-800 border-slate-700 text-white"
-            value={filters.searchTerm}
-            onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+            <Input
+              type="search"
+              placeholder="Buscar por nome, email, CPF..."
+              className="bg-slate-800 border-slate-700 text-white pl-10 w-80"
+              value={localSearchTerm}
+              onChange={(e) => setLocalSearchTerm(e.target.value)}
+            />
+          </div>
           <Button
             onClick={() => setIsImportModalOpen(true)}
             variant="outline"
@@ -190,13 +208,33 @@ export default function Clients() {
 
       {/* Lista de Clientes */}
       <div className="grid gap-4">
-        {clients.map(client => (
-          <ClientRowCard
-            key={client.id}
-            client={client as any}
-            onClick={() => navigate(`/dashboard/clients/${client.id}`)}
-          />
-        ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+              <p className="text-white/60">Carregando clientes...</p>
+            </div>
+          </div>
+        ) : clients.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <Users size={48} className="text-white/40" />
+              <p className="text-white/60">
+                {filters.searchTerm || filters.status !== 'todos' 
+                  ? 'Nenhum cliente encontrado com os filtros aplicados'
+                  : 'Nenhum cliente cadastrado ainda'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          clients.map(client => (
+            <ClientRowCard
+              key={client.id}
+              client={client as any}
+              onClick={() => navigate(`/dashboard/clients/${client.id}`)}
+            />
+          ))
+        )}
       </div>
 
       {/* Controles de Paginação */}
