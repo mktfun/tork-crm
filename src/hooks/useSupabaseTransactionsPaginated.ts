@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Transaction } from '@/types';
 import { DateRange } from 'react-day-picker';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 
 export interface TransactionFilters {
   companyId: string;
@@ -50,8 +50,8 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
 
       // 📅 FILTRO POR INTERVALO PERSONALIZADO NO BACKEND
       if (filters.dateRange?.from && filters.dateRange?.to) {
-        const from = format(startOfDay(filters.dateRange.from), 'yyyy-MM-dd HH:mm:ss');
-        const to = format(endOfDay(filters.dateRange.to), 'yyyy-MM-dd HH:mm:ss');
+        const from = format(filters.dateRange.from, 'yyyy-MM-dd');
+        const to = format(filters.dateRange.to, 'yyyy-MM-dd');
         query = query.gte('date', from).lte('date', to);
       }
 
@@ -103,8 +103,8 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
 
       // Aplicar os mesmos filtros de intervalo e empresa nas métricas
       if (filters.dateRange?.from && filters.dateRange?.to) {
-        const from = format(startOfDay(filters.dateRange.from), 'yyyy-MM-dd HH:mm:ss');
-        const to = format(endOfDay(filters.dateRange.to), 'yyyy-MM-dd HH:mm:ss');
+        const from = format(filters.dateRange.from, 'yyyy-MM-dd');
+        const to = format(filters.dateRange.to, 'yyyy-MM-dd');
         metricsQuery = metricsQuery.gte('date', from).lte('date', to);
       }
 
@@ -208,8 +208,8 @@ export function useSupabaseTransactionsPaginated(filters: TransactionFilters): T
       .not('policy_id', 'is', null);
 
     if (filters.dateRange?.from && filters.dateRange?.to) {
-      const from = format(startOfDay(filters.dateRange.from), 'yyyy-MM-dd HH:mm:ss');
-      const to = format(endOfDay(filters.dateRange.to), 'yyyy-MM-dd HH:mm:ss');
+      const from = format(filters.dateRange.from, 'yyyy-MM-dd');
+      const to = format(filters.dateRange.to, 'yyyy-MM-dd');
       updateQuery = updateQuery.gte('date', from).lte('date', to);
     }
 
