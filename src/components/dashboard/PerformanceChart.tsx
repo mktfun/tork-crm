@@ -58,13 +58,29 @@ export function PerformanceChart() {
 
     console.log(`📅 [PerformanceChart] Granularidade: ${granularidade}, Dias: ${diasDiferenca}`);
 
-    // 2. FILTRAR TRANSAÇÕES POR PERÍODO (usando startOfDay/endOfDay para evitar problemas de timezone)
+    // 2. FILTRAR TRANSAÇÕES POR PERÍODO (LÓGICA CORRIGIDA)
+    // O Mapa de apólices sobe, pois é necessário para o filtro de transações
     const dataInicio = startOfDay(opcoesGrafico.intervalo.from!);
     const dataFim = endOfDay(opcoesGrafico.intervalo.to!);
     
+    const apolicesMap = new Map(policies.map(p => [p.id, p]));
+
     const transacoesFiltradas = transactions.filter(t => {
-      const dataTransacao = startOfDay(new Date(t.date));
-      return dataTransacao >= dataInicio && dataTransacao <= dataFim;
+      if (!t.date || t.nature !== 'RECEITA') return false; // Ignora se não for receita ou não tiver data
+
+      // Se for comissão manual (sem apólice), filtrar pela data da transação
+      if (!t.policyId) {
+        const dataTransacao = startOfDay(new Date(t.date));
+        return dataTransacao >= dataInicio && dataTransacao <= dataFim;
+      }
+      
+      // Se for comissão de apólice, FILTRAR PELA DATA DE VIGÊNCIA (start_date)
+      const apolice = apolicesMap.get(t.policyId);
+      if (!apolice || !apolice.startDate) return false; // Apólice ou data inválida
+
+      const dataVigencia = startOfDay(new Date(apolice.startDate));
+      // A comissão só entra se a VIGÊNCIA da apólice estiver no período
+      return dataVigencia >= dataInicio && dataVigencia <= dataFim;
     });
 
     // 3. FILTRAR APÓLICES POR PERÍODO - ✅ USANDO start_date (DATA DE VIGÊNCIA)
@@ -82,10 +98,7 @@ export function PerformanceChart() {
     // 4. PROCESSAR DADOS POR GRANULARIDADE
     const dadosAgrupados = new Map<string, { nome: string; comissao: number; novasApolices: number }>();
 
-    // Criar mapa de apólices por ID para lookup rápido
-    const apolicesMap = new Map(
-      policies.map(p => [p.id, p])
-    );
+    // O apolicesMap já foi criado acima, no passo 2. Não precisa criar de novo.
 
     // Processar comissões - ✅ USANDO start_date DA APÓLICE (DATA DE VIGÊNCIA)
     transacoesFiltradas.forEach(t => {
