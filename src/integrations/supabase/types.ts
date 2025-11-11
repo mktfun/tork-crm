@@ -617,6 +617,24 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          content: string | null
+          embedding: string | null
+          id: number
+        }
+        Insert: {
+          content?: string | null
+          embedding?: string | null
+          id: number
+        }
+        Update: {
+          content?: string | null
+          embedding?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       migration_ramos_log: {
         Row: {
           created_at: string | null
@@ -807,7 +825,7 @@ export type Database = {
           attempted_access: Json | null
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           record_id: string | null
           severity: string | null
           table_name: string | null
@@ -819,7 +837,7 @@ export type Database = {
           attempted_access?: Json | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           severity?: string | null
           table_name?: string | null
@@ -831,7 +849,7 @@ export type Database = {
           attempted_access?: Json | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           severity?: string | null
           table_name?: string | null
@@ -1502,13 +1520,52 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_functions: {
+        Args: never
+        Returns: {
+          function_name: string
+          function_schema: string
+          function_type: string
+        }[]
+      }
+      admin_list_log_tables: {
+        Args: never
+        Returns: {
+          schemaname: string
+          tablename: string
+        }[]
+      }
+      admin_list_schemas: {
+        Args: never
+        Returns: {
+          schema_name: string
+        }[]
+      }
+      admin_list_tables: {
+        Args: never
+        Returns: {
+          schemaname: string
+          tablename: string
+        }[]
+      }
+      admin_list_triggers: {
+        Args: never
+        Returns: {
+          action_timing: string
+          event_manipulation: string
+          event_object_table: string
+          trigger_name: string
+        }[]
+      }
       batch_update_transactions: {
         Args: { p_user_id: string; updates: Json }
         Returns: string
       }
-      check_upcoming_appointments: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      check_upcoming_appointments: { Args: never; Returns: undefined }
+      execute_sql: { Args: { query: string }; Returns: Json }
+      get_client_kpis: {
+        Args: { p_search_term?: string; p_status?: string; p_user_id: string }
+        Returns: Json
       }
       get_clientes_filtrados: {
         Args: {
@@ -1539,9 +1596,15 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "clientes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_clients_with_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           active_policies: number | null
           budget_policies: number | null
@@ -1557,6 +1620,12 @@ export type Database = {
           total_premium: number | null
           user_id: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "clients_with_stats"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_empresas_com_metricas: {
         Args: { p_corretora_id: string }
@@ -1572,12 +1641,10 @@ export type Database = {
           total_funcionarios_ativos: number
         }[]
       }
-      get_orphan_transactions: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
+      get_schema_info: { Args: never; Returns: Json }
       get_user_companies_with_ramos: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string | null
           id: string | null
@@ -1586,13 +1653,16 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "companies_with_ramos_count"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      get_user_role: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      get_user_role: { Args: { user_id: string }; Returns: string }
       get_user_sinistros_complete: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           analysis_deadline: string | null
           approved_amount: number | null
@@ -1629,35 +1699,15 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "sinistros_complete"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      is_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
-      link_manual_transactions: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
+      is_admin: { Args: { user_id?: string }; Returns: boolean }
+      link_manual_transactions: { Args: { p_user_id: string }; Returns: string }
       preview_apolices_filtradas: {
         Args: { p_ramo?: string; p_seguradora_id?: string; p_user_id: string }
         Returns: {
@@ -1683,30 +1733,11 @@ export type Database = {
           total_records: number
         }[]
       }
-      promote_user_to_admin: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      settle_due_commissions: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      settle_due_commissions_v2: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
+      promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
+      settle_due_commissions: { Args: never; Returns: string }
+      settle_due_commissions_v2: { Args: never; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       validate_user_data_access: {
         Args: { target_user_id: string }
         Returns: boolean

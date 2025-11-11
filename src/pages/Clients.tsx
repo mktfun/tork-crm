@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, FileText, DollarSign, Plus, Search } from 'lucide-react';
+import { Users, UserPlus, FileText, DollarSign } from 'lucide-react';
 import { useSupabaseClientsPaginated, ClientFilters } from '@/hooks/useSupabaseClientsPaginated';
 import { useClientKPIs } from '@/hooks/useClientKPIs';
 import { KpiCard } from '@/components/policies/KpiCard';
@@ -12,7 +12,7 @@ import { PaginationControls } from '@/components/ui/PaginationControls';
 import { ClientRowCard } from '@/components/clients/ClientRowCard';
 import { NewClientModal } from '@/components/clients/NewClientModal';
 import { ClientImportModal } from '@/components/clients/ClientImportModal';
-import { usePolicies } from '@/hooks/useAppData';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { DeduplicationSection } from '@/components/clients/DeduplicationSection';
 import { useAllClients } from '@/hooks/useAllClients';
@@ -20,7 +20,6 @@ import { useAllClients } from '@/hooks/useAllClients';
 export default function Clients() {
   usePageTitle('Clientes');
   const navigate = useNavigate();
-  const { policies } = usePolicies();
   const { allClients } = useAllClients();
 
   // Estado de paginação e filtros
@@ -47,8 +46,10 @@ export default function Clients() {
   // Buscar KPIs dinâmicos
   const { kpis, isLoading: kpisLoading } = useClientKPIs(filters);
 
-  // Calcular comissão média por cliente
-  const avgCommission = totalCount > 0 ? kpis.totalCommission / totalCount : 0;
+  // Calcular comissão média por cliente COM APÓLICE (não dividir por zero!)
+  const avgCommission = kpis.clientsWithPolicies > 0 
+    ? kpis.totalCommission / kpis.clientsWithPolicies 
+    : 0;
 
   // Resetar para página 1 quando os filtros ou limite mudarem
   useEffect(() => {
@@ -62,15 +63,6 @@ export default function Clients() {
     });
   };
 
-  const getClientPoliciesCount = (clientId: string) => {
-    return policies.filter(p => p.clientId === clientId && p.status === 'Ativa').length;
-  };
-
-  const getClientTotalPremium = (clientId: string) => {
-    return policies
-      .filter(p => p.clientId === clientId && p.status === 'Ativa')
-      .reduce((sum, p) => sum + p.premiumValue, 0);
-  };
 
   const handleImportComplete = () => {
     setIsImportModalOpen(false);
@@ -107,8 +99,8 @@ export default function Clients() {
             currency: 'BRL',
           })}
           icon={DollarSign}
-          subtitle="Por Cliente"
-          isLoading={kpisLoading || isLoading}
+          subtitle="Por Cliente com Apólice"
+          isLoading={kpisLoading}
         />
       </div>
 
@@ -198,20 +190,13 @@ export default function Clients() {
 
       {/* Lista de Clientes */}
       <div className="grid gap-4">
-        {clients.map(client => {
-          const activePoliciesCount = getClientPoliciesCount(client.id);
-          const totalPremium = getClientTotalPremium(client.id);
-          
-          return (
-            <ClientRowCard
-              key={client.id}
-              client={client}
-              activePoliciesCount={activePoliciesCount}
-              totalPremium={totalPremium}
-              onClick={() => navigate(`/dashboard/clients/${client.id}`)}
-            />
-          );
-        })}
+        {clients.map(client => (
+          <ClientRowCard
+            key={client.id}
+            client={client as any}
+            onClick={() => navigate(`/dashboard/clients/${client.id}`)}
+          />
+        ))}
       </div>
 
       {/* Controles de Paginação */}

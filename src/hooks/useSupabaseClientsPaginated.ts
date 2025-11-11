@@ -37,10 +37,13 @@ export function useSupabaseClientsPaginated({
 
       console.log('🔍 Fetching clients - Page:', page, 'Limit:', limit, 'Filters:', filters);
 
-      // Construir query base com contagem exata
+      // Construir query base com contagem exata e JOIN com apólices
       let query = supabase
         .from('clientes')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          apolices:apolices(id, status, premium_value, commission_rate)
+        `, { count: 'exact' })
         .eq('user_id', user.id);
 
       // Aplicar filtro por Status
@@ -72,29 +75,44 @@ export function useSupabaseClientsPaginated({
 
       console.log(`✅ Loaded page ${page}: ${data?.length || 0} clients (Total: ${count})`);
 
-      // Mapear dados para o formato Client
-      const clients: Client[] = (data || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        email: c.email,
-        phone: c.phone,
-        cpfCnpj: c.cpf_cnpj,
-        address: c.address,
-        number: c.number,
-        complement: c.complement,
-        neighborhood: c.neighborhood,
-        city: c.city,
-        state: c.state,
-        cep: c.cep,
-        birthDate: c.birth_date,
-        maritalStatus: c.marital_status as '' | 'Solteiro(a)' | 'Casado(a)' | 'Divorciado(a)' | 'Viúvo(a)',
-        profession: c.profession,
-        observations: c.observations,
-        status: c.status as 'Ativo' | 'Inativo',
-        userId: c.user_id,
-        createdAt: c.created_at,
-        updatedAt: c.updated_at
-      }));
+      // Mapear dados para o formato Client e calcular métricas de apólices
+      const clients: Client[] = (data || []).map(c => {
+        const apolices = (c.apolices || []) as any[];
+        const ativas = apolices.filter((a: any) => a.status === 'Ativa');
+        
+        // Calcular comissão total das apólices ativas
+        const comissao_total_ativas = ativas.reduce((sum: number, a: any) => {
+          const premium = Number(a.premium_value) || 0;
+          const rate = Number(a.commission_rate) || 0;
+          return sum + (premium * rate / 100);
+        }, 0);
+
+        return {
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone,
+          cpfCnpj: c.cpf_cnpj,
+          address: c.address,
+          number: c.number,
+          complement: c.complement,
+          neighborhood: c.neighborhood,
+          city: c.city,
+          state: c.state,
+          cep: c.cep,
+          birthDate: c.birth_date,
+          maritalStatus: c.marital_status as '' | 'Solteiro(a)' | 'Casado(a)' | 'Divorciado(a)' | 'Viúvo(a)',
+          profession: c.profession,
+          observations: c.observations,
+          status: c.status as 'Ativo' | 'Inativo',
+          userId: c.user_id,
+          createdAt: c.created_at,
+          updatedAt: c.updated_at,
+          // Adicionar métricas calculadas
+          apolices_ativas_count: ativas.length,
+          comissao_total_ativas: comissao_total_ativas
+        } as any;
+      });
 
       return {
         clients,

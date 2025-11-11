@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { subDays } from 'date-fns';
 
 export interface ClientFilters {
   searchTerm?: string;
@@ -12,7 +11,6 @@ export interface ClientKPIs {
   totalActive: number;
   newClientsLast30d: number;
   clientsWithPolicies: number;
-  totalPoliciesValue: number;
   totalCommission: number;
 }
 
@@ -24,91 +22,31 @@ export function useClientKPIs(filters: ClientFilters) {
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
-      console.log('📊 Calculating Client KPIs with filters:', filters);
+      console.log('📊 Calling RPC get_client_kpis with filters:', filters);
 
-      // Construir query base para clientes (SEM paginação)
-      let clientQuery = supabase
-        .from('clientes')
-        .select('id, status, created_at')
-        .eq('user_id', user.id);
+      // Chamar a RPC function otimizada
+      const { data, error } = await supabase.rpc('get_client_kpis', {
+        p_user_id: user.id,
+        p_search_term: filters.searchTerm || null,
+        p_status: filters.status || 'todos'
+      });
 
-      // Aplicar filtro por Status
-      if (filters.status && filters.status !== 'todos') {
-        clientQuery = clientQuery.eq('status', filters.status);
+      if (error) {
+        console.error('❌ Error calling get_client_kpis:', error);
+        throw error;
       }
 
-      // Aplicar filtro por Termo de Busca
-      if (filters.searchTerm && filters.searchTerm.trim()) {
-        const searchTerm = filters.searchTerm.trim();
-        clientQuery = clientQuery.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,cpf_cnpj.ilike.%${searchTerm}%`);
-      }
-
-      // Executar query de clientes
-      const { data: clientsData, error: clientsError } = await clientQuery;
-
-      if (clientsError) {
-        console.error('❌ Error fetching clients for KPIs:', clientsError);
-        throw clientsError;
-      }
-
-      // Buscar todas as apólices ativas dos clientes filtrados
-      const clientIds = (clientsData || []).map(c => c.id);
+      console.log('✅ Client KPIs from RPC:', data);
       
-      let policiesValue = 0;
-      let totalCommission = 0;
-      let clientsWithActivePolicies = new Set<string>();
-
-      if (clientIds.length > 0) {
-        const { data: policiesData, error: policiesError } = await supabase
-          .from('apolices')
-          .select('client_id, premium_value, commission_rate, status')
-          .eq('user_id', user.id)
-          .in('client_id', clientIds)
-          .eq('status', 'Ativa');
-
-        if (policiesError) {
-          console.error('❌ Error fetching policies for KPIs:', policiesError);
-        } else {
-          (policiesData || []).forEach(policy => {
-            const premium = Number(policy.premium_value) || 0;
-            const commissionRate = Number(policy.commission_rate) || 0;
-            
-            policiesValue += premium;
-            totalCommission += (premium * commissionRate) / 100;
-            clientsWithActivePolicies.add(policy.client_id);
-          });
-        }
-      }
-
-      // Calcular KPIs
-      const hoje = new Date();
-      const trinta_dias_atras = subDays(hoje, 30);
-
-      const calculatedKPIs = (clientsData || []).reduce(
-        (acc, client) => {
-          // Total de Clientes Ativos
-          if (client.status === 'Ativo') {
-            acc.totalActive++;
-          }
-
-          // Novos Clientes (Últimos 30 dias)
-          if (client.created_at && new Date(client.created_at) >= trinta_dias_atras) {
-            acc.newClientsLast30d++;
-          }
-
-          return acc;
-        },
-        {
-          totalActive: 0,
-          newClientsLast30d: 0,
-          clientsWithPolicies: clientsWithActivePolicies.size,
-          totalPoliciesValue: policiesValue,
-          totalCommission,
-        }
-      );
-
-      console.log('✅ Client KPIs calculated:', calculatedKPIs);
-      return calculatedKPIs;
+      // Cast do tipo Json para nosso formato
+      const result = data as any;
+      
+      return {
+        totalActive: result.totalActive || 0,
+        newClientsLast30d: result.newClientsLast30d || 0,
+        clientsWithPolicies: result.clientsWithPolicies || 0,
+        totalCommission: Number(result.totalCommission) || 0,
+      } as ClientKPIs;
     },
     enabled: !!user,
     staleTime: 2 * 60 * 1000, // 2 minutos
@@ -119,7 +57,6 @@ export function useClientKPIs(filters: ClientFilters) {
       totalActive: 0,
       newClientsLast30d: 0,
       clientsWithPolicies: 0,
-      totalPoliciesValue: 0,
       totalCommission: 0,
     },
     isLoading,
