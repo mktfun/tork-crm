@@ -319,83 +319,74 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     return { data: dataFormatada, insight };
   }, [apolicesFiltradas]);
 
-  // 📊 DISTRIBUIÇÃO POR RAMOS (baseada em transações pagas)
-  const branchDistributionDataFromTransactions = useMemo(() => {
-    // 🛡️ GUARD CLAUSE ROBUSTA: Aguardar dados locais
-    if (!transacoesFiltradas || !ramos || ramos.length === 0) {
-      console.warn('⚠️ [branchDistribution] Aguardando dados: transações ou ramos');
-      return [];
-    }
-    
-    // Filtrar apenas transações de receita pagas
-    const filteredTransactions = transacoesFiltradas.filter(t => 
-      t.nature === 'RECEITA' && 
-      (t.status === 'PAGO' || t.status === 'REALIZADO')
-    );
-    
-    // Agrupar por ramoId COM SUPORTE A PRÊMIO E COMISSÃO
-    const ramoData: { [key: string]: { count: number; premium: number; commission: number } } = {};
-    
-    filteredTransactions.forEach(t => {
-      const ramoId = t.ramoId || 'Não informado';
-      
-      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
-      const premiumValue = t.premiumValue || t.amount || 0;
-      const commissionValue = t.commissionValue || t.amount || 0;
-      
-      if (!ramoData[ramoId]) {
-        ramoData[ramoId] = { count: 0, premium: 0, commission: 0 };
+  // 📊 DISTRIBUIÇÃO POR RAMOS (baseada em RPC otimizada)
+  const { data: branchDistributionFromRPC } = useQuery({
+    queryKey: ['reports-branch-distribution', filtros],
+    queryFn: async () => {
+      if (!filtros.intervalo?.from || !filtros.intervalo?.to) return [];
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return [];
+
+      console.log('🔍 [Relatórios] Buscando distribuição de ramos via RPC...', {
+        from: filtros.intervalo.from,
+        to: filtros.intervalo.to
+      });
+
+      const { data, error } = await supabase.rpc('get_producao_por_ramo', {
+        p_user_id: userData.user.id,
+        start_range: filtros.intervalo.from.toISOString(),
+        end_range: filtros.intervalo.to.toISOString()
+      });
+
+      if (error) {
+        console.error('❌ Erro ao buscar distribuição de ramos:', error);
+        throw error;
       }
+
+      console.log('✅ [Relatórios] Distribuição de ramos recebida:', data);
+
+      // Transformar para o formato esperado
+      const distribution = (data || []).map((item: any) => ({
+        ramo: item.ramo_nome,
+        total: Number(item.total_apolices),
+        valor: Number(item.total_premio),
+        valorComissao: Number(item.total_comissao),
+        taxaMediaComissao: Number(item.taxa_media_comissao)
+      }));
+
+      // Agrupar itens pequenos (menos de 5% do total) em "Outros"
+      const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+      const threshold = totalValue * 0.05;
       
-      ramoData[ramoId].count += 1;
-      ramoData[ramoId].premium += premiumValue;
-      ramoData[ramoId].commission += commissionValue;
-    });
-    
-    // ✅ CORREÇÃO: Helper usando dados locais do hook
-    const getRamoName = (ramoId: string): string => {
-      if (ramoId === 'Não informado') return 'Não informado';
-      const ramo = ramos.find((r: any) => r.id === ramoId);
-      return ramo?.nome || 'Ramo Desconhecido';
-    };
-    
-    // Converter para array e mapear nomes dos ramos COM PRÊMIO E COMISSÃO
-    let distribution = Object.entries(ramoData).map(([ramoId, data]) => {
-      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
+      const mainItems = distribution.filter(item => item.valor >= threshold);
+      const smallItems = distribution.filter(item => item.valor < threshold);
       
-      return {
-        ramo: getRamoName(ramoId),
-        total: data.count,
-        valor: data.premium, // Valor TOTAL é o prêmio
-        valorComissao: data.commission,
-        taxaMediaComissao: avgCommissionRate
-      };
-    }).sort((a, b) => b.valor - a.valor);
-    
-    // Agrupar itens pequenos em "Outros" (< 5% do total)
-    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
-    const threshold = totalValue * 0.05;
-    
-    const mainItems = distribution.filter(item => item.valor >= threshold);
-    const smallItems = distribution.filter(item => item.valor < threshold);
-    
-    if (smallItems.length > 0 && mainItems.length > 0) {
-      const othersData = smallItems.reduce(
-        (acc, item) => ({
-          ramo: 'Outros',
-          total: acc.total + item.total,
-          valor: acc.valor + item.valor,
-          valorComissao: acc.valorComissao + item.valorComissao,
-          taxaMediaComissao: 0
-        }),
-        { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
-      );
-      
-      distribution = [...mainItems.slice(0, 7), othersData];
-    }
-    
-    return distribution;
-  }, [transacoesFiltradas, ramos]);
+      if (smallItems.length > 0 && mainItems.length > 0) {
+        const othersData = smallItems.reduce(
+          (acc, item) => ({
+            ramo: 'Outros',
+            total: acc.total + item.total,
+            valor: acc.valor + item.valor,
+            valorComissao: acc.valorComissao + item.valorComissao,
+            taxaMediaComissao: 0
+          }),
+          { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
+        );
+
+        if (othersData.valor > 0) {
+          othersData.taxaMediaComissao = (othersData.valorComissao / othersData.valor) * 100;
+        }
+
+        return [...mainItems.slice(0, 7), othersData];
+      }
+
+      return distribution;
+    },
+    enabled: Boolean(filtros.intervalo?.from && filtros.intervalo?.to)
+  });
+
+  const branchDistributionDataFromTransactions = branchDistributionFromRPC || [];
 
   // 📊 DISTRIBUIÇÃO POR SEGURADORAS (baseada em transações pagas)
   const companyDistributionDataFromTransactions = useMemo(() => {

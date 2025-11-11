@@ -382,99 +382,74 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     }
   }, [policies, policiesLoading, dateRange]);
 
-  // 📊 GRÁFICOS DE PIZZA COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
-  const branchDistributionData = useMemo(() => {
-    if (!isDataReady) return []; // 🛡️ GUARD CLAUSE: Aguardar todos os dados
-    
-    // ✅ USAR TRANSAÇÕES ao invés de apólices (mesma lógica dos Relatórios)
-    let filteredTransactions = transactions;
-    
-    // Aplicar filtro de data se fornecido
-    if (dateRange?.from && dateRange?.to) {
-      filteredTransactions = transactions.filter(t => isDateInRange(t.date));
-    }
-    
-    // Filtrar apenas transações PAGAS de RECEITA
-    const paidTransactions = filteredTransactions.filter(t => 
-      t.nature === 'RECEITA' && 
-      (t.status === 'PAGO' || t.status === 'REALIZADO')
-    );
-    
-    // Build lookup map for ramo names com guard clause
-    const ramoById = new Map<string, string>();
-    if (ramos && Array.isArray(ramos)) {
-      ramos.forEach(r => {
-        if (r?.id && r?.nome) {
-          ramoById.set(r.id, r.nome);
-        }
+  // 📊 GRÁFICOS DE PIZZA COM FILTRO DE DATA - USANDO RPC OTIMIZADA
+  // Query para buscar distribuição de ramos usando RPC
+  const { data: branchDistributionFromRPC } = useQuery({
+    queryKey: ['branch-distribution', user?.id, dateRange],
+    queryFn: async () => {
+      if (!user || !dateRange?.from || !dateRange?.to) return [];
+
+      console.log('🔍 Buscando distribuição de ramos via RPC...', {
+        userId: user.id,
+        from: dateRange.from,
+        to: dateRange.to
       });
-    }
-    
-    // Agrupar por ramo_id COM SUPORTE A PRÊMIO E COMISSÃO
-    const branchData: { [key: string]: { count: number; premium: number; commission: number } } = {};
-    
-    paidTransactions.forEach(transaction => {
-      const ramoId = transaction.ramoId || 'Não informado';
-      
-      // Buscar nome do ramo com fallback seguro
-      const branch = ramoId !== 'Não informado' && ramoById.has(ramoId) 
-        ? ramoById.get(ramoId)! 
-        : 'Não informado';
-      
-      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
-      const premiumValue = transaction.premiumValue || transaction.amount || 0;
-      const commissionValue = transaction.commissionValue || transaction.amount || 0;
 
-      if (!branchData[branch]) {
-        branchData[branch] = { count: 0, premium: 0, commission: 0 };
-      }
-      branchData[branch].count += 1;
-      branchData[branch].premium += premiumValue;
-      branchData[branch].commission += commissionValue;
-    });
+      const { data, error } = await supabase.rpc('get_producao_por_ramo', {
+        p_user_id: user.id,
+        start_range: dateRange.from.toISOString(),
+        end_range: dateRange.to.toISOString()
+      });
 
-    // Converter para array e ordenar por valor COM PRÊMIO E COMISSÃO
-    let distribution = Object.entries(branchData).map(([ramo, data]) => {
-      const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
-
-      return {
-        ramo,
-        total: data.count,
-        valor: data.premium, // Valor TOTAL é o prêmio
-        valorComissao: data.commission,
-        taxaMediaComissao: avgCommissionRate
-      };
-    }).sort((a, b) => b.valor - a.valor);
-
-    // Agrupar itens pequenos (menos de 5% do total de valor) em "Outros"
-    const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
-    const threshold = totalValue * 0.05;
-    
-    const mainItems = distribution.filter(item => item.valor >= threshold);
-    const smallItems = distribution.filter(item => item.valor < threshold);
-    
-    if (smallItems.length > 0 && mainItems.length > 0) {
-      const othersData = smallItems.reduce(
-        (acc, item) => ({
-          ramo: 'Outros',
-          total: acc.total + item.total,
-          valor: acc.valor + item.valor,
-          valorComissao: acc.valorComissao + item.valorComissao,
-          taxaMediaComissao: 0
-        }),
-        { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
-      );
-
-      if (othersData.valor > 0) {
-        othersData.taxaMediaComissao = (othersData.valorComissao / othersData.valor) * 100;
+      if (error) {
+        console.error('❌ Erro ao buscar distribuição de ramos:', error);
+        throw error;
       }
 
-      distribution = [...mainItems.slice(0, 7), othersData];
-    }
-    
-    console.log('📊 Dashboard - Distribuição por ramos (transações pagas):', distribution);
-    return distribution;
-  }, [isDataReady, transactions, ramos, dateRange]);
+      console.log('✅ Distribuição de ramos recebida:', data);
+
+      // Transformar para o formato esperado pelo componente
+      const distribution = (data || []).map((item: any) => ({
+        ramo: item.ramo_nome,
+        total: Number(item.total_apolices),
+        valor: Number(item.total_premio),
+        valorComissao: Number(item.total_comissao),
+        taxaMediaComissao: Number(item.taxa_media_comissao)
+      }));
+
+      // Agrupar itens pequenos (menos de 5% do total) em "Outros"
+      const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+      const threshold = totalValue * 0.05;
+      
+      const mainItems = distribution.filter(item => item.valor >= threshold);
+      const smallItems = distribution.filter(item => item.valor < threshold);
+      
+      if (smallItems.length > 0 && mainItems.length > 0) {
+        const othersData = smallItems.reduce(
+          (acc, item) => ({
+            ramo: 'Outros',
+            total: acc.total + item.total,
+            valor: acc.valor + item.valor,
+            valorComissao: acc.valorComissao + item.valorComissao,
+            taxaMediaComissao: 0
+          }),
+          { ramo: 'Outros', total: 0, valor: 0, valorComissao: 0, taxaMediaComissao: 0 }
+        );
+
+        if (othersData.valor > 0) {
+          othersData.taxaMediaComissao = (othersData.valorComissao / othersData.valor) * 100;
+        }
+
+        return [...mainItems.slice(0, 7), othersData];
+      }
+
+      return distribution;
+    },
+    enabled: Boolean(user && dateRange?.from && dateRange?.to)
+  });
+
+  // Usar os dados da RPC ou array vazio
+  const branchDistributionData = branchDistributionFromRPC || [];
 
   // 📊 DISTRIBUIÇÃO POR SEGURADORAS COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
   const companyDistributionData = useMemo(() => {

@@ -1642,6 +1642,16 @@ export type Database = {
         }[]
       }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
+      get_producao_por_ramo: {
+        Args: { end_range: string; p_user_id: string; start_range: string }
+        Returns: {
+          ramo_nome: string
+          taxa_media_comissao: number
+          total_apolices: number
+          total_comissao: number
+          total_premio: number
+        }[]
+      }
       get_schema_info: { Args: never; Returns: Json }
       get_user_companies_with_ramos: {
         Args: never
