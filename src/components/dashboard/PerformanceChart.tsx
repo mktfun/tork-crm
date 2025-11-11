@@ -4,7 +4,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { useState, useMemo } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, LineChart } from 'recharts';
-import { startOfMonth, format, differenceInDays, subDays } from 'date-fns';
+import { startOfMonth, format, differenceInDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useSupabaseTransactions } from '@/hooks/useSupabaseTransactions';
 import { useSupabasePolicies } from '@/hooks/useSupabasePolicies';
@@ -58,17 +58,20 @@ export function PerformanceChart() {
 
     console.log(`📅 [PerformanceChart] Granularidade: ${granularidade}, Dias: ${diasDiferenca}`);
 
-    // 2. FILTRAR TRANSAÇÕES POR PERÍODO
+    // 2. FILTRAR TRANSAÇÕES POR PERÍODO (usando startOfDay/endOfDay para evitar problemas de timezone)
+    const dataInicio = startOfDay(opcoesGrafico.intervalo.from!);
+    const dataFim = endOfDay(opcoesGrafico.intervalo.to!);
+    
     const transacoesFiltradas = transactions.filter(t => {
-      const dataTransacao = new Date(t.date);
-      return dataTransacao >= opcoesGrafico.intervalo.from! && dataTransacao <= opcoesGrafico.intervalo.to!;
+      const dataTransacao = startOfDay(new Date(t.date));
+      return dataTransacao >= dataInicio && dataTransacao <= dataFim;
     });
 
-    // 3. FILTRAR APÓLICES POR PERÍODO (data de criação)
+    // 3. FILTRAR APÓLICES POR PERÍODO (usando startOfDay/endOfDay para incluir dia 1)
     const apolicesFiltradas = policies.filter(p => {
-      const dataApolice = new Date(p.createdAt);
-      return dataApolice >= opcoesGrafico.intervalo.from! && 
-             dataApolice <= opcoesGrafico.intervalo.to! &&
+      const dataApolice = startOfDay(new Date(p.createdAt));
+      return dataApolice >= dataInicio && 
+             dataApolice <= dataFim &&
              p.status !== 'Orçamento'; // Só apólices efetivas
     });
 
