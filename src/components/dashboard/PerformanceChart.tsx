@@ -4,7 +4,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { useState, useMemo } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, LineChart } from 'recharts';
-import { startOfMonth, format, differenceInDays, subDays, startOfDay, endOfDay } from 'date-fns';
+import { startOfMonth, endOfMonth, format, differenceInDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useSupabaseTransactions } from '@/hooks/useSupabaseTransactions';
 import { useSupabasePolicies } from '@/hooks/useSupabasePolicies';
@@ -12,9 +12,9 @@ import { Loader2, TrendingUp, BarChart as BarChartIcon, LineChart as LineChartIc
 import { ChartInsight } from './charts/ChartInsight';
 
 export function PerformanceChart() {
-  // Estados para controlar os filtros
+  // Estados para controlar os filtros - ✅ INICIANDO COM MÊS ATUAL
   const [opcoesGrafico, setOpcoesGrafico] = useState({
-    intervalo: { from: subDays(new Date(), 90), to: new Date() } as DateRange,
+    intervalo: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) } as DateRange,
     series: ['comissao', 'novasApolices'] as string[],
     tipoGrafico: 'composed' as 'bar' | 'line' | 'composed',
   });
