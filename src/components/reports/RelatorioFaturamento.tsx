@@ -31,10 +31,11 @@ export function RelatorioFaturamento({
     return isReceita && isCommissionLike;
   };
 
-  // Aplicar filtro de período quando existir (usa transactionDate se disponível)
+  // Aplicar filtro de período quando existir (usa start_date da apólice se disponível)
   const inRange = (t: Transaction) => {
     if (!intervalo?.from || !intervalo?.to) return true;
-    const raw = t.transactionDate || t.date;
+    // Usar start_date da apólice para transações de comissão
+    const raw = (t as any).policyStartDate || t.transactionDate || t.date;
     if (!raw) return false;
     const d = new Date(raw);
     return d >= intervalo.from && d <= intervalo.to;
@@ -66,7 +67,8 @@ export function RelatorioFaturamento({
       return dias.map(dia => {
         const comissaoDia = comissoesTransacoes
           .filter(t => {
-            const raw = t.transactionDate || t.date;
+            // Usar start_date da apólice para transações de comissão
+            const raw = (t as any).policyStartDate || t.transactionDate || t.date;
             if (!raw) return false;
             return format(new Date(raw), 'yyyy-MM-dd') === format(dia, 'yyyy-MM-dd');
           })
@@ -87,7 +89,8 @@ export function RelatorioFaturamento({
       return meses.map(mes => {
         const comissaoMes = comissoesTransacoes
           .filter(t => {
-            const raw = t.transactionDate || t.date;
+            // Usar start_date da apólice para transações de comissão
+            const raw = (t as any).policyStartDate || t.transactionDate || t.date;
             if (!raw) return false;
             return format(new Date(raw), 'yyyy-MM') === format(mes, 'yyyy-MM');
           })

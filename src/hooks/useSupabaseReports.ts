@@ -77,16 +77,13 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
           *,
           apolices!policy_id (
             premium_value,
-            commission_rate
+            commission_rate,
+            start_date
           )
         `);
 
-      // Filtro por período - usar transaction_date em vez de date
-      if (filtros.intervalo?.from && filtros.intervalo?.to) {
-        query = query
-          .gte('transaction_date', format(filtros.intervalo.from, 'yyyy-MM-dd'))
-          .lte('transaction_date', format(filtros.intervalo.to, 'yyyy-MM-dd'));
-      }
+      // ✅ NÃO FILTRAR TRANSAÇÕES POR PERÍODO AQUI
+      // O filtro será aplicado no frontend baseado no start_date da apólice associada
 
       // Filtros de seleção múltipla para transações
       if (filtros.seguradoraIds.length > 0) {
@@ -110,8 +107,8 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
 
       console.log('✅ Transações carregadas:', data?.length);
       
-      // Transformar dados incluindo premium_value e commission_value
-      return data?.map((tx: any) => {
+      // Transformar dados incluindo premium_value, commission_value e start_date da apólice
+      const allTransactions = data?.map((tx: any) => {
         const policy = tx.apolices;
         const hasPolicyData = policy && policy.premium_value;
         
@@ -120,9 +117,26 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
           premiumValue: hasPolicyData ? policy.premium_value : tx.amount,
           commissionValue: tx.amount,
           commissionRate: hasPolicyData ? policy.commission_rate : 100,
-          transactionType: tx.policy_id ? 'policy_commission' : 'manual_bonus'
+          transactionType: tx.policy_id ? 'policy_commission' : 'manual_bonus',
+          policyStartDate: hasPolicyData ? policy.start_date : null
         };
       }) || [];
+
+      // ✅ FILTRAR TRANSAÇÕES POR start_date DA APÓLICE ASSOCIADA
+      if (filtros.intervalo?.from && filtros.intervalo?.to) {
+        return allTransactions.filter(tx => {
+          // Se a transação tem apólice associada, filtrar pela data de vigência
+          if (tx.policyStartDate) {
+            const startDate = new Date(tx.policyStartDate);
+            return startDate >= filtros.intervalo!.from! && startDate <= filtros.intervalo!.to!;
+          }
+          // Se não tem apólice (transação manual), filtrar pela data da transação
+          const txDate = new Date(tx.transactionDate || tx.date);
+          return txDate >= filtros.intervalo!.from! && txDate <= filtros.intervalo!.to!;
+        });
+      }
+
+      return allTransactions;
     }
   });
 
