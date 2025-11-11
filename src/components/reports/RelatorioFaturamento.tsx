@@ -121,7 +121,7 @@ export function RelatorioFaturamento({
       value: formatCurrency(totalComissoes),
       icon: DollarSign,
       bgColor: "bg-green-600",
-      description: "Comissões ganhas no per��odo"
+      description: "Comissões ganhas no período"
     },
     {
       title: "Comissão Média / Apólice",
