@@ -1641,32 +1641,19 @@ export type Database = {
           total_funcionarios_ativos: number
         }[]
       }
-      get_faturamento_data:
-        | {
-            Args: {
-              p_client_id?: string
-              p_company_id?: string
-              p_end_date: string
-              p_nature?: string
-              p_page?: number
-              p_page_size?: number
-              p_start_date: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_client_id?: string
-              p_company_id?: string
-              p_end_date: string
-              p_page?: number
-              p_page_size?: number
-              p_start_date: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      get_faturamento_data: {
+        Args: {
+          p_client_id?: string
+          p_company_id?: string
+          p_end_date: string
+          p_page?: number
+          p_page_size?: number
+          p_start_date: string
+          p_timezone?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
       get_producao_por_ramo: {
         Args: { end_range: string; p_user_id: string; start_range: string }
