@@ -29,11 +29,11 @@ export function useSupabaseReports(filtros: FiltrosGlobais) {
           companies(id, name)
         `);
 
-      // Filtro por período
+      // Filtro por período - usar start_date (data de vigência) em vez de created_at
       if (filtros.intervalo?.from && filtros.intervalo?.to) {
         query = query
-          .gte('created_at', format(filtros.intervalo.from, 'yyyy-MM-dd'))
-          .lte('created_at', format(filtros.intervalo.to, 'yyyy-MM-dd'));
+          .gte('start_date', format(filtros.intervalo.from, 'yyyy-MM-dd'))
+          .lte('start_date', format(filtros.intervalo.to, 'yyyy-MM-dd'));
       }
 
       // Filtros de seleção múltipla

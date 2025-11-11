@@ -90,7 +90,8 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     let dadosAgrupados: { [key: string]: { novas: number; renovadas: number } } = {};
 
     [...apolicesNovas, ...apolicesRenovadas].forEach(policy => {
-      const dataPolicy = parseISO(policy.created_at);
+      // Usar start_date (data de vigência) em vez de created_at
+      const dataPolicy = parseISO(policy.start_date);
       const chave = usarGranularidadeDiaria 
         ? format(dataPolicy, 'dd/MM', { locale: ptBR })
         : format(startOfMonth(dataPolicy), 'MMM/yy', { locale: ptBR });
