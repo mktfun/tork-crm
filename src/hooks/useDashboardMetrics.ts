@@ -281,9 +281,11 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     
     let filteredPolicies = policies;
     
-    // Se há filtro de data, aplicar filtro
+    // Se há filtro de data, aplicar filtro pela data de início de vigência
     if (dateRange?.from && dateRange?.to) {
-      filteredPolicies = policies.filter(policy => isDateInRange(policy.createdAt));
+      filteredPolicies = policies.filter(policy => 
+        policy.startDate && isDateInRange(policy.startDate)
+      );
     }
     
     console.log('��� Processando dados de crescimento...');
@@ -309,16 +311,22 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         const dayStr = format(day, 'dd/MM');
         
         const novas = filteredPolicies.filter(policy => {
-          const createdDate = new Date(policy.createdAt);
-          const sameDay = format(createdDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          // Usar start_date em vez de created_at
+          if (!policy.startDate) return false;
+          
+          const startDate = new Date(policy.startDate);
+          const sameDay = format(startDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
           const isAtiva = policy.status === 'Ativa';
           
           return sameDay && isAtiva;
         }).length;
         
         const renovadas = filteredPolicies.filter(policy => {
-          const renewalDate = new Date(policy.createdAt);
-          const sameDay = format(renewalDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+          // Usar start_date em vez de created_at
+          if (!policy.startDate) return false;
+          
+          const startDate = new Date(policy.startDate);
+          const sameDay = format(startDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
           const isRenovada = policy.renewalStatus === 'Renovada';
           
           return sameDay && isRenovada;
@@ -340,18 +348,24 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
         
         const novas = filteredPolicies.filter(policy => {
-          const createdDate = new Date(policy.createdAt);
-          const sameMonth = createdDate.getMonth() === month.getMonth();
-          const sameYear = createdDate.getFullYear() === month.getFullYear();
+          // Usar start_date em vez de created_at
+          if (!policy.startDate) return false;
+          
+          const startDate = new Date(policy.startDate);
+          const sameMonth = startDate.getMonth() === month.getMonth();
+          const sameYear = startDate.getFullYear() === month.getFullYear();
           const isAtiva = policy.status === 'Ativa';
           
           return sameMonth && sameYear && isAtiva;
         }).length;
         
         const renovadas = filteredPolicies.filter(policy => {
-          const renewalDate = new Date(policy.createdAt);
-          const sameMonth = renewalDate.getMonth() === month.getMonth();
-          const sameYear = renewalDate.getFullYear() === month.getFullYear();
+          // Usar start_date em vez de created_at
+          if (!policy.startDate) return false;
+          
+          const startDate = new Date(policy.startDate);
+          const sameMonth = startDate.getMonth() === month.getMonth();
+          const sameYear = startDate.getFullYear() === month.getFullYear();
           const isRenovada = policy.renewalStatus === 'Renovada';
           
           return sameMonth && sameYear && isRenovada;
