@@ -8,6 +8,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Lista de modelos para tentar em ordem de prioridade
+const MODELS_TO_TRY = [
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-001',
+];
+const GOOGLE_API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
+
 // Função para buscar contexto (clientes, seguradoras, ramos)
 async function fetchDatabaseContext(supabaseAdmin: any) {
   const [
@@ -29,7 +36,6 @@ async function fetchDatabaseContext(supabaseAdmin: any) {
 
 // Função para baixar PDF do Storage e converter para Base64
 async function downloadPdfAsBase64(supabaseAdmin: any, fileUrl: string): Promise<string> {
-  // Extrai o caminho do arquivo da URL pública
   const urlParts = new URL(fileUrl);
   const filePath = urlParts.pathname.split('/object/public/quote-uploads/')[1];
 
@@ -47,7 +53,6 @@ async function downloadPdfAsBase64(supabaseAdmin: any, fileUrl: string): Promise
     throw new Error(`Erro ao baixar PDF: ${error?.message}`);
   }
 
-  // Converte Blob para base64 de forma segura
   const arrayBuffer = await pdfBlob.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
   const base64 = btoa(bytes.reduce((data, byte) => data + String.fromCharCode(byte), ''));
@@ -89,7 +94,6 @@ function performIntelligentMatching(extractedData: any, dbContext: any) {
     ramoMatch: 'none',
   };
 
-  // Match do Cliente
   if (data.clientName) {
     const clientFound = dbContext.clients.find(
       (c: any) => c.name.toLowerCase() === data.clientName.toLowerCase()
@@ -100,7 +104,6 @@ function performIntelligentMatching(extractedData: any, dbContext: any) {
     }
   }
 
-  // Match da Seguradora
   if (data.insurerName) {
     const insurerFound = dbContext.companies.find(
       (c: any) => c.name.toLowerCase() === data.insurerName.toLowerCase()
@@ -111,7 +114,6 @@ function performIntelligentMatching(extractedData: any, dbContext: any) {
     }
   }
 
-  // Match do Ramo
   if (data.insuranceLine) {
     const ramoFound = dbContext.ramos.find(
       (r: any) => r.nome.toLowerCase() === data.insuranceLine.toLowerCase()
@@ -125,65 +127,53 @@ function performIntelligentMatching(extractedData: any, dbContext: any) {
   return { ...data, matchingDetails };
 }
 
-// Função principal de extração (chama a API do Google)
-async function extractDataWithGeminiPDF(pdfBase64: string, dbContext: any) {
-  const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
-  if (!GOOGLE_AI_API_KEY) {
-    throw new Error('GOOGLE_AI_API_KEY não configurada. Obtenha em: https://aistudio.google.com/apikey');
-  }
+// Tenta extrair dados com UM modelo específico
+async function extractWithModel(modelName: string, pdfBase64: string, prompt: string, apiKey: string) {
+  const apiUrl = `${GOOGLE_API_URL_BASE}${modelName}:generateContent`;
+  
+  console.log(`🤖 Chamando Google Gemini: ${modelName}`);
 
-  const prompt = buildPromptForGemini(dbContext);
-  console.log('🤖 Chamando Google Gemini 1.5 Flash com PDF nativo...');
-
-  const response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GOOGLE_AI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: 'application/pdf',
-                  data: pdfBase64,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              clientName: { type: 'string', nullable: true },
-              insuredItem: { type: 'string', nullable: true },
-              insurerName: { type: 'string', nullable: true },
-              insuranceLine: { type: 'string', nullable: true },
-              policyNumber: { type: 'string', nullable: true },
-              premiumValue: { type: 'number', nullable: true },
-              commissionPercentage: { type: 'number', nullable: true },
-              startDate: { type: 'string', nullable: true },
-              shouldGenerateRenewal: { type: 'boolean' },
-            },
-            required: ['shouldGenerateRenewal'],
-          },
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
+          ],
         },
-      }),
-    }
-  );
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            clientName: { type: 'string', nullable: true },
+            insuredItem: { type: 'string', nullable: true },
+            insurerName: { type: 'string', nullable: true },
+            insuranceLine: { type: 'string', nullable: true },
+            policyNumber: { type: 'string', nullable: true },
+            premiumValue: { type: 'number', nullable: true },
+            commissionPercentage: { type: 'number', nullable: true },
+            startDate: { type: 'string', nullable: true },
+            shouldGenerateRenewal: { type: 'boolean' },
+          },
+          required: ['shouldGenerateRenewal'],
+        },
+      },
+    }),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ Erro da Google AI API:', errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    console.error(`❌ Erro da Google AI API com o modelo ${modelName}:`, errorText);
+    throw new Error(`Gemini API error (${modelName}): ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
@@ -193,21 +183,43 @@ async function extractDataWithGeminiPDF(pdfBase64: string, dbContext: any) {
     throw new Error('Gemini não retornou dados');
   }
 
-  // O Gemini já retorna JSON puro (devido ao responseMimeType)
-  const extractedData = JSON.parse(extractedText);
+  return JSON.parse(extractedText);
+}
 
-  // Realizar matching inteligente
-  return performIntelligentMatching(extractedData, dbContext);
+// Função principal com fallback
+async function extractDataWithGeminiPDF(pdfBase64: string, dbContext: any) {
+  const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+  if (!GOOGLE_AI_API_KEY) {
+    throw new Error('GOOGLE_AI_API_KEY não configurada.');
+  }
+
+  const prompt = buildPromptForGemini(dbContext);
+  let lastError: Error | null = null;
+
+  for (const modelName of MODELS_TO_TRY) {
+    try {
+      console.log(`🔄 Tentando modelo: ${modelName}`);
+      const extractedData = await extractWithModel(modelName, pdfBase64, prompt, GOOGLE_AI_API_KEY);
+      console.log(`✅ Sucesso com: ${modelName}`);
+      
+      return performIntelligentMatching(extractedData, dbContext);
+
+    } catch (error) {
+      console.log(`⚠️ Falha com ${modelName}:`, error.message);
+      lastError = error;
+    }
+  }
+
+  console.error('❌ Todos os modelos de IA falharam.');
+  throw new Error(`Falha na extração de dados após tentar ${MODELS_TO_TRY.length} modelos. Último erro: ${lastError?.message}`);
 }
 
 // Servidor Deno
 serve(async (req) => {
-  // Trata requisição CORS (preflight)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Cria cliente Supabase Admin (para ter acesso ao storage e db)
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -219,25 +231,20 @@ serve(async (req) => {
 
     console.log('📄 Processando PDF:', fileUrl);
 
-    // 1. Baixar PDF do Storage
     const pdfBase64 = await downloadPdfAsBase64(supabaseAdmin, fileUrl);
 
-    // 2. Buscar contexto do Banco de Dados
     const dbContext = await fetchDatabaseContext(supabaseAdmin);
     console.log(`✅ Contexto: ${dbContext.ramos.length} ramos, ${dbContext.companies.length} seguradoras, ${dbContext.clients.length} clientes`);
 
-    // 3. Extrair dados com Gemini 1.5
     const extractedData = await extractDataWithGeminiPDF(pdfBase64, dbContext);
     console.log('✅ Dados extraídos e enriquecidos:', extractedData);
 
-    // 4. Limpar o PDF do Storage
     const filePath = new URL(fileUrl).pathname.split('/object/public/quote-uploads/')[1];
     if (filePath) {
       await supabaseAdmin.storage.from('quote-uploads').remove([filePath]);
       console.log('🗑️ Arquivo temporário removido');
     }
 
-    // Retorna sucesso
     return new Response(
       JSON.stringify({ success: true, data: extractedData }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
