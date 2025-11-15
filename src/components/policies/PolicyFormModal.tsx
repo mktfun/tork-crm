@@ -17,6 +17,7 @@ import { Edit3, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { useClients, usePolicies } from '@/hooks/useAppData';
 import { QuickAddClientModal } from '@/components/clients/QuickAddClientModal';
+import { QuoteUploadButton } from './QuoteUploadButton';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
 import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 import { useRamosByCompany } from '@/hooks/useRamosByCompany';
@@ -288,12 +289,65 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     setValue('clientId', newClient.id);
   };
 
+  const handleQuoteDataExtracted = (data: any) => {
+    console.log('🔌 Recebendo dados processados:', data);
+
+    // Preencher campos do formulário
+    if (data.clientId) setValue('clientId', data.clientId);
+    if (data.insuredAsset) setValue('insuredAsset', data.insuredAsset);
+    if (data.status) setValue('status', data.status);
+    if (data.insuranceCompany) setValue('insuranceCompany', data.insuranceCompany);
+    if (data.type) setValue('type', data.type);
+    if (data.policyNumber) setValue('policyNumber', data.policyNumber);
+    if (data.premiumValue) setValue('premiumValue', data.premiumValue);
+    if (data.commissionRate) setValue('commissionRate', data.commissionRate);
+    if (data.startDate) setValue('startDate', data.startDate);
+    if (data.expirationDate) setValue('expirationDate', data.expirationDate);
+    if (data.automaticRenewal !== undefined) setValue('automaticRenewal', data.automaticRenewal);
+
+    // Feedback visual
+    if (data.matching?.client === 'created') {
+      toast.success('Novo cliente criado: ' + data.extractedNames.clientName);
+    } else if (data.matching?.client === 'exact') {
+      toast.success('Cliente encontrado: ' + data.extractedNames.clientName);
+    }
+
+    if (data.matching?.insurer === 'exact') {
+      toast.success('Seguradora encontrada: ' + data.extractedNames.insurerName);
+    } else if (data.extractedNames.insurerName) {
+      toast.warning('Seguradora não encontrada: ' + data.extractedNames.insurerName + '. Por favor, selecione manualmente.');
+    }
+
+    if (data.matching?.ramo === 'exact') {
+      toast.success('Ramo encontrado: ' + data.extractedNames.ramoName);
+    } else if (data.extractedNames.ramoName) {
+      toast.warning('Ramo não encontrado: ' + data.extractedNames.ramoName + '. Por favor, selecione manualmente.');
+    }
+
+    // Forçar revalidação dos campos
+    trigger();
+  };
+
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-6">
+            
+            {/* Seção de Importação com IA */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-foreground">Importação Rápida com IA</h3>
+              <p className="text-xs text-muted-foreground">
+                Faça upload de um orçamento em PDF e a IA preencherá automaticamente os campos do formulário
+              </p>
+              <QuoteUploadButton 
+                onDataExtracted={handleQuoteDataExtracted}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <Separator className="my-4" />
 
             {/* Cliente Selection */}
             <div>

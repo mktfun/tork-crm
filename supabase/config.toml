@@ -9,4 +9,7 @@ verify_jwt = false
 [functions.enrich-old-transactions]
 verify_jwt = true
 
+[functions.extract-quote-data]
+verify_jwt = false
+
 
