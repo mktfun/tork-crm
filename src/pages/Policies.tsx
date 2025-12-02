@@ -30,7 +30,7 @@ export default function Policies() {
   const navigate = useNavigate();
   const [isNewPolicyModalOpen, setIsNewPolicyModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  
+
   // Estado de paginação e filtros
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -277,8 +277,8 @@ export default function Policies() {
           <Label htmlFor="period" className="text-slate-300">Vencimento</Label>
           <Select
             value={filters.period}
-            onValueChange={(value) => setFilters({ 
-              ...filters, 
+            onValueChange={(value) => setFilters({
+              ...filters,
               period: value,
               // Limpar datas customizadas se selecionar um preset
               customStart: value !== 'custom' ? null : filters.customStart,
@@ -367,7 +367,7 @@ export default function Policies() {
           const client = clients.find(c => c.id === policy.clientId);
           const producer = producers.find(p => p.id === policy.producerId);
           const isExpiringSoon = differenceInDays(new Date(policy.expirationDate), new Date()) <= 30;
-          
+
           return (
             <div
               key={policy.id}
@@ -380,12 +380,12 @@ export default function Policies() {
                     <h3 className="text-lg font-semibold text-white">
                       {policy.policyNumber || `Orçamento #${policy.id.slice(0, 8)}`}
                     </h3>
-                    <Badge 
+                    <Badge
                       className={getStatusColor(policy.status) + " text-white"}
                     >
                       {policy.status}
                     </Badge>
-                    <AutoRenewalIndicator 
+                    <AutoRenewalIndicator
                       automaticRenewal={policy.automaticRenewal}
                       expirationDate={policy.expirationDate}
                       status={policy.status}
@@ -396,23 +396,23 @@ export default function Policies() {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-slate-400">Cliente</p>
                       <p className="text-white font-medium">{client?.name || 'Cliente não encontrado'}</p>
                     </div>
-                    
+
                     <div>
                       <p className="text-slate-400">Seguradora</p>
                       <p className="text-white">{policy.companies?.name || 'Não especificada'}</p>
                     </div>
-                    
+
                     <div>
                       <p className="text-slate-400">Ramo</p>
-                      <p className="text-white">{(policy as any).ramos?.nome || policy.type || 'Não especificado'}</p>
+                      <p className="text-white">{(policy as Policy & { ramos?: { nome: string } }).ramos?.nome || policy.type || 'Não especificado'}</p>
                     </div>
-                    
+
                     {producer && (
                       <div>
                         <p className="text-slate-400">Produtor</p>
@@ -421,7 +421,7 @@ export default function Policies() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="text-right">
                     <p className="text-slate-400 text-sm">Prêmio</p>
@@ -432,7 +432,7 @@ export default function Policies() {
                       {policy.commissionRate}% comissão
                     </p>
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="text-slate-400 text-sm">Vencimento</p>
                     <p className={`font-medium ${isExpiringSoon ? 'text-red-400' : 'text-white'}`}>
@@ -478,7 +478,7 @@ export default function Policies() {
             </div>
             <PolicyFormModal
               onClose={handleCloseNewPolicyModal}
-              onPolicyAdded={() => {}}
+              onPolicyAdded={() => { }}
             />
           </div>
         </div>

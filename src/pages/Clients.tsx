@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { useAllClients } from '@/hooks/useAllClients';
 export default function Clients() {
   usePageTitle('Clientes');
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { allClients } = useAllClients();
 
   // Estado de paginação e filtros
@@ -34,7 +36,7 @@ export default function Clients() {
 
   // Estado local para busca (rápido, sem delay)
   const [localSearchTerm, setLocalSearchTerm] = useState('');
-  
+
   // Debounce da busca (500ms de atraso)
   const debouncedSearchTerm = useDebounce(localSearchTerm, 500);
 
@@ -59,8 +61,8 @@ export default function Clients() {
   const { kpis, isLoading: kpisLoading } = useClientKPIs(filters);
 
   // Calcular comissão média por cliente COM APÓLICE (não dividir por zero!)
-  const avgCommission = kpis.clientsWithPolicies > 0 
-    ? kpis.totalCommission / kpis.clientsWithPolicies 
+  const avgCommission = kpis.clientsWithPolicies > 0
+    ? kpis.totalCommission / kpis.clientsWithPolicies
     : 0;
 
   // Resetar para página 1 quando os filtros ou limite mudarem
@@ -82,7 +84,8 @@ export default function Clients() {
   const handleImportComplete = () => {
     setIsImportModalOpen(false);
     // Invalidar query para recarregar dados
-    window.location.reload();
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    queryClient.invalidateQueries({ queryKey: ['clients-paginated'] });
   };
 
   return (
@@ -151,7 +154,10 @@ export default function Clients() {
       {allClients && allClients.length > 0 && (
         <DeduplicationSection
           clients={allClients}
-          onDeduplicationComplete={() => window.location.reload()}
+          onDeduplicationComplete={() => {
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            queryClient.invalidateQueries({ queryKey: ['clients-paginated'] });
+          }}
         />
       )}
 
@@ -220,7 +226,7 @@ export default function Clients() {
             <div className="flex flex-col items-center gap-4">
               <Users size={48} className="text-white/40" />
               <p className="text-white/60">
-                {filters.searchTerm || filters.status !== 'todos' 
+                {filters.searchTerm || filters.status !== 'todos'
                   ? 'Nenhum cliente encontrado com os filtros aplicados'
                   : 'Nenhum cliente cadastrado ainda'}
               </p>
@@ -230,7 +236,7 @@ export default function Clients() {
           clients.map(client => (
             <ClientRowCard
               key={client.id}
-              client={client as any}
+              client={client}
               onClick={() => navigate(`/dashboard/clients/${client.id}`)}
             />
           ))
@@ -247,8 +253,8 @@ export default function Clients() {
       />
 
       {/* Modal de Importação */}
-      <ClientImportModal 
-        open={isImportModalOpen} 
+      <ClientImportModal
+        open={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
         onImportComplete={handleImportComplete}
       />

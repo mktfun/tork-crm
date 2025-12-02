@@ -47,7 +47,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // Helper function to check if a date is within the selected range
   const isDateInRange = (date: string | Date) => {
     if (!dateRange?.from || !dateRange?.to) return true;
-    
+
     const checkDate = typeof date === 'string' ? new Date(date) : date;
     return isWithinInterval(checkDate, { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) });
   };
@@ -57,7 +57,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     queryKey: ['birthday-greetings', user?.id, new Date().getFullYear()],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const currentYear = new Date().getFullYear();
       const { data, error } = await supabase
         .from('birthday_greetings')
@@ -76,8 +76,8 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   });
 
   // 🛡️ GUARD CLAUSE CENTRAL - Dados prontos para cálculos
-  const isDataReady = useMemo(() => 
-    !transactionsLoading && !ramosLoading && !companiesLoading && 
+  const isDataReady = useMemo(() =>
+    !transactionsLoading && !ramosLoading && !companiesLoading &&
     Array.isArray(transactions) && Array.isArray(ramos) && Array.isArray(companies),
     [transactionsLoading, ramosLoading, companiesLoading, transactions, ramos, companies]
   );
@@ -85,150 +85,135 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // 🔥 KPI 1: CLIENTES ATIVOS - MEMOIZAÇÃO INDIVIDUAL
   const activeClients = useMemo(() => {
     if (clientsLoading) return 0;
-    
+
     // Filter clients by date range if provided
     let filteredClients = clients;
     if (dateRange?.from && dateRange?.to) {
       filteredClients = clients.filter(client => isDateInRange(client.createdAt));
     }
-    
-    console.log('🔢 Calculando clientes ativos com filtro:', filteredClients.length);
+
     return filteredClients.length;
   }, [clients, clientsLoading, dateRange]);
 
   // 🔥 KPI 2: RENOVAÇÕES EM 30 DIAS - BASEADO EM VIGÊNCIA
   const renewals30Days = useMemo(() => {
     if (policiesLoading) return 0;
-    
+
     let filteredPolicies = policies;
     // ✅ CORREÇÃO: Usar start_date (vigência) em vez de createdAt
     if (dateRange?.from && dateRange?.to) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.startDate));
     }
-    
-    const renewalsCount = filteredPolicies.filter(policy => 
+
+    const renewalsCount = filteredPolicies.filter(policy =>
       policy.status === 'Ativa' && isWithinDays(policy.expirationDate, 30)
     ).length;
-    
-    console.log('📅 Calculando renovações em 30 dias com filtro:', renewalsCount);
+
     return renewalsCount;
   }, [policies, policiesLoading, dateRange]);
 
   // 🔥 KPI 3: RENOVAÇÕES EM 90 DIAS - BASEADO EM VIGÊNCIA
   const renewals90Days = useMemo(() => {
     if (policiesLoading) return 0;
-    
+
     let filteredPolicies = policies;
     // ✅ CORREÇÃO: Usar start_date (vigência) em vez de createdAt
     if (dateRange?.from && dateRange?.to) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.startDate));
     }
-    
-    const renewalsCount = filteredPolicies.filter(policy => 
+
+    const renewalsCount = filteredPolicies.filter(policy =>
       policy.status === 'Ativa' && isWithinDays(policy.expirationDate, 90)
     ).length;
-    
-    console.log('📅 Calculando renovações em 90 dias com filtro:', renewalsCount);
+
     return renewalsCount;
   }, [policies, policiesLoading, dateRange]);
 
   // 🔥 KPI 4: COMISSÃO DO MÊS ATUAL OU PERÍODO FILTRADO
   const comissaoMesAtual = useMemo(() => {
     if (transactionsLoading) return 0;
-    
+
     let filteredTransactions = transactions;
-    
+
     // Se há filtro de data, usar o filtro; senão, usar mês atual
     if (dateRange?.from && dateRange?.to) {
       filteredTransactions = transactions.filter(t => isDateInRange(t.date));
     } else {
       filteredTransactions = transactions.filter(t => isInMonth(t.date, 0));
     }
-    
+
     const comissaoTotal = filteredTransactions
       .filter(t => {
         const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
-      const isGanho = ['GANHO', 'RECEITA'].includes(t.nature);
+        const isGanho = ['GANHO', 'RECEITA'].includes(t.nature);
         return isRealizado && isGanho;
       })
       .reduce((sum, t) => sum + t.amount, 0);
 
-    console.log('💰 Comissão calculada com filtro:', comissaoTotal);
     return comissaoTotal;
   }, [transactions, transactionsLoading, dateRange]);
 
   // 🔥 KPI 5: COMISSÃO DO MÊS ANTERIOR - CORREÇÃO CRÍTICA
   const comissaoMesAnterior = useMemo(() => {
     if (transactionsLoading) return 0;
-    
+
     const comissaoTotal = transactions
       .filter(t => {
         const isLastMonth = isInMonth(t.date, -1);
         const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
         const isReceita = t.nature === 'RECEITA';
-        
+
         return isLastMonth && isRealizado && isReceita;
       })
       .reduce((sum, t) => sum + t.amount, 0);
 
-    console.log('💰 Comissão calculada do mês anterior:', comissaoTotal);
     return comissaoTotal;
   }, [transactions, transactionsLoading]);
 
   // 🔥 KPI 6: APÓLICES NOVAS DO PERÍODO (BASEADO EM VIGÊNCIA - start_date)
   const apolicesNovasMes = useMemo(() => {
     if (policiesLoading) return 0;
-    
+
     let filteredPolicies = policies;
-    
+
     // ✅ CORREÇÃO: Usar start_date (vigência) em vez de createdAt (registro)
     if (dateRange?.from && dateRange?.to) {
       filteredPolicies = policies.filter(policy => isDateInRange(policy.startDate));
     } else {
       filteredPolicies = policies.filter(policy => isInMonth(policy.startDate, 0));
     }
-    
+
     const apolicesCount = filteredPolicies.filter(policy => policy.status === 'Ativa').length;
 
-    console.log('📋 Apólices com vigência no período:', apolicesCount);
     return apolicesCount;
   }, [policies, policiesLoading, dateRange]);
 
   // 🔥 KPI 7: AGENDAMENTOS DE HOJE
   const todaysAppointments = useMemo(() => {
-    const appointmentsCount = appointments.filter(appointment => 
+    const appointmentsCount = appointments.filter(appointment =>
       appointment.status === 'Pendente' && isToday(appointment.date)
     ).length;
-    
-    console.log('📅 Agendamentos de hoje:', appointmentsCount);
+
     return appointmentsCount;
   }, [appointments]);
 
   // 🎂 KPI 8: ANIVERSARIANTES DE HOJE - LÓGICA INTELIGENTE COM CONTROLE DE SAUDAÇÕES
   const aniversariantesHoje = useMemo(() => {
     if (clientsLoading || greetingsLoading) return [];
-    
-    console.log('🎂 Buscando aniversariantes de hoje...');
-    console.log('🎂 Saudações já enviadas este ano:', sentGreetings);
-    
+
     // 1. Filtrar clientes que fazem aniversário hoje
-    const birthdayClientsToday = clients.filter(client => 
+    const birthdayClientsToday = clients.filter(client =>
       client.birthDate && isBirthdayToday(client.birthDate)
     );
-    
-    console.log('🎂 Clientes que fazem aniversário hoje:', birthdayClientsToday.length);
-    
+
     // 2. Filtrar apenas os que NÃO receberam saudação este ano
-    const unsalutedClients = birthdayClientsToday.filter(client => 
+    const unsalutedClients = birthdayClientsToday.filter(client =>
       !sentGreetings.includes(client.id)
     );
-    
-    console.log('🎂 Clientes que ainda não receberam saudação:', unsalutedClients.length);
-    
+
     // 3. Processar mensagens personalizadas
     const processedClients = processClients(unsalutedClients);
-    
-    console.log('🎂 Aniversariantes processados para saudação:', processedClients);
+
     return processedClients;
   }, [clients, clientsLoading, sentGreetings, greetingsLoading, processClients]);
 
@@ -240,21 +225,21 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // 🔥 DADOS PARA GRÁFICOS COM FILTRO DE DATA
   const monthlyCommissionData = useMemo(() => {
     if (transactionsLoading) return [];
-    
+
     let filteredTransactions = transactions;
-    
+
     // Se há filtro de data, aplicar filtro
     if (dateRange?.from && dateRange?.to) {
       filteredTransactions = transactions.filter(t => isDateInRange(t.date));
     }
-    
+
     const months = [];
     const today = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-      
+
       const monthlyCommission = filteredTransactions
         .filter(t => {
           const transactionDate = new Date(t.date);
@@ -262,7 +247,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
           const sameYear = transactionDate.getFullYear() === month.getFullYear();
           const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
           const isReceita = t.nature === 'RECEITA';
-          
+
           return sameMonth && sameYear && isRealizado && isReceita;
         })
         .reduce((sum, t) => sum + t.amount, 0);
@@ -272,24 +257,23 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         comissao: monthlyCommission
       });
     }
-    
-    console.log('📊 Dados mensais de comissão com filtro:', months);
+
     return months;
   }, [transactions, transactionsLoading, dateRange]);
 
   // 🆕 GRÁFICO DE CRESCIMENTO COM DADOS REAIS PROCESSADOS POR DIA OU MÊS
   const monthlyGrowthData = useMemo(() => {
     if (policiesLoading) return [];
-    
+
     let filteredPolicies = policies;
-    
+
     // Se há filtro de data, aplicar filtro pela data de início de vigência
     if (dateRange?.from && dateRange?.to) {
-      filteredPolicies = policies.filter(policy => 
+      filteredPolicies = policies.filter(policy =>
         policy.startDate && isDateInRange(policy.startDate)
       );
     }
-    
+
     console.log('��� Processando dados de crescimento...');
     console.log('📈 Apólices filtradas:', filteredPolicies.length);
     console.log('📈 DateRange:', dateRange);
@@ -303,34 +287,34 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       }
     }
 
-    console.log('📈 Granularidade:', granularidade);
+
 
     if (granularidade === 'dia' && dateRange?.from && dateRange?.to) {
       // PROCESSAR DADOS POR DIA COM DADOS REAIS
       const days = eachDayOfInterval({ start: dateRange.from, end: dateRange.to });
-      
+
       return days.map(day => {
         const dayStr = format(day, 'dd/MM');
-        
+
         const novas = filteredPolicies.filter(policy => {
           // Usar start_date em vez de created_at
           if (!policy.startDate) return false;
-          
+
           const startDate = new Date(policy.startDate);
           const sameDay = format(startDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
           const isAtiva = policy.status === 'Ativa';
-          
+
           return sameDay && isAtiva;
         }).length;
-        
+
         const renovadas = filteredPolicies.filter(policy => {
           // Usar start_date em vez de created_at
           if (!policy.startDate) return false;
-          
+
           const startDate = new Date(policy.startDate);
           const sameDay = format(startDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
           const isRenovada = policy.renewalStatus === 'Renovada';
-          
+
           return sameDay && isRenovada;
         }).length;
 
@@ -344,32 +328,32 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       // PROCESSAR DADOS POR MÊS
       const months = [];
       const today = new Date();
-      
+
       for (let i = 5; i >= 0; i--) {
         const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
         const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-        
+
         const novas = filteredPolicies.filter(policy => {
           // Usar start_date em vez de created_at
           if (!policy.startDate) return false;
-          
+
           const startDate = new Date(policy.startDate);
           const sameMonth = startDate.getMonth() === month.getMonth();
           const sameYear = startDate.getFullYear() === month.getFullYear();
           const isAtiva = policy.status === 'Ativa';
-          
+
           return sameMonth && sameYear && isAtiva;
         }).length;
-        
+
         const renovadas = filteredPolicies.filter(policy => {
           // Usar start_date em vez de created_at
           if (!policy.startDate) return false;
-          
+
           const startDate = new Date(policy.startDate);
           const sameMonth = startDate.getMonth() === month.getMonth();
           const sameYear = startDate.getFullYear() === month.getFullYear();
           const isRenovada = policy.renewalStatus === 'Renovada';
-          
+
           return sameMonth && sameYear && isRenovada;
         }).length;
 
@@ -379,7 +363,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
           renovadas
         });
       }
-      
+
       return months;
     }
   }, [policies, policiesLoading, dateRange]);
@@ -390,12 +374,6 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     queryKey: ['branch-distribution', user?.id, dateRange],
     queryFn: async () => {
       if (!user || !dateRange?.from || !dateRange?.to) return [];
-
-      console.log('🔍 Buscando distribuição de ramos via RPC...', {
-        userId: user.id,
-        from: dateRange.from,
-        to: dateRange.to
-      });
 
       const { data, error } = await supabase.rpc('get_producao_por_ramo', {
         p_user_id: user.id,
@@ -408,8 +386,6 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
         throw error;
       }
 
-      console.log('✅ Distribuição de ramos recebida:', data);
-
       // Transformar para o formato esperado pelo componente
       const distribution = (data || []).map((item: any) => ({
         ramo: item.ramo_nome,
@@ -420,15 +396,15 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       }));
 
       // Agrupar itens pequenos (menos de 5% do total) em "Outros"
-      const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
+      const totalValue = distribution.reduce((sum: number, item: any) => sum + item.valor, 0);
       const threshold = totalValue * 0.05;
-      
-      const mainItems = distribution.filter(item => item.valor >= threshold);
-      const smallItems = distribution.filter(item => item.valor < threshold);
-      
+
+      const mainItems = distribution.filter((item: any) => item.valor >= threshold);
+      const smallItems = distribution.filter((item: any) => item.valor < threshold);
+
       if (smallItems.length > 0 && mainItems.length > 0) {
         const othersData = smallItems.reduce(
-          (acc, item) => ({
+          (acc: any, item: any) => ({
             ramo: 'Outros',
             total: acc.total + item.total,
             valor: acc.valor + item.valor,
@@ -456,27 +432,27 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // 📊 DISTRIBUIÇÃO POR SEGURADORAS COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
   const companyDistributionData = useMemo(() => {
     if (!isDataReady) return []; // 🛡️ GUARD CLAUSE: Aguardar todos os dados
-    
+
     // ✅ USAR TRANSAÇÕES ao invés de apólices (mesma lógica dos Relatórios)
     let filteredTransactions = transactions;
-    
+
     // Aplicar filtro de data se fornecido
     if (dateRange?.from && dateRange?.to) {
       filteredTransactions = transactions.filter(t => isDateInRange(t.date));
     }
-    
+
     // Filtrar apenas transações PAGAS de RECEITA
-    const paidTransactions = filteredTransactions.filter(t => 
-      t.nature === 'RECEITA' && 
+    const paidTransactions = filteredTransactions.filter(t =>
+      t.nature === 'RECEITA' &&
       (t.status === 'PAGO' || t.status === 'REALIZADO')
     );
-    
+
     // Agrupar por company_id COM SUPORTE A PRÊMIO E COMISSÃO
     const companyData: { [key: string]: { count: number; premium: number; commission: number } } = {};
-    
+
     paidTransactions.forEach(transaction => {
       const companyId = transaction.companyId || 'Não informado';
-      
+
       // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
       const premiumValue = transaction.premiumValue || transaction.amount || 0;
       const commissionValue = transaction.commissionValue || transaction.amount || 0;
@@ -505,10 +481,10 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     // Agrupar itens pequenos (menos de 5% do total de valor) em "Outros"
     const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
     const threshold = totalValue * 0.05;
-    
+
     const mainItems = distribution.filter(item => item.valor >= threshold);
     const smallItems = distribution.filter(item => item.valor < threshold);
-    
+
     if (smallItems.length > 0 && mainItems.length > 0) {
       const othersData = smallItems.reduce(
         (acc, item) => ({
@@ -527,8 +503,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
 
       distribution = [...mainItems.slice(0, 7), othersData];
     }
-    
-    console.log('📊 Dashboard - Distribuição por seguradoras (transações pagas):', distribution);
+
     return distribution;
   }, [isDataReady, transactions, getCompanyName, dateRange]);
 
@@ -537,19 +512,19 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (policiesLoading || branchDistributionData.length === 0) {
       return 'Carregando análise de ramos...';
     }
-    
+
     const totalValue = branchDistributionData.reduce((sum, item) => sum + item.valor, 0);
-    const principal = branchDistributionData.reduce((prev, current) => 
+    const principal = branchDistributionData.reduce((prev, current) =>
       current.valor > prev.valor ? current : prev
     );
-    
+
     if (totalValue === 0) {
       return 'Sem dados de produção para análise no período selecionado.';
     }
-    
+
     const percentage = Math.round((principal.valor / totalValue) * 100);
     const periodText = dateRange?.from && dateRange?.to ? 'no período selecionado' : 'na sua produção';
-    
+
     if (percentage >= 60) {
       return `O ramo "${principal.ramo}" domina ${periodText} com ${percentage}% do faturamento. Considere diversificar para reduzir riscos.`;
     } else if (percentage >= 40) {
@@ -563,19 +538,19 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (policiesLoading || companyDistributionData.length === 0) {
       return 'Carregando análise de seguradoras...';
     }
-    
+
     const totalValue = companyDistributionData.reduce((sum, item) => sum + item.valor, 0);
-    const principal = companyDistributionData.reduce((prev, current) => 
+    const principal = companyDistributionData.reduce((prev, current) =>
       current.valor > prev.valor ? current : prev
     );
-    
+
     if (totalValue === 0) {
       return 'Sem dados de faturamento para análise no período selecionado.';
     }
-    
+
     const percentage = Math.round((principal.valor / totalValue) * 100);
     const periodText = dateRange?.from && dateRange?.to ? 'no período selecionado' : '';
-    
+
     if (percentage >= 70) {
       return `Concentração alta ${periodText}: ${principal.seguradora} representa ${percentage}% do faturamento. Diversifique para reduzir dependência.`;
     } else if (percentage >= 50) {
@@ -589,23 +564,23 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     if (policiesLoading || monthlyGrowthData.length === 0) {
       return 'Carregando análise de crescimento...';
     }
-    
-    const mesComMaisNovas = monthlyGrowthData.reduce((prev, current) => 
+
+    const mesComMaisNovas = monthlyGrowthData.reduce((prev, current) =>
       current.novas > prev.novas ? current : prev
     );
-    
+
     const ultimoMes = monthlyGrowthData[monthlyGrowthData.length - 1];
     const penultimoMes = monthlyGrowthData[monthlyGrowthData.length - 2];
-    
+
     if (!ultimoMes || !penultimoMes) {
       return 'Dados insuficientes para análise de tendência.';
     }
-    
+
     const totalUltimoMes = ultimoMes.novas + ultimoMes.renovadas;
     const totalPenultimoMes = penultimoMes.novas + penultimoMes.renovadas;
-    
+
     const periodText = dateRange?.from && dateRange?.to ? 'no período filtrado' : '';
-    
+
     if (totalUltimoMes > totalPenultimoMes) {
       return `Tendência positiva ${periodText}! ${ultimoMes.month} teve ${totalUltimoMes} apólices vs. ${totalPenultimoMes} no período anterior.`;
     } else if (totalUltimoMes < totalPenultimoMes) {
@@ -658,53 +633,9 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // 🔥 ESTADO DE LOADING GERAL
   const isLoading = policiesLoading || clientsLoading || transactionsLoading || greetingsLoading || ramosLoading || companiesLoading;
 
-  // 🔥 LOG FINAL DE VALIDAÇÃO
-  console.log('🎯 RESUMO DOS KPIS CALCULADOS COM FILTRO:', {
-    activeClients,
-    renewals30Days,
-    renewals90Days,
-    comissaoMesAtual,
-    comissaoMesAnterior,
-    apolicesNovasMes,
-    todaysAppointments,
-    aniversariantesHoje: aniversariantesHoje.length,
-    dateRange,
-    monthlyGrowthDataLength: monthlyGrowthData.length,
-    isLoading
-  });
-
   // ====================== INÍCIO DO BLOCO DE DIAGNÓSTICO ======================
   useEffect(() => {
-    // Este log só vai rodar QUANDO a guarda 'isDataReady' permitir a execução dos cálculos.
-    if (isDataReady) {
-      console.log('✅ DADOS PRONTOS. Inspecionando o que os gráficos estão recebendo...');
-      
-      console.log('🚚 INSUMO 1: Lista de RAMOS para mapeamento:', ramos);
-
-      console.log('🚚 INSUMO 2: Lista de SEGURADORAS para mapeamento:', companies);
-      
-      const paidTransactions = transactions.filter(t =>
-        t.nature === 'RECEITA' && (t.status === 'PAGO' || t.status === 'REALIZADO')
-      );
-      
-      console.log('🚚 INSUMO 3: Amostra de TRANSAÇÕES PAGAS a serem processadas:', paidTransactions.slice(0, 5));
-
-      // Verificação explícita do mapeamento
-      const firstTransaction = paidTransactions[0];
-      if (firstTransaction) {
-        const ramoId = firstTransaction.ramoId;
-        const companyId = firstTransaction.companyId;
-        
-        console.log(`🕵️ Verificando a primeira transação (ID: ${firstTransaction.id})...`);
-        console.log(`   - Ramo ID da Transação: ${ramoId}`);
-        const foundRamo = ramos.find(r => r.id === ramoId);
-        console.log(`   - Ramo encontrado na lista 'ramos':`, foundRamo || 'NENHUM');
-        
-        console.log(`   - Seguradora ID da Transação: ${companyId}`);
-        const foundCompany = companies.find(c => c.id === companyId);
-        console.log(`   - Seguradora encontrada na lista 'companies':`, foundCompany || 'NENHUMA');
-      }
-    }
+    // Logs removidos para limpeza
   }, [isDataReady, transactions, ramos, companies]);
   // ======================= FIM DO BLOCO DE DIAGNÓSTICO ========================
 

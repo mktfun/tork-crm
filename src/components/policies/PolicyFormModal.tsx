@@ -38,7 +38,7 @@ interface PolicyFormModalProps {
 
 const STEPS = [
   'Informações Principais',
-  'Detalhes do Seguro', 
+  'Detalhes do Seguro',
   'Valores e Vigência',
   'Envolvidos'
 ];
@@ -50,7 +50,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
   const { producers } = useSupabaseProducers();
   const { brokerages } = useSupabaseBrokerages();
   const { companyBranches } = useSupabaseCompanyBranches();
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isManualDueDate, setIsManualDueDate] = useState(false);
@@ -75,7 +75,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
         automaticRenewal: policy.automaticRenewal ?? true,
       };
     }
-    
+
     return {
       status: 'Orçamento' as const,
       commissionRate: 20,
@@ -100,33 +100,32 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
 
   const selectedCompanyId = watch('insuranceCompany');
   const { data: availableBranches = [] } = useRamosByCompany(selectedCompanyId);
-  
+
   // Seleção reativa do ramo assim que os ramos da seguradora estiverem disponíveis
   React.useEffect(() => {
     if (!pendingRamo) return;
     if (!selectedCompanyId) return;
     if (!availableBranches || availableBranches.length === 0) return;
-  
-    console.log('📋 useEffect: Tentando selecionar ramo:', pendingRamo);
-    console.log('📋 useEffect: Ramos disponíveis:', availableBranches.map(r => r.nome));
-  
+
+
+
     let foundRamo: { id: string; nome: string } | null = null;
-  
+
     // 1) Preferência por ID se veio da edge function
     if (pendingRamo.id) {
       foundRamo = availableBranches.find(r => r.id === pendingRamo.id) || null;
       if (foundRamo) {
-        console.log('✅ Ramo encontrado por ID:', foundRamo.nome);
+
       }
     }
-  
+
     // 2) Se não achou por ID, tentar por nome
     if (!foundRamo && pendingRamo.name) {
       const normalized = pendingRamo.name.toLowerCase().trim();
-  
+
       // Exact match
       foundRamo = availableBranches.find(r => r.nome.toLowerCase().trim() === normalized) || null;
-  
+
       // Partial match
       if (!foundRamo) {
         foundRamo = availableBranches.find(r => {
@@ -134,7 +133,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           return n.includes(normalized) || normalized.includes(n);
         }) || null;
       }
-  
+
       // Word match
       if (!foundRamo) {
         foundRamo = availableBranches.find(r => {
@@ -143,7 +142,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           return words.some(sw => ramoWords.some(rw => rw.includes(sw) || sw.includes(rw)));
         }) || null;
       }
-  
+
       // Abreviações
       if (!foundRamo) {
         const abreviacoes: Record<string, string[]> = {
@@ -153,7 +152,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           'rc': ['responsabilidade civil', 'resp civil'],
           'empresarial': ['empresa', 'comercial']
         };
-  
+
         for (const [key, variants] of Object.entries(abreviacoes)) {
           if (normalized.includes(key) || variants.some(v => normalized.includes(v))) {
             foundRamo = availableBranches.find(r => {
@@ -164,15 +163,15 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
           }
         }
       }
-  
+
       if (foundRamo) {
-        console.log('✅ Ramo encontrado por nome:', foundRamo.nome);
+
       }
     }
-  
-  if (foundRamo) {
-    setValue('type', foundRamo.id);
-    setPendingRamo(null);
+
+    if (foundRamo) {
+      setValue('type', foundRamo.id);
+      setPendingRamo(null);
       toast.success('Ramo identificado', {
         description: `${foundRamo.nome} selecionado automaticamente`
       });
@@ -184,7 +183,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       setPendingRamo(null);
     }
   }, [pendingRamo, availableBranches, selectedCompanyId, setValue]);
-  
+
   // Reset branch when company changes
   React.useEffect(() => {
     if (selectedCompanyId && watch('type')) {
@@ -234,7 +233,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     e?.preventDefault();
     const fieldsToValidate = getFieldsForStep(currentStep);
     const isStepValid = await trigger(fieldsToValidate);
-    
+
     if (isStepValid && currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -250,7 +249,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
   const onSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const data = watch();
       const finalData = {
@@ -282,15 +281,15 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
     label: `${client.name} - ${client.phone}`
   }));
 
-  const handleClientCreated = (newClient: any) => {
+  const handleClientCreated = (newClient: { id: string }) => {
     // Refetch clients to include the new one
     refetchClients();
     // Auto-select the new client
     setValue('clientId', newClient.id);
   };
 
-  const handleQuoteDataExtracted = (data: any) => {
-    console.log('🔌 Recebendo dados processados:', data);
+  const handleQuoteDataExtracted = (data: Partial<PolicyFormData> & { matching?: Record<string, string>, extractedNames: Record<string, string> }) => {
+
 
     // Preencher campos do formulário
     if (data.clientId) setValue('clientId', data.clientId);
@@ -334,14 +333,14 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       case 1:
         return (
           <div className="space-y-6">
-            
+
             {/* Seção de Importação com IA */}
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-foreground">Importação Rápida com IA</h3>
               <p className="text-xs text-muted-foreground">
                 Faça upload de um orçamento em PDF e a IA preencherá automaticamente os campos do formulário
               </p>
-              <QuoteUploadButton 
+              <QuoteUploadButton
                 onDataExtracted={handleQuoteDataExtracted}
                 disabled={isSubmitting}
               />
@@ -524,7 +523,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
                   <p className="text-red-400 text-sm mt-1">{errors.startDate.message}</p>
                 )}
               </div>
-              
+
               {/* Data de Vencimento com Toggle */}
               <div>
                 <div className="flex items-center gap-2">
@@ -546,7 +545,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                
+
                 {isManualDueDate ? (
                   <Input
                     {...register('expirationDate')}
@@ -643,8 +642,8 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
             disabled={isSubmitting}
             className="bg-green-600 hover:bg-green-700"
           >
-            {isSubmitting 
-              ? (isEditing ? 'Salvando...' : 'Criando...') 
+            {isSubmitting
+              ? (isEditing ? 'Salvando...' : 'Criando...')
               : (isEditing ? 'Salvar Alterações' : 'Criar Apólice')
             }
           </Button>
@@ -658,7 +657,7 @@ export function PolicyFormModal({ policy, isEditing = false, onClose, onPolicyAd
       <div className="space-y-6">
         {/* Stepper */}
         <Stepper steps={STEPS} currentStep={currentStep} />
-        
+
         <div>
           {/* Step Content */}
           <div className="min-h-[400px]">

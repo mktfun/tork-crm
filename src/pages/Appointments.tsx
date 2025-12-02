@@ -16,6 +16,22 @@ import listPlugin from '@fullcalendar/list';
 import interactionPlugin from '@fullcalendar/interaction';
 import { ptBR } from 'date-fns/locale';
 
+const STATUS_COLORS = {
+  Realizado: { backgroundColor: '#16a34a', borderColor: '#15803d' },
+  Cancelado: { backgroundColor: '#dc2626', borderColor: '#b91c1c' },
+  Pendente: { backgroundColor: '#2563eb', borderColor: '#1d4ed8' },
+  Overdue: { backgroundColor: '#ea580c', borderColor: '#c2410c' },
+  Default: { backgroundColor: '#475569', borderColor: '#334155' }
+};
+
+interface Appointment {
+  id: string;
+  status: string;
+  date: string;
+  time: string;
+  [key: string]: any;
+}
+
 export default function Appointments() {
   const [modoDeVisao, setModoDeVisao] = useState('mes');
   const [dataDeReferencia, setDataDeReferencia] = useState(new Date());
@@ -26,11 +42,11 @@ export default function Appointments() {
   const [tituloAtual, setTituloAtual] = useState('Julho 2025');
   const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>();
   const calendarRef = useRef<FullCalendar>(null);
-  
+
   const { appointments } = useAppointments();
-  const { 
-    upcomingAppointments, 
-    scheduleGaps, 
+  const {
+    upcomingAppointments,
+    scheduleGaps,
     weeklyStats,
     isLoadingUpcoming,
     isLoadingGaps,
@@ -76,7 +92,7 @@ export default function Appointments() {
     if (!appointments) return [];
     return appointments.map(apt => {
       const colors = getAppointmentColor(apt);
-      
+
       return {
         id: apt.id,
         title: apt.title,
@@ -123,12 +139,12 @@ export default function Appointments() {
     }, 100);
   };
 
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: { dateStr: string }) => {
     setDataAgendamento(arg.dateStr);
     setIsModalAberto(true);
   };
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = (clickInfo: { event: { id: string } }) => {
     const appointmentId = clickInfo.event.id;
     const appointment = appointments.find(a => a.id === appointmentId);
     if (appointment) {
@@ -157,7 +173,7 @@ export default function Appointments() {
       if (api) {
         api.changeView(
           view === 'mes' ? 'dayGridMonth' :
-          view === 'semana' ? 'timeGridWeek' : 'listWeek'
+            view === 'semana' ? 'timeGridWeek' : 'listWeek'
         );
         atualizarTitulo();
       }
@@ -182,7 +198,7 @@ export default function Appointments() {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -191,7 +207,7 @@ export default function Appointments() {
           >
             Hoje
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -260,16 +276,16 @@ export default function Appointments() {
               dateClick={handleDateClick}
               eventClick={handleEventClick}
               datesSet={atualizarTitulo}
-              
+
               dayMaxEvents={3}
               eventDisplay="block"
-              
+
               slotMinTime="06:00:00"
               slotMaxTime="22:00:00"
               allDaySlot={false}
               slotDuration="00:30:00"
               slotLabelInterval="01:00:00"
-              
+
               listDayFormat={{ weekday: 'long' }}
               listDaySideFormat={{ day: 'numeric', month: 'short' }}
               eventTimeFormat={{
@@ -277,15 +293,15 @@ export default function Appointments() {
                 minute: '2-digit',
                 meridiem: false
               }}
-              
+
               nowIndicator={true}
               selectMirror={true}
               dayHeaderFormat={{ weekday: 'short' }}
-              
+
               eventMouseEnter={(info) => {
                 info.el.style.cursor = 'pointer';
               }}
-              
+
               aspectRatio={1.35}
               handleWindowResize={true}
             />
