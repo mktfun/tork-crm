@@ -93,9 +93,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[FATAL] Erro inesperado na função:', error);
-    return new Response(JSON.stringify({ message: 'Erro interno do servidor.', details: error.message }), {
+    return new Response(JSON.stringify({ message: 'Erro interno do servidor.', details: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

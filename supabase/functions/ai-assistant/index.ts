@@ -222,7 +222,7 @@ async function executeToolCall(toolCall: any, supabase: any, userId: string) {
 
       if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
       
-      const summary = data.reduce((acc, t) => {
+      const summary = data.reduce((acc: { realizadas: number; pendentes: number; total: number }, t: { status: string; amount: number }) => {
         if (t.status === 'PAGO') acc.realizadas += Number(t.amount);
         if (t.status === 'PENDENTE') acc.pendentes += Number(t.amount);
         acc.total += Number(t.amount);
@@ -327,7 +327,7 @@ async function executeToolCall(toolCall: any, supabase: any, userId: string) {
         if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
         
         if (args.format === 'summary') {
-          const totalPremium = data.reduce((sum, p) => sum + Number(p.premium_value || 0), 0);
+          const totalPremium = data.reduce((sum: number, p: { premium_value?: number }) => sum + Number(p.premium_value || 0), 0);
           const summaryText = `Relatório de Renovações (${args.period}): Encontradas ${data.length} apólices vencendo nos próximos 30 dias. Prêmio total: R$ ${totalPremium.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. ${data.length > 0 ? `A mais próxima é a apólice ${data[0]?.policy_number} do cliente ${data[0]?.clientes.name} em ${new Date(data[0]?.expiration_date).toLocaleDateString('pt-BR')}.` : ''}`;
           return { tool_call_id: toolCall.id, output: JSON.stringify({ summary: summaryText }) };
         }
@@ -355,7 +355,7 @@ async function executeToolCall(toolCall: any, supabase: any, userId: string) {
         if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
 
         if (args.format === 'summary') {
-          const summary = data.reduce((acc, t) => {
+          const summary = data.reduce((acc: { totalReceitas: number; receitasRecebidas: number; totalDespesas: number; despesasPagas: number }, t: { nature: string; amount: number; status: string }) => {
             if (t.nature === 'RECEITA') {
               acc.totalReceitas += Number(t.amount);
               if (t.status === 'PAGO') acc.receitasRecebidas += Number(t.amount);
@@ -382,7 +382,7 @@ async function executeToolCall(toolCall: any, supabase: any, userId: string) {
         if (error) return { tool_call_id: toolCall.id, output: JSON.stringify({ error: error.message }) };
 
         if (args.format === 'summary') {
-          const totalAtivos = data.filter(c => c.status === 'Ativo').length;
+          const totalAtivos = data.filter((c: { status: string }) => c.status === 'Ativo').length;
           const summaryText = `Relatório de Clientes: Total de ${data.length} clientes cadastrados. Ativos: ${totalAtivos}. Inativos: ${data.length - totalAtivos}.`;
           return { tool_call_id: toolCall.id, output: JSON.stringify({ summary: summaryText }) };
         }
@@ -516,10 +516,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in ai-assistant:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

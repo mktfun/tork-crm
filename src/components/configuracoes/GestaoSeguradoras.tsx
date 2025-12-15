@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Building2, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { Building2, Edit2, Save, X, Trash2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function GestaoSeguradoras() {
@@ -16,7 +16,12 @@ export function GestaoSeguradoras() {
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
   
-  const { companies, loading: isLoading, updateCompany, deleteCompany, isUpdating } = useSupabaseCompanies();
+  // Estado para criação de nova seguradora
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
+  const [selectedRamosForNewCompany, setSelectedRamosForNewCompany] = useState<string[]>([]);
+  
+  const { companies, loading: isLoading, addCompany, updateCompany, deleteCompany, isUpdating, isAdding } = useSupabaseCompanies();
   const { toast } = useToast();
   const { data: ramos = [] } = useSupabaseRamos();
   const { data: companyRamos = [] } = useCompanyRamosById(selectedCompanyId);
@@ -105,6 +110,65 @@ export function GestaoSeguradoras() {
     }
   };
 
+  const handleToggleRamoForNewCompany = (ramoId: string) => {
+    setSelectedRamosForNewCompany(prev => 
+      prev.includes(ramoId) 
+        ? prev.filter(id => id !== ramoId)
+        : [...prev, ramoId]
+    );
+  };
+
+  const handleCreateCompany = async () => {
+    if (!newCompanyName.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite o nome da seguradora.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // 1. Criar a seguradora
+      const newCompany = await addCompany({ name: newCompanyName.trim() });
+      
+      // 2. Associar os ramos selecionados
+      if (selectedRamosForNewCompany.length > 0 && newCompany?.id) {
+        for (const ramoId of selectedRamosForNewCompany) {
+          await createCompanyRamo.mutateAsync({
+            company_id: newCompany.id,
+            ramo_id: ramoId
+          });
+        }
+      }
+      
+      toast({
+        title: "Seguradora criada",
+        description: `"${newCompanyName}" foi criada com ${selectedRamosForNewCompany.length} ramo(s) associado(s).`,
+      });
+      
+      // Limpar formulário e selecionar a nova seguradora
+      setNewCompanyName('');
+      setSelectedRamosForNewCompany([]);
+      setIsCreating(false);
+      if (newCompany?.id) {
+        setSelectedCompanyId(newCompany.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar",
+        description: error.message || "Não foi possível criar a seguradora.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelCreate = () => {
+    setIsCreating(false);
+    setNewCompanyName('');
+    setSelectedRamosForNewCompany([]);
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -140,12 +204,94 @@ export function GestaoSeguradoras() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Lista de Seguradoras */}
       <AppCard className="p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white">Gestão de Seguradoras</h2>
-          <p className="text-sm text-slate-400 mt-2">
-            Selecione uma seguradora para gerenciar seus ramos
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Gestão de Seguradoras</h2>
+            <p className="text-sm text-slate-400 mt-2">
+              Selecione uma seguradora para gerenciar seus ramos
+            </p>
+          </div>
+          {!isCreating && (
+            <Button 
+              onClick={() => setIsCreating(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nova
+            </Button>
+          )}
         </div>
+
+        {/* Formulário de criação */}
+        {isCreating && (
+          <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700 rounded-lg space-y-4">
+            <h3 className="text-sm font-medium text-blue-400">Nova Seguradora</h3>
+            
+            <div>
+              <Label htmlFor="new-company-name" className="text-slate-300">Nome da Seguradora *</Label>
+              <Input
+                id="new-company-name"
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+                placeholder="Ex: Porto Seguro"
+                className="mt-1 bg-slate-800 border-slate-600"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <Label className="text-slate-300">Ramos oferecidos (opcional)</Label>
+              <div className="mt-2 max-h-[200px] overflow-y-auto space-y-2 pr-2">
+                {ramos.length === 0 ? (
+                  <p className="text-sm text-slate-500">Nenhum ramo cadastrado. Crie ramos primeiro em "Gestão de Ramos".</p>
+                ) : (
+                  ramos.map((ramo) => (
+                    <div
+                      key={ramo.id}
+                      className="flex items-center space-x-3 p-2 bg-slate-800 border border-slate-700 rounded"
+                    >
+                      <Checkbox
+                        id={`new-ramo-${ramo.id}`}
+                        checked={selectedRamosForNewCompany.includes(ramo.id)}
+                        onCheckedChange={() => handleToggleRamoForNewCompany(ramo.id)}
+                      />
+                      <Label 
+                        htmlFor={`new-ramo-${ramo.id}`}
+                        className={`cursor-pointer text-sm ${selectedRamosForNewCompany.includes(ramo.id) ? 'text-white font-medium' : 'text-slate-300'}`}
+                      >
+                        {ramo.nome}
+                      </Label>
+                    </div>
+                  ))
+                )}
+              </div>
+              {selectedRamosForNewCompany.length > 0 && (
+                <p className="mt-2 text-xs text-blue-400">
+                  {selectedRamosForNewCompany.length} ramo(s) selecionado(s)
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button 
+                onClick={handleCreateCompany} 
+                disabled={isAdding || !newCompanyName.trim()}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isAdding ? 'Criando...' : 'Criar Seguradora'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCancelCreate}
+                disabled={isAdding}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           {/* Lista de seguradoras existentes */}
           <div className="space-y-2">
@@ -157,10 +303,10 @@ export function GestaoSeguradoras() {
               <div className="text-center py-8 text-slate-400">
                 <Building2 className="w-12 h-12 mx-auto mb-4 text-slate-600" />
                 <p>Nenhuma seguradora cadastrada ainda.</p>
-                <p className="text-sm">Vá para "Gestão de Seguradoras" em Configurações para adicionar seguradoras.</p>
+                <p className="text-sm">Clique em "Nova" para adicionar sua primeira seguradora.</p>
               </div>
             ) : (
-              <div className="max-h-[500px] overflow-y-auto space-y-2 pr-2">
+              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
                 {companies.map((company) => (
                   <div
                     key={company.id}
@@ -264,16 +410,6 @@ export function GestaoSeguradoras() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Informações sobre a migração */}
-          <div className="bg-green-900/20 border border-green-700 rounded-lg p-4">
-            <h4 className="text-green-400 font-medium mb-2">✅ Migração concluída</h4>
-            <div className="text-sm text-green-300 space-y-1">
-              <p>• Suas seguradoras foram preservadas</p>
-              <p>• Os ramos foram normalizados automaticamente</p>
-              <p>• Agora você pode gerenciar as associações seguradoras-ramos</p>
-            </div>
           </div>
         </div>
       </AppCard>

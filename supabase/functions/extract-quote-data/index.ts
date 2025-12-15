@@ -258,9 +258,9 @@ async function extractDataWithGemini(pdfBase64: string, dbContext: any, apiKey: 
       const rawData = await extractWithModel(modelName, pdfBase64, prompt, apiKey);
       console.log(`✅ Sucesso com: ${modelName}`);
       return rawData;
-    } catch (error) {
-      console.log(`⚠️ Falha com ${modelName}:`, error.message);
-      lastError = error;
+    } catch (error: unknown) {
+      console.log(`⚠️ Falha com ${modelName}:`, error instanceof Error ? error.message : 'Unknown error');
+      lastError = error instanceof Error ? error : new Error('Unknown error');
     }
   }
 
@@ -512,10 +512,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Erro:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
