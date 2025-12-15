@@ -19,7 +19,7 @@ interface TransactionRow {
   clientName: string;
   typeName: string;
   policyNumber: string | null;
-  status: string;
+  status: string; // 'Pago' | 'Pendente' | 'Parcial'
   amount: number;
   nature: 'GANHO' | 'PERDA';
 }
@@ -43,44 +43,66 @@ interface ReportData {
   options?: ReportOptions;
 }
 
-// Fixed column widths (total ~182mm usable width)
-const COLUMN_CONFIG: Record<ColumnKey, { header: string; widthPercent: number; align: 'left' | 'center' | 'right' }> = {
-  date: { header: 'DATA', widthPercent: 12, align: 'center' },
-  description: { header: 'DESCRIÇÃO', widthPercent: 30, align: 'left' },
-  client: { header: 'CLIENTE', widthPercent: 25, align: 'left' },
-  type: { header: 'TIPO', widthPercent: 13, align: 'left' },
-  status: { header: 'STATUS', widthPercent: 8, align: 'center' },
-  value: { header: 'VALOR', widthPercent: 12, align: 'right' },
+// ========================================
+// LARGURAS FIXAS EM MM (Total ~182mm usável em A4)
+// ========================================
+const COLUMN_CONFIG: Record<ColumnKey, { header: string; width: number; align: 'left' | 'center' | 'right' }> = {
+  date: { header: 'DATA', width: 22, align: 'center' },
+  description: { header: 'DESCRIÇÃO', width: 58, align: 'left' },
+  client: { header: 'CLIENTE', width: 42, align: 'left' },
+  type: { header: 'TIPO', width: 28, align: 'left' },
+  status: { header: 'STATUS', width: 18, align: 'center' },
+  value: { header: 'VALOR (R$)', width: 28, align: 'right' },
 };
 
-// SANITIZAÇÃO CRÍTICA - NUNCA retornar "undefined"
+// SANITIZAÇÃO + TRUNCAMENTO - NUNCA retornar "undefined"
 const sanitizeDescription = (
   desc: string | null | undefined, 
   typeName: string | null | undefined, 
-  policyNumber: string | null | undefined
+  policyNumber: string | null | undefined,
+  maxLength: number = 45
 ): string => {
-  // Se a descrição contém "undefined" ou está vazia
-  const cleanDesc = desc?.replace(/undefined/gi, '').trim();
+  let result = '';
   
-  if (!cleanDesc || cleanDesc === '' || cleanDesc.toLowerCase() === 'null') {
+  // Limpar undefined/null da descrição
+  const cleanDesc = desc?.replace(/undefined/gi, '').replace(/null/gi, '').trim();
+  
+  if (!cleanDesc || cleanDesc === '') {
     // Fallback 1: Usar número da apólice
-    if (policyNumber && policyNumber !== 'undefined') {
-      return `Comissão Apólice ${policyNumber}`;
+    if (policyNumber && policyNumber !== 'undefined' && policyNumber !== 'null') {
+      result = `Comissão Apólice ${policyNumber}`;
     }
     // Fallback 2: Usar nome do tipo
-    if (typeName && typeName !== 'undefined') {
-      return typeName;
+    else if (typeName && typeName !== 'undefined' && typeName !== 'null') {
+      result = typeName;
     }
     // Fallback 3: Texto genérico
-    return 'Lançamento Manual';
+    else {
+      result = 'Lançamento Manual';
+    }
+  } else {
+    result = cleanDesc;
   }
   
-  return cleanDesc;
+  // Truncar se muito longo
+  if (result.length > maxLength) {
+    result = result.substring(0, maxLength - 3) + '...';
+  }
+  
+  return result;
+};
+
+// Sanitizar strings genéricas
+const sanitizeString = (str: string | null | undefined, fallback: string): string => {
+  if (!str || str === 'undefined' || str === 'null' || str.trim() === '') {
+    return fallback;
+  }
+  return str.replace(/undefined/gi, '').replace(/null/gi, '').trim() || fallback;
 };
 
 export const generateBillingReport = async ({ 
   transactions, 
-  metrics: _ignoredMetrics, // IGNORAMOS as métricas recebidas - vamos recalcular
+  metrics: _ignoredMetrics, // IGNORAMOS métricas recebidas - recalculamos aqui
   period,
   options = {}
 }: ReportData): Promise<void> => {
@@ -92,183 +114,213 @@ export const generateBillingReport = async ({
   } = options;
 
   // ========================================
-  // RECÁLCULO DE MÉTRICAS (BASEADO NO FILTRO!)
+  // 1. FILTRAR BASEADO NAS OPÇÕES DO MODAL
   // ========================================
-  const filteredTransactions = transactions.filter(t => {
+  const rowsToPrint = transactions.filter(t => {
     if (statusFilter === 'paid') return t.status === 'Pago';
     if (statusFilter === 'pending') return t.status === 'Pendente' || t.status === 'Parcial';
     return true;
   });
 
-  // Recalcular totais com base APENAS nas transações filtradas
-  const recalculatedMetrics = {
-    totalGanhos: filteredTransactions
-      .filter(t => t.nature === 'GANHO' && t.status === 'Pago')
-      .reduce((acc, t) => acc + Math.abs(t.amount), 0),
-    
-    totalPerdas: filteredTransactions
-      .filter(t => t.nature === 'PERDA' && t.status === 'Pago')
-      .reduce((acc, t) => acc + Math.abs(t.amount), 0),
-    
-    totalPrevisto: filteredTransactions
-      .filter(t => t.status === 'Pendente' || t.status === 'Parcial')
-      .reduce((acc, t) => acc + Math.abs(t.amount), 0),
-    
-    saldoLiquido: 0
-  };
+  // ========================================
+  // 2. RECÁLCULO CONTÁBIL PRECISO
+  // ========================================
+  // REGRA DE OURO:
+  // - Receitas = Apenas GANHOS que foram PAGOS
+  // - Despesas = Apenas PERDAS que foram PAGAS  
+  // - Saldo Líquido = Receitas - Despesas (SOMENTE valores já realizados)
+  // - Previsto/A Receber = GANHOS pendentes (não inclui despesas pendentes)
   
-  // Saldo = Receitas pagas - Despesas pagas
-  recalculatedMetrics.saldoLiquido = recalculatedMetrics.totalGanhos - recalculatedMetrics.totalPerdas;
+  const metricasCalculadas = rowsToPrint.reduce((acc, t) => {
+    const valor = Math.abs(Number(t.amount) || 0);
+    const isPago = t.status === 'Pago';
+    const isPendente = t.status === 'Pendente' || t.status === 'Parcial';
+    const isGanho = t.nature === 'GANHO';
+    const isPerda = t.nature === 'PERDA';
 
+    if (isPago) {
+      // Soma nos totais REALIZADOS
+      if (isGanho) {
+        acc.receitas += valor;
+      } else if (isPerda) {
+        acc.despesas += valor;
+      }
+    } else if (isPendente) {
+      // Soma nos PREVISTOS (apenas receitas futuras)
+      if (isGanho) {
+        acc.previsto += valor;
+      }
+      // Despesas pendentes NÃO somam no previsto - são obrigações futuras
+      // Se quiser mostrar, criar métrica separada "A Pagar"
+    }
+    
+    return acc;
+  }, { receitas: 0, despesas: 0, previsto: 0 });
+
+  // SALDO LÍQUIDO = Apenas valores já PAGOS/RECEBIDOS
+  const saldoLiquido = metricasCalculadas.receitas - metricasCalculadas.despesas;
+
+  // ========================================
+  // 3. INICIALIZAR PDF
+  // ========================================
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const margin = 14;
-  const usableWidth = pageWidth - (margin * 2);
   
-  // ========================================
-  // DESIGN SYSTEM - MINIMALISTA STRIPE-LIKE
-  // ========================================
+  // Design System Colors
   const colors = {
-    text: { primary: '#0f172a', secondary: '#64748b', muted: '#94a3b8' },
-    border: '#e2e8f0',
-    background: { table: '#f8fafc' },
-    values: { positive: '#047857', negative: '#b91c1c', neutral: '#0f172a' }
+    text: { 
+      primary: '#0f172a',   // Slate-900
+      secondary: '#64748b', // Slate-500
+      muted: '#94a3b8'      // Slate-400
+    },
+    border: '#e2e8f0',       // Slate-200
+    tableHeader: '#334155',  // Slate-700
+    tableAlt: '#f8fafc',     // Slate-50
+    values: { 
+      positive: '#047857',   // Emerald-700
+      negative: '#b91c1c',   // Red-700
+      pending: '#ca8a04'     // Yellow-600
+    }
   };
 
   // ========================================
-  // 1. CABEÇALHO MINIMALISTA (SEM FUNDO COLORIDO)
+  // 4. CABEÇALHO MINIMALISTA
   // ========================================
-  let yPos = 20;
+  let yPos = 18;
   
-  // Logo placeholder (círculo cinza)
-  doc.setFillColor(71, 85, 105); // Slate-600
-  doc.circle(margin + 6, yPos, 6, 'F');
+  // Logo placeholder
+  doc.setFillColor(71, 85, 105);
+  doc.circle(margin + 5, yPos, 5, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('SGC', margin + 6, yPos + 2.5, { align: 'center' });
+  doc.text('SGC', margin + 5, yPos + 2, { align: 'center' });
   
   // Nome da corretora
   doc.setTextColor(colors.text.primary);
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('SGC Pro', margin + 16, yPos + 2);
+  doc.text('SGC Pro', margin + 14, yPos + 1);
   
-  // Subtítulo
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(colors.text.secondary);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema de Gestão de Corretora', margin + 16, yPos + 8);
+  doc.text('Sistema de Gestão de Corretora', margin + 14, yPos + 6);
   
-  // Lado direito - Título do relatório
-  doc.setFontSize(10);
+  // Lado direito
+  doc.setFontSize(8);
   doc.setTextColor(colors.text.muted);
-  doc.setFont('helvetica', 'normal');
   doc.text('RELATÓRIO DE FATURAMENTO', pageWidth - margin, yPos - 2, { align: 'right' });
   
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(colors.text.primary);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, pageWidth - margin, yPos + 6, { align: 'right' });
+  doc.text(title.substring(0, 40), pageWidth - margin, yPos + 5, { align: 'right' });
   
-  // Período
   const periodoTexto = period.from && period.to 
     ? `${format(period.from, 'dd/MM/yyyy')} a ${format(period.to, 'dd/MM/yyyy')}`
     : 'Período Total';
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(colors.text.secondary);
   doc.setFont('helvetica', 'normal');
-  doc.text(periodoTexto, pageWidth - margin, yPos + 13, { align: 'right' });
+  doc.text(periodoTexto, pageWidth - margin, yPos + 11, { align: 'right' });
 
-  // Linha separadora fina
-  yPos += 22;
+  // Linha separadora
+  yPos += 18;
   doc.setDrawColor(colors.border);
   doc.setLineWidth(0.3);
   doc.line(margin, yPos, pageWidth - margin, yPos);
 
   // ========================================
-  // 2. MÉTRICAS - NÚMEROS GRANDES COM SEPARADORES
+  // 5. CARDS DE MÉTRICAS (RECALCULADOS)
   // ========================================
-  yPos += 12;
+  yPos += 10;
+  const cardWidth = 43;
+  const cardGap = 3;
   
-  const metricWidth = usableWidth / 4;
-  
-  const drawMetric = (x: number, label: string, value: number, color: string, showSeparator: boolean = true) => {
-    // Label (pequeno, acima)
-    doc.setFontSize(8);
+  const drawMetricCard = (x: number, label: string, value: number, textColor: string) => {
+    // Label
+    doc.setFontSize(7);
     doc.setTextColor(colors.text.muted);
     doc.setFont('helvetica', 'normal');
     doc.text(label.toUpperCase(), x, yPos);
     
-    // Valor (grande, abaixo)
-    doc.setFontSize(14);
-    doc.setTextColor(color);
-    doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(value), x, yPos + 8);
-    
-    // Linha vertical separadora
-    if (showSeparator) {
-      doc.setDrawColor(colors.border);
-      doc.setLineWidth(0.2);
-      doc.line(x + metricWidth - 4, yPos - 4, x + metricWidth - 4, yPos + 12);
-    }
+    // Valor - usar Courier para alinhamento monospace
+    doc.setFontSize(13);
+    doc.setTextColor(textColor);
+    doc.setFont('courier', 'bold');
+    doc.text(formatCurrency(value), x, yPos + 7);
+    doc.setFont('helvetica', 'normal');
   };
-  
-  drawMetric(margin, 'Receitas', recalculatedMetrics.totalGanhos, colors.values.positive, true);
-  drawMetric(margin + metricWidth, 'Despesas', recalculatedMetrics.totalPerdas, colors.values.negative, true);
-  drawMetric(margin + metricWidth * 2, 'Saldo Líquido', recalculatedMetrics.saldoLiquido, 
-    recalculatedMetrics.saldoLiquido >= 0 ? colors.values.positive : colors.values.negative, true);
-  drawMetric(margin + metricWidth * 3, 'Previsto', recalculatedMetrics.totalPrevisto, colors.text.primary, false);
+
+  drawMetricCard(margin, 'Receitas (Pagas)', metricasCalculadas.receitas, colors.values.positive);
+  drawMetricCard(margin + cardWidth + cardGap, 'Despesas (Pagas)', metricasCalculadas.despesas, colors.values.negative);
+  drawMetricCard(margin + (cardWidth + cardGap) * 2, 'Saldo Líquido', saldoLiquido, saldoLiquido >= 0 ? colors.values.positive : colors.values.negative);
+  drawMetricCard(margin + (cardWidth + cardGap) * 3, 'A Receber', metricasCalculadas.previsto, colors.values.pending);
+
+  // Separadores verticais entre métricas
+  doc.setDrawColor(colors.border);
+  doc.setLineWidth(0.2);
+  for (let i = 1; i < 4; i++) {
+    const xSep = margin + (cardWidth + cardGap) * i - cardGap / 2;
+    doc.line(xSep, yPos - 4, xSep, yPos + 10);
+  }
 
   // Linha separadora após métricas
-  yPos += 20;
+  yPos += 16;
   doc.setDrawColor(colors.border);
   doc.setLineWidth(0.3);
   doc.line(margin, yPos, pageWidth - margin, yPos);
 
   // ========================================
-  // 3. TABELA COM LARGURAS FIXAS
+  // 6. TABELA COM LARGURAS FIXAS
   // ========================================
   const orderedColumns = selectedColumns.filter(col => COLUMN_CONFIG[col]);
   const headers = orderedColumns.map(col => COLUMN_CONFIG[col].header);
   
-  // Calcular larguras reais das colunas
-  const totalPercent = orderedColumns.reduce((sum, col) => sum + COLUMN_CONFIG[col].widthPercent, 0);
-  const columnWidths = orderedColumns.map(col => 
-    (COLUMN_CONFIG[col].widthPercent / totalPercent) * usableWidth
-  );
-
   const getColumnValue = (t: TransactionRow, col: ColumnKey): string => {
     switch (col) {
       case 'date': 
-        return t.date || 'N/A';
+        return sanitizeString(t.date, 'N/A');
       case 'description': 
         return sanitizeDescription(t.description, t.typeName, t.policyNumber);
       case 'client': 
-        return t.clientName && t.clientName !== 'undefined' ? t.clientName : 'Não informado';
+        const clientName = sanitizeString(t.clientName, 'Não informado');
+        return clientName.length > 30 ? clientName.substring(0, 27) + '...' : clientName;
       case 'type': 
-        return t.typeName && t.typeName !== 'undefined' ? t.typeName : 'Transação';
+        return sanitizeString(t.typeName, 'Transação');
       case 'status': 
         return t.status || 'Pendente';
       case 'value': 
-        const sign = t.nature === 'GANHO' ? '+' : '-';
-        return `${sign} ${formatCurrency(Math.abs(t.amount))}`;
+        // Formato alinhável: sem sinal no texto, cor indica direção
+        return formatCurrency(Math.abs(t.amount));
       default: 
         return '-';
     }
   };
 
-  const tableData = filteredTransactions.map(t => 
+  const tableData = rowsToPrint.map(t => 
     orderedColumns.map(col => getColumnValue(t, col))
   );
 
-  // Column styles com larguras fixas
-  const columnStyles: Record<number, { cellWidth: number; halign: 'left' | 'center' | 'right' }> = {};
+  // Column styles com LARGURAS FIXAS em mm
+  const columnStyles: Record<number, { 
+    cellWidth: number; 
+    halign: 'left' | 'center' | 'right';
+    overflow?: 'ellipsize' | 'linebreak';
+    font?: string;
+    fontStyle?: 'normal' | 'bold';
+  }> = {};
+  
   orderedColumns.forEach((col, index) => {
+    const config = COLUMN_CONFIG[col];
     columnStyles[index] = {
-      cellWidth: columnWidths[index],
-      halign: COLUMN_CONFIG[col].align
+      cellWidth: config.width,
+      halign: config.align,
+      overflow: col === 'description' || col === 'client' ? 'ellipsize' : undefined,
+      ...(col === 'value' ? { font: 'courier', fontStyle: 'bold' as const } : {})
     };
   });
 
@@ -276,42 +328,44 @@ export const generateBillingReport = async ({
   const statusColumnIndex = orderedColumns.indexOf('status');
 
   autoTable(doc, {
-    startY: yPos + 8,
+    startY: yPos + 6,
     head: [headers],
     body: tableData,
-    theme: 'plain',
+    theme: 'striped',
     styles: {
+      fontSize: 8,
+      cellPadding: { top: 3, bottom: 3, left: 2, right: 2 },
+      overflow: 'ellipsize',
       lineColor: colors.border,
       lineWidth: 0.1
     },
     headStyles: {
-      fillColor: colors.background.table,
-      textColor: '#475569', // Slate-600
+      fillColor: colors.tableHeader,
+      textColor: '#ffffff',
       fontSize: 7,
       fontStyle: 'bold',
-      halign: 'left',
-      cellPadding: { top: 4, bottom: 4, left: 3, right: 3 }
+      cellPadding: { top: 4, bottom: 4, left: 2, right: 2 }
     },
     bodyStyles: {
-      fontSize: 8,
-      textColor: colors.text.primary,
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 }
+      textColor: colors.text.primary
+    },
+    alternateRowStyles: {
+      fillColor: colors.tableAlt
     },
     columnStyles,
     didParseCell: function(data) {
-      // Linha inferior em cada célula do body
-      if (data.section === 'body') {
-        data.cell.styles.lineWidth = { bottom: 0.1, top: 0, left: 0, right: 0 };
-      }
-      
-      // Colorir valores
+      // Colorir valores baseado na nature da transação
       if (data.section === 'body' && valueColumnIndex >= 0 && data.column.index === valueColumnIndex) {
-        const rawValue = String(data.cell.raw);
-        data.cell.styles.fontStyle = 'bold';
-        if (rawValue.startsWith('-')) {
-          data.cell.styles.textColor = colors.values.negative;
-        } else {
-          data.cell.styles.textColor = colors.values.positive;
+        const rowIndex = data.row.index;
+        const transaction = rowsToPrint[rowIndex];
+        if (transaction) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.font = 'courier';
+          if (transaction.nature === 'PERDA') {
+            data.cell.styles.textColor = colors.values.negative;
+          } else {
+            data.cell.styles.textColor = colors.values.positive;
+          }
         }
       }
       
@@ -320,88 +374,89 @@ export const generateBillingReport = async ({
         const status = String(data.cell.raw);
         if (status === 'Pago') {
           data.cell.styles.textColor = colors.values.positive;
+          data.cell.styles.fontStyle = 'bold';
         } else if (status === 'Parcial') {
           data.cell.styles.textColor = '#2563eb';
         } else {
-          data.cell.styles.textColor = '#ca8a04';
+          data.cell.styles.textColor = colors.values.pending;
         }
       }
     },
-    foot: filteredTransactions.length > 0 ? [
+    // Rodapé da tabela com total
+    foot: rowsToPrint.length > 0 ? [
       orderedColumns.map((col, idx) => {
-        if (idx === orderedColumns.length - 2) return 'TOTAL';
-        if (idx === orderedColumns.length - 1) return formatCurrency(recalculatedMetrics.saldoLiquido);
+        if (idx === orderedColumns.length - 2) return 'TOTAL REALIZADO:';
+        if (idx === orderedColumns.length - 1) return formatCurrency(saldoLiquido);
         return '';
       })
     ] : undefined,
     footStyles: {
-      fillColor: '#ffffff',
+      fillColor: '#f1f5f9',
       textColor: colors.text.primary,
       fontStyle: 'bold',
       fontSize: 9,
-      cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
-      lineWidth: { top: 0.5 }
+      font: 'courier',
+      cellPadding: { top: 5, bottom: 5, left: 2, right: 2 }
     }
   });
 
   // ========================================
-  // 4. OBSERVAÇÕES (se houver)
+  // 7. OBSERVAÇÕES (se houver)
   // ========================================
-  if (notes) {
+  if (notes && notes.trim()) {
     const finalY = (doc as any).lastAutoTable?.finalY || 150;
     
     doc.setDrawColor(colors.border);
     doc.setLineWidth(0.3);
-    doc.line(margin, finalY + 10, pageWidth - margin, finalY + 10);
+    doc.line(margin, finalY + 8, pageWidth - margin, finalY + 8);
     
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(colors.text.secondary);
     doc.setFont('helvetica', 'bold');
-    doc.text('Observações', margin, finalY + 18);
+    doc.text('OBSERVAÇÕES', margin, finalY + 14);
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(colors.text.primary);
-    const splitNotes = doc.splitTextToSize(notes, usableWidth);
-    doc.text(splitNotes, margin, finalY + 24);
+    doc.setFontSize(8);
+    const splitNotes = doc.splitTextToSize(notes.trim(), pageWidth - margin * 2);
+    doc.text(splitNotes, margin, finalY + 20);
   }
 
   // ========================================
-  // 5. RODAPÉ EM TODAS AS PÁGINAS
+  // 8. RODAPÉ EM TODAS AS PÁGINAS
   // ========================================
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
-    // Linha separadora
     doc.setDrawColor(colors.border);
     doc.setLineWidth(0.2);
-    doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16);
+    doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
     
-    // Texto legal
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setTextColor(colors.text.muted);
+    doc.setFont('helvetica', 'normal');
     doc.text(
-      `Documento gerado eletronicamente em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} via SGC Pro`,
+      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} via SGC Pro • Este documento não tem valor fiscal`,
       margin,
-      pageHeight - 10
+      pageHeight - 8
     );
     
-    // Paginação
     doc.text(
       `Página ${i} de ${pageCount}`,
       pageWidth - margin,
-      pageHeight - 10,
+      pageHeight - 8,
       { align: 'right' }
     );
   }
 
   // ========================================
-  // 6. SALVAR ARQUIVO
+  // 9. SALVAR ARQUIVO
   // ========================================
   const monthYear = period.from 
     ? format(period.from, 'MMM_yyyy', { locale: ptBR }).toUpperCase()
     : 'GERAL';
-  const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+  const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 25);
   const fileName = `${safeTitle}_${monthYear}.pdf`;
   
   doc.save(fileName);
