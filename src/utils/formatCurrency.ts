@@ -1,8 +1,11 @@
-
 export function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { 
+  // Garantir que value é número válido
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  
+  return safeValue.toLocaleString('pt-BR', { 
     style: 'currency', 
     currency: 'BRL',
-    minimumFractionDigits: 0 
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
 }

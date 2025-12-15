@@ -84,13 +84,20 @@ export function ExportBillingModal({
       setIsGenerating(true);
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Filtrar transações por status
+      // Filtrar transações por status (confia nos dados que a tela já filtrou por data)
       let filteredTransactions = [...transactions];
       if (statusFilter === 'paid') {
         filteredTransactions = transactions.filter(t => t.status === 'PAGO');
       } else if (statusFilter === 'pending') {
         filteredTransactions = transactions.filter(t => t.status === 'PENDENTE' || t.status === 'PARCIALMENTE_PAGO');
       }
+
+      // Log para debug
+      console.log('📋 ExportModal - Transações filtradas:', {
+        total: transactions.length,
+        filtradas: filteredTransactions.length,
+        filtro: statusFilter
+      });
 
       if (filteredTransactions.length === 0) {
         toast({
@@ -276,6 +283,19 @@ export function ExportBillingModal({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Contador de transações */}
+          <div className="rounded-lg bg-muted/50 p-3 text-center">
+            <span className="text-sm text-muted-foreground">
+              <strong className="text-foreground">
+                {statusFilter === 'paid' 
+                  ? transactions.filter(t => t.status === 'PAGO').length
+                  : statusFilter === 'pending'
+                  ? transactions.filter(t => t.status === 'PENDENTE' || t.status === 'PARCIALMENTE_PAGO').length
+                  : transactions.length}
+              </strong> transações selecionadas para exportação
+            </span>
           </div>
         </div>
 

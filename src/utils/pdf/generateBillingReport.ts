@@ -100,6 +100,20 @@ const sanitizeString = (str: string | null | undefined, fallback: string): strin
   return str.replace(/undefined/gi, '').replace(/null/gi, '').trim() || fallback;
 };
 
+// ========================================
+// PARSING SEGURO DE VALORES
+// ========================================
+const parseValue = (val: unknown): number => {
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  if (typeof val === 'string') {
+    // Remove formatação brasileira (R$, pontos de milhar)
+    const cleaned = val.replace(/[R$\s.]/g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
 export const generateBillingReport = async ({ 
   transactions, 
   metrics: _ignoredMetrics, // IGNORAMOS métricas recebidas - recalculamos aqui
@@ -123,7 +137,7 @@ export const generateBillingReport = async ({
   });
 
   // ========================================
-  // 2. RECÁLCULO CONTÁBIL PRECISO
+  // 2. RECÁLCULO CONTÁBIL PRECISO (usando parseValue)
   // ========================================
   // REGRA DE OURO:
   // - Receitas = Apenas GANHOS que foram PAGOS
@@ -132,7 +146,7 @@ export const generateBillingReport = async ({
   // - Previsto/A Receber = GANHOS pendentes (não inclui despesas pendentes)
   
   const metricasCalculadas = rowsToPrint.reduce((acc, t) => {
-    const valor = Math.abs(Number(t.amount) || 0);
+    const valor = Math.abs(parseValue(t.amount));
     const isPago = t.status === 'Pago';
     const isPendente = t.status === 'Pendente' || t.status === 'Parcial';
     const isGanho = t.nature === 'GANHO';
@@ -151,7 +165,6 @@ export const generateBillingReport = async ({
         acc.previsto += valor;
       }
       // Despesas pendentes NÃO somam no previsto - são obrigações futuras
-      // Se quiser mostrar, criar métrica separada "A Pagar"
     }
     
     return acc;
@@ -159,6 +172,18 @@ export const generateBillingReport = async ({
 
   // SALDO LÍQUIDO = Apenas valores já PAGOS/RECEBIDOS
   const saldoLiquido = metricasCalculadas.receitas - metricasCalculadas.despesas;
+
+  // DEBUG LOG - Verificar no console do navegador (F12)
+  console.log('📊 PDF Generation Debug:', {
+    totalLinhas: rowsToPrint.length,
+    filtroStatus: statusFilter,
+    metricas: {
+      receitas: metricasCalculadas.receitas.toFixed(2),
+      despesas: metricasCalculadas.despesas.toFixed(2),
+      saldoLiquido: saldoLiquido.toFixed(2),
+      previsto: metricasCalculadas.previsto.toFixed(2)
+    }
+  });
 
   // ========================================
   // 3. INICIALIZAR PDF
