@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../formatCurrency';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { drawPDFHeader, drawPDFFooter, PDF_COLORS } from './pdfHeader';
 
 export type ColumnKey = 'date' | 'description' | 'client' | 'type' | 'status' | 'value';
 
@@ -190,73 +191,19 @@ export const generateBillingReport = async ({
   // ========================================
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
   const margin = 14;
   
-  // Design System Colors
-  const colors = {
-    text: { 
-      primary: '#0f172a',   // Slate-900
-      secondary: '#64748b', // Slate-500
-      muted: '#94a3b8'      // Slate-400
-    },
-    border: '#e2e8f0',       // Slate-200
-    tableHeader: '#334155',  // Slate-700
-    tableAlt: '#f8fafc',     // Slate-50
-    values: { 
-      positive: '#047857',   // Emerald-700
-      negative: '#b91c1c',   // Red-700
-      pending: '#ca8a04'     // Yellow-600
-    }
-  };
+  // Usar cores do design system compartilhado
+  const colors = PDF_COLORS;
 
   // ========================================
-  // 4. CABEÇALHO MINIMALISTA
+  // 4. CABEÇALHO (usando função compartilhada)
   // ========================================
-  let yPos = 18;
-  
-  // Logo placeholder
-  doc.setFillColor(71, 85, 105);
-  doc.circle(margin + 5, yPos, 5, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text('SGC', margin + 5, yPos + 2, { align: 'center' });
-  
-  // Nome da corretora
-  doc.setTextColor(colors.text.primary);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('SGC Pro', margin + 14, yPos + 1);
-  
-  doc.setFontSize(7);
-  doc.setTextColor(colors.text.secondary);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sistema de Gestão de Corretora', margin + 14, yPos + 6);
-  
-  // Lado direito
-  doc.setFontSize(8);
-  doc.setTextColor(colors.text.muted);
-  doc.text('RELATÓRIO DE FATURAMENTO', pageWidth - margin, yPos - 2, { align: 'right' });
-  
-  doc.setFontSize(10);
-  doc.setTextColor(colors.text.primary);
-  doc.setFont('helvetica', 'bold');
-  doc.text(title.substring(0, 40), pageWidth - margin, yPos + 5, { align: 'right' });
-  
-  const periodoTexto = period.from && period.to 
-    ? `${format(period.from, 'dd/MM/yyyy')} a ${format(period.to, 'dd/MM/yyyy')}`
-    : 'Período Total';
-  doc.setFontSize(8);
-  doc.setTextColor(colors.text.secondary);
-  doc.setFont('helvetica', 'normal');
-  doc.text(periodoTexto, pageWidth - margin, yPos + 11, { align: 'right' });
-
-  // Linha separadora
-  yPos += 18;
-  doc.setDrawColor(colors.border);
-  doc.setLineWidth(0.3);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
+  let yPos = drawPDFHeader(doc, {
+    title,
+    subtitle: 'RELATÓRIO DE FATURAMENTO',
+    period
+  });
 
   // ========================================
   // 5. CARDS DE MÉTRICAS (RECALCULADOS)
@@ -448,32 +395,9 @@ export const generateBillingReport = async ({
   }
 
   // ========================================
-  // 8. RODAPÉ EM TODAS AS PÁGINAS
+  // 8. RODAPÉ EM TODAS AS PÁGINAS (usando função compartilhada)
   // ========================================
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    
-    doc.setDrawColor(colors.border);
-    doc.setLineWidth(0.2);
-    doc.line(margin, pageHeight - 14, pageWidth - margin, pageHeight - 14);
-    
-    doc.setFontSize(6);
-    doc.setTextColor(colors.text.muted);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} via SGC Pro • Este documento não tem valor fiscal`,
-      margin,
-      pageHeight - 8
-    );
-    
-    doc.text(
-      `Página ${i} de ${pageCount}`,
-      pageWidth - margin,
-      pageHeight - 8,
-      { align: 'right' }
-    );
-  }
+  drawPDFFooter(doc);
 
   // ========================================
   // 9. SALVAR ARQUIVO

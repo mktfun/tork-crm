@@ -18,10 +18,13 @@ import { useClientesPreviewWithStats } from '@/hooks/useClientesPreviewWithStats
 import { useApolicesPreview } from '@/hooks/useApolicesPreview';
 import PreviewCard from '@/components/PreviewCard';
 import { KpiCard } from '@/components/reports/KpiCard';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, FileDown, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { BranchDistributionChart } from '@/components/dashboard/charts/BranchDistributionChart';
 import { CompanyDistributionChart } from '@/components/dashboard/charts/CompanyDistributionChart';
+import { Button } from '@/components/ui/button';
+import { generateManagementReport } from '@/utils/pdf/generateManagementReport';
+import { toast } from 'sonner';
 
 interface FiltrosGlobais {
   intervalo: DateRange | undefined;
@@ -39,6 +42,7 @@ export default function Reports() {
     produtorIds: [],
     statusIds: [],
   });
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const previewFilters = {
     seguradoraId: (filtrosGlobais.seguradoraIds && filtrosGlobais.seguradoraIds[0]) || null,
@@ -86,11 +90,68 @@ export default function Reports() {
     });
   };
 
+  const handleExportManagementReport = async () => {
+    if (!temDados) {
+      toast.error('Não há dados para exportar');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      // Calcular KPIs da carteira
+      const apolicesAtivas = apolicesFiltradas.filter(p => p.status === 'Ativa');
+      const valorTotalCarteira = apolicesAtivas.reduce((sum, p) => sum + (p.premium_value || 0), 0);
+      const numeroClientes = new Set(apolicesFiltradas.map(p => p.client_id)).size;
+      const numeroApolices = apolicesFiltradas.length;
+      const ticketMedio = numeroApolices > 0 ? valorTotalCarteira / numeroApolices : 0;
+
+      await generateManagementReport({
+        period: { from: filtrosGlobais.intervalo?.from, to: filtrosGlobais.intervalo?.to },
+        portfolio: {
+          valorTotalCarteira,
+          numeroClientes,
+          numeroApolices,
+          ticketMedio
+        },
+        financial: {
+          totalGanhos,
+          totalPerdas,
+          saldoLiquido
+        },
+        branchDistribution: branchDistributionDataFromTransactions,
+        companyDistribution: companyDistributionDataFromTransactions,
+        producerPerformance: dadosPerformanceProdutor.data
+      });
+
+      toast.success('Relatório de Gestão gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      toast.error('Erro ao gerar relatório. Tente novamente.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <div className="mb-2">
-        <h1 className="text-3xl font-bold text-white mb-2">Relatórios</h1>
-        <p className="text-slate-400">Central de inteligência para análise completa da carteira e tomada de decisões estratégicas</p>
+      <div className="mb-2 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Relatórios</h1>
+          <p className="text-slate-400">Central de inteligência para análise completa da carteira e tomada de decisões estratégicas</p>
+        </div>
+        <Button
+          onClick={handleExportManagementReport}
+          variant="outline"
+          className="gap-2"
+          disabled={isLoading || !temDados || isGeneratingPDF}
+        >
+          {isGeneratingPDF ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <FileDown className="w-4 h-4" />
+          )}
+          {isGeneratingPDF ? 'Gerando...' : 'Baixar Relatório Gerencial'}
+        </Button>
       </div>
 
       <FiltrosAvancados
