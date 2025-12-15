@@ -3,11 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Merge, Users, CheckCircle, Eye } from 'lucide-react';
+import { AlertTriangle, Users, CheckCircle, FileText, Calendar, Loader2 } from 'lucide-react';
 import { Client } from '@/types';
-import { useSupabaseClients } from '@/hooks/useSupabaseClients';
-import { useGenericSupabaseMutation } from '@/hooks/useGenericSupabaseMutation';
-import { MergePreview } from './MergePreview';
+import { useSafeMerge, ClientRelationships, SmartMergeField } from '@/hooks/useSafeMerge';
+import { SafeMergePreview } from './SafeMergePreview';
 import { toast } from 'sonner';
 
 interface DuplicateGroup {
@@ -34,25 +33,27 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<DuplicateGroup | null>(null);
   const [primaryClient, setPrimaryClient] = useState<Client | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { updateItem: updateClient, deleteItem: deleteClient } = useGenericSupabaseMutation({
-    tableName: 'clientes',
-    queryKey: 'clients',
-    onSuccessMessage: {
-      update: 'Cliente atualizado com sucesso',
-      delete: 'Cliente removido com sucesso'
-    }
-  });
+  const [secondaryClient, setSecondaryClient] = useState<Client | null>(null);
+  const [relationshipsMap, setRelationshipsMap] = useState<Map<string, ClientRelationships>>(new Map());
+  const [smartMergeFields, setSmartMergeFields] = useState<SmartMergeField[]>([]);
+  const [showMergePreview, setShowMergePreview] = useState(false);
 
-  // Funções auxiliares melhoradas
+  const { 
+    fetchClientRelationships, 
+    calculateSmartMergeFields, 
+    executeSafeMerge, 
+    isLoading, 
+    isMerging 
+  } = useSafeMerge();
+
+  // Funções auxiliares
   const normalizeName = (name: string): string => {
     return name.toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/\b(da|de|do|dos|das)\b/g, '') // Remove preposições
-      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
-      .replace(/\s+/g, ' ') // Normaliza espaços
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(da|de|do|dos|das)\b/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
   };
 
@@ -99,9 +100,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const calculateNameSimilarity = (name1: string, name2: string): number => {
     const norm1 = normalizeName(name1);
     const norm2 = normalizeName(name2);
-
     if (norm1 === norm2) return 1.0;
-
     const distance = levenshteinDistance(norm1, norm2);
     const maxLength = Math.max(norm1.length, norm2.length);
     return 1 - (distance / maxLength);
@@ -112,7 +111,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     const reasons: string[] = [];
     let maxScore = 0;
 
-    // CPF/CNPJ exato (peso 40)
     if (client1.cpfCnpj && client2.cpfCnpj) {
       maxScore += 40;
       if (normalizeDocument(client1.cpfCnpj) === normalizeDocument(client2.cpfCnpj)) {
@@ -121,7 +119,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       }
     }
 
-    // Email exato (peso 35)
     if (client1.email && client2.email) {
       maxScore += 35;
       if (normalizeEmail(client1.email) === normalizeEmail(client2.email)) {
@@ -130,7 +127,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       }
     }
 
-    // Telefone (peso 25)
     if (client1.phone && client2.phone) {
       maxScore += 25;
       const phone1 = normalizePhone(client1.phone);
@@ -143,12 +139,11 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
         const lastDigits2 = phone2.slice(-8);
         if (lastDigits1 === lastDigits2) {
           score += 15;
-          reasons.push('Número similar (mesmo número, DDD diferente)');
+          reasons.push('Número similar');
         }
       }
     }
 
-    // Nome (peso 20)
     maxScore += 20;
     const nameSimilarity = calculateNameSimilarity(client1.name, client2.name);
     if (nameSimilarity >= 0.9) {
@@ -159,7 +154,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       reasons.push('Nome similar');
     }
 
-    // Data de nascimento (peso 10)
     if (client1.birthDate && client2.birthDate) {
       maxScore += 10;
       if (client1.birthDate === client2.birthDate) {
@@ -182,7 +176,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     return { score: percentage, reasons, confidence };
   };
 
-  // Detectar duplicatas com algoritmo melhorado
   const detectDuplicates = () => {
     const groups: DuplicateGroup[] = [];
     const processed = new Set<string>();
@@ -234,7 +227,6 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       }
     });
 
-    // Ordenar grupos por confiança e score
     groups.sort((a, b) => {
       const confidenceOrder = { high: 3, medium: 2, low: 1 };
       if (confidenceOrder[a.confidence] !== confidenceOrder[b.confidence]) {
@@ -246,67 +238,95 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     setDuplicateGroups(groups);
   };
 
-
-  // Mesclar clientes
-  const handleMergeClients = async () => {
-    if (!selectedGroup || !primaryClient) return;
-
-    setIsProcessing(true);
-    try {
-      const secondaryClients = selectedGroup.clients.filter(c => c.id !== primaryClient.id);
-      
-      // Lógica inteligente de mesclagem
-      const mergedData: Partial<Client> = {
-        name: primaryClient.name,
-        email: primaryClient.email || secondaryClients.find(c => c.email)?.email,
-        phone: primaryClient.phone || secondaryClients.find(c => c.phone)?.phone,
-        cpfCnpj: primaryClient.cpfCnpj || secondaryClients.find(c => c.cpfCnpj)?.cpfCnpj,
-        birthDate: primaryClient.birthDate || secondaryClients.find(c => c.birthDate)?.birthDate,
-        maritalStatus: primaryClient.maritalStatus || secondaryClients.find(c => c.maritalStatus)?.maritalStatus,
-        profession: primaryClient.profession || secondaryClients.find(c => c.profession)?.profession,
-        cep: primaryClient.cep || secondaryClients.find(c => c.cep)?.cep,
-        address: primaryClient.address || secondaryClients.find(c => c.address)?.address,
-        number: primaryClient.number || secondaryClients.find(c => c.number)?.number,
-        complement: primaryClient.complement || secondaryClients.find(c => c.complement)?.complement,
-        neighborhood: primaryClient.neighborhood || secondaryClients.find(c => c.neighborhood)?.neighborhood,
-        city: primaryClient.city || secondaryClients.find(c => c.city)?.city,
-        state: primaryClient.state || secondaryClients.find(c => c.state)?.state,
-        observations: [
-          primaryClient.observations,
-          ...secondaryClients.map(c => c.observations).filter(Boolean)
-        ].filter(Boolean).join('\n\n=== MESCLADO AUTOMATICAMENTE ===\n\n')
-      };
-
-      // Log da mescla para auditoria
-      console.log('Mesclando clientes:', {
-        principal: primaryClient.name,
-        secundarios: secondaryClients.map(c => c.name),
-        dadosMesclados: mergedData
+  // Buscar relacionamentos quando um grupo é selecionado
+  useEffect(() => {
+    if (selectedGroup) {
+      const clientIds = selectedGroup.clients.map(c => c.id);
+      fetchClientRelationships(clientIds).then(relationships => {
+        const map = new Map<string, ClientRelationships>();
+        relationships.forEach(r => map.set(r.clientId, r));
+        setRelationshipsMap(map);
       });
+    }
+  }, [selectedGroup]);
 
-      // Atualizar o cliente principal
-      updateClient({ id: primaryClient.id, ...mergedData });
+  // Calcular smart merge quando os clientes são selecionados
+  useEffect(() => {
+    if (primaryClient && secondaryClient) {
+      const fields = calculateSmartMergeFields(primaryClient, secondaryClient);
+      setSmartMergeFields(fields);
+    }
+  }, [primaryClient, secondaryClient]);
 
-      // Deletar os clientes secundários
-      for (const client of secondaryClients) {
-        deleteClient(client.id);
+  // Selecionar cliente para merge (sistema par-a-par)
+  const handleSelectClientForMerge = (client: Client) => {
+    if (!primaryClient) {
+      setPrimaryClient(client);
+    } else if (primaryClient.id === client.id) {
+      setPrimaryClient(null);
+      setSecondaryClient(null);
+    } else if (secondaryClient?.id === client.id) {
+      setSecondaryClient(null);
+    } else {
+      setSecondaryClient(client);
+    }
+  };
+
+  // Trocar primário/secundário
+  const handleSwapClients = () => {
+    if (primaryClient && secondaryClient) {
+      const temp = primaryClient;
+      setPrimaryClient(secondaryClient);
+      setSecondaryClient(temp);
+    }
+  };
+
+  // Executar merge seguro
+  const handleConfirmMerge = async (fieldsToInherit: SmartMergeField[]) => {
+    if (!primaryClient || !secondaryClient) return;
+
+    const result = await executeSafeMerge(primaryClient, [secondaryClient], fieldsToInherit);
+
+    if (result.success) {
+      // Remover clientes mesclados do grupo
+      const updatedClients = selectedGroup!.clients.filter(
+        c => c.id !== secondaryClient.id
+      );
+
+      if (updatedClients.length <= 1) {
+        // Se sobrou só um cliente, remover o grupo
+        setDuplicateGroups(prev => prev.filter(g => g.id !== selectedGroup!.id));
+        setSelectedGroup(null);
+      } else {
+        // Atualizar grupo com clientes restantes
+        const updatedGroup = { ...selectedGroup!, clients: updatedClients };
+        setDuplicateGroups(prev => 
+          prev.map(g => g.id === selectedGroup!.id ? updatedGroup : g)
+        );
+        setSelectedGroup(updatedGroup);
       }
 
-      // Remover o grupo processado
-      setDuplicateGroups(prev => prev.filter(g => g.id !== selectedGroup.id));
+      setPrimaryClient(null);
+      setSecondaryClient(null);
+      setShowMergePreview(false);
+      onDeduplicationComplete();
+    }
+  };
+
+  // Cancelar merge preview
+  const handleCancelMerge = () => {
+    setShowMergePreview(false);
+  };
+
+  // Reset ao fechar modal
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
       setSelectedGroup(null);
       setPrimaryClient(null);
-      setShowPreview(false);
-      
-      toast.success(`${secondaryClients.length + 1} clientes mesclados com sucesso!`, {
-        description: `Cliente principal: ${primaryClient.name}. ${secondaryClients.length} duplicatas removidas.`
-      });
-      onDeduplicationComplete();
-    } catch (error) {
-      console.error('Erro ao mesclar clientes:', error);
-      toast.error('Erro ao mesclar clientes');
-    } finally {
-      setIsProcessing(false);
+      setSecondaryClient(null);
+      setShowMergePreview(false);
+      setRelationshipsMap(new Map());
     }
   };
 
@@ -318,29 +338,40 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
 
   const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.clients.length, 0);
 
+  const getRelationshipCount = (clientId: string) => {
+    const rel = relationshipsMap.get(clientId);
+    if (!rel) return { total: 0, apolices: 0, appointments: 0, sinistros: 0 };
+    return {
+      total: rel.apolicesCount + rel.appointmentsCount + rel.sinistrosCount,
+      apolices: rel.apolicesCount,
+      appointments: rel.appointmentsCount,
+      sinistros: rel.sinistrosCount
+    };
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Users size={16} />
           Deduplicar ({totalDuplicates > 0 ? totalDuplicates : 0})
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="text-yellow-500" size={20} />
-            Deduplicação de Clientes
+            <AlertTriangle className="text-amber-500" size={20} />
+            Deduplicação Segura de Clientes
           </DialogTitle>
         </DialogHeader>
 
         {duplicateGroups.length === 0 ? (
           <div className="text-center py-8">
-            <CheckCircle className="mx-auto mb-4 text-green-500" size={48} />
-            <h3 className="text-lg font-medium text-white mb-2">
+            <CheckCircle className="mx-auto mb-4 text-emerald-500" size={48} />
+            <h3 className="text-lg font-medium mb-2">
               Nenhuma duplicata encontrada
             </h3>
-            <p className="text-white/60">
+            <p className="text-muted-foreground">
               Todos os clientes parecem ser únicos.
             </p>
           </div>
@@ -349,14 +380,14 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
             {!selectedGroup ? (
               // Lista de grupos de duplicatas
               <div className="space-y-3">
-                <p className="text-white/80">
+                <p className="text-muted-foreground">
                   Encontradas {duplicateGroups.length} possíveis duplicatas envolvendo {totalDuplicates} clientes:
                 </p>
                 {duplicateGroups.map((group) => (
-                  <Card key={group.id} className="bg-white/5 border-white/10">
+                  <Card key={group.id}>
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-white text-sm">
+                        <CardTitle className="text-sm">
                           {group.clients.length} clientes similares
                         </CardTitle>
                         <div className="flex items-center gap-2">
@@ -370,9 +401,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                           <Button
                             size="sm"
                             onClick={() => setSelectedGroup(group)}
-                            className="gap-1"
                           >
-                            <Merge size={14} />
                             Revisar
                           </Button>
                         </div>
@@ -381,165 +410,198 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
                     <CardContent>
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white/80">
+                          <span className="text-sm font-medium">
                             Score: {group.score.toFixed(0)}%
                           </span>
-                          <div className="h-2 bg-white/10 rounded-full flex-1 max-w-[100px]">
+                          <div className="h-2 bg-muted rounded-full flex-1 max-w-[100px]">
                             <div
                               className={`h-full rounded-full transition-all ${
-                                group.confidence === 'high' ? 'bg-red-400' :
-                                group.confidence === 'medium' ? 'bg-yellow-400' : 'bg-blue-400'
+                                group.confidence === 'high' ? 'bg-destructive' :
+                                group.confidence === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
                               }`}
                               style={{ width: `${Math.min(group.score, 100)}%` }}
                             />
                           </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-white/60">Razões da similaridade:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {group.reasons.map((reason, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs">
-                                {reason}
-                              </Badge>
-                            ))}
-                          </div>
+                        <div className="flex flex-wrap gap-1">
+                          {group.reasons.map((reason, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {reason}
+                            </Badge>
+                          ))}
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-white/60">Clientes envolvidos:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {group.clients.map(client => (
-                              <Badge key={client.id} variant="secondary" className="text-xs">
-                                {client.name}
-                              </Badge>
-                            ))}
-                          </div>
+                        <div className="flex flex-wrap gap-2">
+                          {group.clients.map(client => (
+                            <Badge key={client.id} variant="secondary" className="text-xs">
+                              {client.name}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            ) : (
-              // Interface de mesclagem
+            ) : showMergePreview && primaryClient && secondaryClient ? (
+              // Safe Merge Preview (Split View)
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedGroup(null)}
+                    onClick={() => setShowMergePreview(false)}
                   >
                     ← Voltar
                   </Button>
-                  <h3 className="text-lg font-medium text-white">
-                    Mesclar Clientes Duplicados
+                  <h3 className="text-lg font-medium">
+                    Confirmar Mesclagem
+                  </h3>
+                </div>
+                
+                <SafeMergePreview
+                  primaryClient={primaryClient}
+                  secondaryClient={secondaryClient}
+                  primaryRelationships={relationshipsMap.get(primaryClient.id) || {
+                    clientId: primaryClient.id,
+                    apolicesCount: 0,
+                    appointmentsCount: 0,
+                    sinistrosCount: 0
+                  }}
+                  secondaryRelationships={relationshipsMap.get(secondaryClient.id) || {
+                    clientId: secondaryClient.id,
+                    apolicesCount: 0,
+                    appointmentsCount: 0,
+                    sinistrosCount: 0
+                  }}
+                  smartMergeFields={smartMergeFields}
+                  onConfirm={handleConfirmMerge}
+                  onCancel={handleCancelMerge}
+                  onSwap={handleSwapClients}
+                  isProcessing={isMerging}
+                />
+              </div>
+            ) : (
+              // Seleção de clientes (par-a-par)
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedGroup(null);
+                      setPrimaryClient(null);
+                      setSecondaryClient(null);
+                    }}
+                  >
+                    ← Voltar
+                  </Button>
+                  <h3 className="text-lg font-medium">
+                    Selecionar Clientes para Mesclar
                   </h3>
                 </div>
 
-                <div className="mb-6 p-4 bg-blue-500/10 border border-blue-400/20 rounded-lg">
-                  <h4 className="text-white font-medium mb-2">Como funciona a mescla:</h4>
-                  <ul className="text-sm text-white/80 space-y-1">
-                    <li>• O cliente selecionado será mantido como principal</li>
-                    <li>• Dados em branco serão preenchidos com informações dos outros clientes</li>
-                    <li>• Observações serão combinadas</li>
-                    <li>• Os clientes duplicados serão removidos</li>
+                <div className="p-4 bg-blue-500/10 border border-blue-400/20 rounded-lg">
+                  <h4 className="font-medium mb-2">Mesclagem Par-a-Par (Segura):</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>1️⃣ Clique no cliente que será <strong>MANTIDO</strong> (borda verde)</li>
+                    <li>2️⃣ Clique no cliente que será <strong>REMOVIDO</strong> (borda vermelha)</li>
+                    <li>3️⃣ Revise e confirme a mesclagem</li>
+                    <li>4️⃣ Se houver mais clientes, repita o processo</li>
                   </ul>
                 </div>
 
-                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-400/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle size={16} className="text-yellow-400" />
-                    <span className="text-yellow-200 font-medium">Detalhes da Similaridade</span>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Carregando informações...</span>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    {selectedGroup.similarityDetails.map((detail, idx) => (
-                      <div key={idx} className="text-white/70">
-                        <span className="font-medium">{detail.client1.name}</span> ↔ <span className="font-medium">{detail.client2.name}</span>
-                        <div className="ml-4 text-xs text-white/60">
-                          Score: {detail.score.toFixed(0)}% | {detail.reasons.join(', ')}
-                        </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedGroup.clients.map((client) => {
+                        const isPrimary = primaryClient?.id === client.id;
+                        const isSecondary = secondaryClient?.id === client.id;
+                        const rel = getRelationshipCount(client.id);
+                        
+                        return (
+                          <Card 
+                            key={client.id} 
+                            className={`cursor-pointer transition-all ${
+                              isPrimary 
+                                ? 'border-emerald-500 bg-emerald-500/10' 
+                                : isSecondary
+                                  ? 'border-destructive bg-destructive/10'
+                                  : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => handleSelectClientForMerge(client)}
+                          >
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-sm flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                  {isPrimary && <Badge className="bg-emerald-600">MANTER</Badge>}
+                                  {isSecondary && <Badge variant="destructive">REMOVER</Badge>}
+                                  {client.name}
+                                </span>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2 text-sm">
+                              <div className="text-muted-foreground">
+                                <strong>Email:</strong> {client.email || '—'}
+                              </div>
+                              <div className="text-muted-foreground">
+                                <strong>Telefone:</strong> {client.phone || '—'}
+                              </div>
+                              <div className="text-muted-foreground">
+                                <strong>CPF/CNPJ:</strong> {client.cpfCnpj || '—'}
+                              </div>
+                              
+                              {/* Relacionamentos */}
+                              <div className="flex items-center gap-3 pt-2 border-t">
+                                <span className="flex items-center gap-1 text-xs">
+                                  <FileText className="h-3 w-3 text-blue-500" />
+                                  {rel.apolices} apólices
+                                </span>
+                                <span className="flex items-center gap-1 text-xs">
+                                  <Calendar className="h-3 w-3 text-purple-500" />
+                                  {rel.appointments} agendamentos
+                                </span>
+                                <span className="flex items-center gap-1 text-xs">
+                                  <AlertTriangle className="h-3 w-3 text-orange-500" />
+                                  {rel.sinistros} sinistros
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+
+                    {primaryClient && secondaryClient && (
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setPrimaryClient(null);
+                            setSecondaryClient(null);
+                          }}
+                        >
+                          Limpar Seleção
+                        </Button>
+                        <Button
+                          onClick={() => setShowMergePreview(true)}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          Revisar Mesclagem
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedGroup.clients.map((client) => (
-                    <Card 
-                      key={client.id} 
-                      className={`cursor-pointer transition-all ${
-                        primaryClient?.id === client.id 
-                          ? 'bg-blue-500/20 border-blue-400' 
-                          : 'bg-white/5 border-white/10 hover:bg-white/10'
-                      }`}
-                      onClick={() => setPrimaryClient(client)}
-                    >
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-white text-sm flex items-center gap-2">
-                          {primaryClient?.id === client.id && <CheckCircle size={16} className="text-blue-400" />}
-                          {client.name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div className="text-white/60">
-                          <strong>Email:</strong> {client.email || 'Não informado'}
-                        </div>
-                        <div className="text-white/60">
-                          <strong>Telefone:</strong> {client.phone || 'Não informado'}
-                        </div>
-                        <div className="text-white/60">
-                          <strong>CPF/CNPJ:</strong> {client.cpfCnpj || 'Não informado'}
-                        </div>
-                        <div className="text-white/60">
-                          <strong>Criado em:</strong> {new Date(client.createdAt).toLocaleDateString('pt-BR')}
-                        </div>
-                        {client.observations && (
-                          <div className="text-white/60">
-                            <strong>Observações:</strong> {client.observations.slice(0, 50)}{client.observations.length > 50 ? '...' : ''}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {primaryClient && !showPreview && (
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedGroup(null)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowPreview(true)}
-                      className="gap-2"
-                    >
-                      <Eye size={16} />
-                      Preview da Mesclagem
-                    </Button>
-                    <Button
-                      onClick={handleMergeClients}
-                      disabled={isProcessing}
-                      className="gap-2"
-                    >
-                      <Merge size={16} />
-                      {isProcessing ? 'Mesclando...' : 'Mesclar Diretamente'}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Preview da Mesclagem */}
-                {primaryClient && showPreview && (
-                  <div className="mt-6">
-                    <MergePreview
-                      primaryClient={primaryClient}
-                      secondaryClients={selectedGroup.clients.filter(c => c.id !== primaryClient.id)}
-                      onConfirm={handleMergeClients}
-                      onCancel={() => setShowPreview(false)}
-                      isProcessing={isProcessing}
-                    />
-                  </div>
+                    {primaryClient && !secondaryClient && (
+                      <p className="text-center text-muted-foreground text-sm py-2">
+                        Agora selecione o cliente que será <strong>removido</strong>
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )}
