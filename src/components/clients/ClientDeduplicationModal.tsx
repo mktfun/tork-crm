@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Users, CheckCircle, FileText, Calendar, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { AlertTriangle, Users, CheckCircle, FileText, Calendar, Loader2, Zap, SkipForward, ArrowRight, X } from 'lucide-react';
 import { Client } from '@/types';
 import { useSafeMerge, ClientRelationships, SmartMergeField } from '@/hooks/useSafeMerge';
 import { SafeMergePreview } from './SafeMergePreview';
@@ -37,6 +38,13 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   const [relationshipsMap, setRelationshipsMap] = useState<Map<string, ClientRelationships>>(new Map());
   const [smartMergeFields, setSmartMergeFields] = useState<SmartMergeField[]>([]);
   const [showMergePreview, setShowMergePreview] = useState(false);
+
+  // Batch Review Mode States
+  const [isBatchReviewMode, setIsBatchReviewMode] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [skippedGroups, setSkippedGroups] = useState<Set<string>>(new Set());
+  const [processedCount, setProcessedCount] = useState(0);
 
   const { 
     fetchClientRelationships, 
@@ -238,9 +246,182 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     setDuplicateGroups(groups);
   };
 
-  // Buscar relacionamentos quando um grupo é selecionado
+  // Auto-select primary client based on criteria
+  const autoSelectPrimary = useCallback((group: DuplicateGroup, relationships: Map<string, ClientRelationships>): { primary: Client; secondary: Client } => {
+    const clientsWithScore = group.clients.map(client => {
+      let score = 0;
+      const rel = relationships.get(client.id);
+      
+      // Critério 1: Mais apólices (peso alto)
+      if (rel) {
+        score += rel.apolicesCount * 100;
+        score += rel.appointmentsCount * 10;
+        score += rel.sinistrosCount * 20;
+      }
+      
+      // Critério 2: Cadastro mais antigo (peso médio)
+      if (client.createdAt) {
+        const age = Date.now() - new Date(client.createdAt).getTime();
+        score += Math.min(age / (1000 * 60 * 60 * 24 * 365), 5) * 20; // Max 5 anos * 20 pontos
+      }
+      
+      // Critério 3: CPF preenchido (peso médio)
+      if (client.cpfCnpj && client.cpfCnpj.trim()) {
+        score += 50;
+      }
+      
+      // Critério 4: Email preenchido
+      if (client.email && client.email.trim()) {
+        score += 30;
+      }
+      
+      // Critério 5: Telefone preenchido
+      if (client.phone && client.phone.trim()) {
+        score += 20;
+      }
+      
+      // Critério 6: Endereço completo
+      if (client.city && client.state) {
+        score += 15;
+      }
+      
+      return { client, score };
+    });
+    
+    clientsWithScore.sort((a, b) => b.score - a.score);
+    
+    return {
+      primary: clientsWithScore[0].client,
+      secondary: clientsWithScore[1]?.client || clientsWithScore[0].client
+    };
+  }, []);
+
+  // Initialize batch review for a group
+  const initializeBatchGroup = useCallback(async (group: DuplicateGroup) => {
+    const clientIds = group.clients.map(c => c.id);
+    const relationships = await fetchClientRelationships(clientIds);
+    const map = new Map<string, ClientRelationships>();
+    relationships.forEach(r => map.set(r.clientId, r));
+    setRelationshipsMap(map);
+    
+    const { primary, secondary } = autoSelectPrimary(group, map);
+    setPrimaryClient(primary);
+    setSecondaryClient(secondary);
+    
+    const fields = calculateSmartMergeFields(primary, secondary);
+    setSmartMergeFields(fields);
+  }, [fetchClientRelationships, autoSelectPrimary, calculateSmartMergeFields]);
+
+  // Start batch review mode
+  const handleStartBatchReview = async () => {
+    if (duplicateGroups.length === 0) return;
+    
+    setIsBatchReviewMode(true);
+    setReviewIndex(0);
+    setBatchError(null);
+    setSkippedGroups(new Set());
+    setProcessedCount(0);
+    
+    await initializeBatchGroup(duplicateGroups[0]);
+  };
+
+  // Handle skip in batch mode
+  const handleBatchSkip = async () => {
+    const currentGroup = duplicateGroups[reviewIndex];
+    if (currentGroup) {
+      setSkippedGroups(prev => new Set([...prev, currentGroup.id]));
+    }
+    
+    const nextIndex = reviewIndex + 1;
+    if (nextIndex < duplicateGroups.length) {
+      setReviewIndex(nextIndex);
+      await initializeBatchGroup(duplicateGroups[nextIndex]);
+    } else {
+      // Fim da revisão
+      finishBatchReview();
+    }
+  };
+
+  // Handle merge in batch mode
+  const handleBatchMerge = async (fieldsToInherit: SmartMergeField[]) => {
+    if (!primaryClient || !secondaryClient) return;
+    
+    setBatchError(null);
+    
+    try {
+      const result = await executeSafeMerge(primaryClient, [secondaryClient], fieldsToInherit);
+      
+      if (!result.success) {
+        // PARAR em caso de erro
+        setBatchError(result.error || 'Erro ao mesclar clientes');
+        toast.error('Erro na mesclagem', {
+          description: result.error || 'Verifique os dados e tente novamente'
+        });
+        return;
+      }
+      
+      setProcessedCount(prev => prev + 1);
+      
+      // Atualizar grupo atual
+      const currentGroup = duplicateGroups[reviewIndex];
+      const updatedClients = currentGroup.clients.filter(c => c.id !== secondaryClient.id);
+      
+      if (updatedClients.length <= 1) {
+        // Grupo resolvido, ir para próximo
+        const updatedGroups = duplicateGroups.filter(g => g.id !== currentGroup.id);
+        setDuplicateGroups(updatedGroups);
+        
+        if (reviewIndex < updatedGroups.length) {
+          await initializeBatchGroup(updatedGroups[reviewIndex]);
+        } else if (updatedGroups.length > 0) {
+          setReviewIndex(0);
+          await initializeBatchGroup(updatedGroups[0]);
+        } else {
+          finishBatchReview();
+        }
+      } else {
+        // Ainda há clientes no grupo, mesclar próximo par
+        const updatedGroup = { ...currentGroup, clients: updatedClients };
+        const updatedGroups = duplicateGroups.map(g => 
+          g.id === currentGroup.id ? updatedGroup : g
+        );
+        setDuplicateGroups(updatedGroups);
+        await initializeBatchGroup(updatedGroup);
+      }
+      
+      onDeduplicationComplete();
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setBatchError(errorMessage);
+      toast.error('Erro na mesclagem', { description: errorMessage });
+    }
+  };
+
+  // Finish batch review
+  const finishBatchReview = () => {
+    setIsBatchReviewMode(false);
+    setReviewIndex(0);
+    setPrimaryClient(null);
+    setSecondaryClient(null);
+    
+    toast.success('Revisão em lote concluída!', {
+      description: `${processedCount} mesclagens realizadas, ${skippedGroups.size} grupos pulados`
+    });
+  };
+
+  // Exit batch mode
+  const handleExitBatchMode = () => {
+    setIsBatchReviewMode(false);
+    setReviewIndex(0);
+    setPrimaryClient(null);
+    setSecondaryClient(null);
+    setBatchError(null);
+  };
+
+  // Buscar relacionamentos quando um grupo é selecionado (modo manual)
   useEffect(() => {
-    if (selectedGroup) {
+    if (selectedGroup && !isBatchReviewMode) {
       const clientIds = selectedGroup.clients.map(c => c.id);
       fetchClientRelationships(clientIds).then(relationships => {
         const map = new Map<string, ClientRelationships>();
@@ -248,15 +429,15 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
         setRelationshipsMap(map);
       });
     }
-  }, [selectedGroup]);
+  }, [selectedGroup, isBatchReviewMode]);
 
-  // Calcular smart merge quando os clientes são selecionados
+  // Calcular smart merge quando os clientes são selecionados (modo manual)
   useEffect(() => {
-    if (primaryClient && secondaryClient) {
+    if (primaryClient && secondaryClient && !isBatchReviewMode) {
       const fields = calculateSmartMergeFields(primaryClient, secondaryClient);
       setSmartMergeFields(fields);
     }
-  }, [primaryClient, secondaryClient]);
+  }, [primaryClient, secondaryClient, isBatchReviewMode]);
 
   // Selecionar cliente para merge (sistema par-a-par)
   const handleSelectClientForMerge = (client: Client) => {
@@ -278,27 +459,27 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       const temp = primaryClient;
       setPrimaryClient(secondaryClient);
       setSecondaryClient(temp);
+      // Recalcular smart merge fields
+      const fields = calculateSmartMergeFields(secondaryClient, primaryClient);
+      setSmartMergeFields(fields);
     }
   };
 
-  // Executar merge seguro
+  // Executar merge seguro (modo manual)
   const handleConfirmMerge = async (fieldsToInherit: SmartMergeField[]) => {
     if (!primaryClient || !secondaryClient) return;
 
     const result = await executeSafeMerge(primaryClient, [secondaryClient], fieldsToInherit);
 
     if (result.success) {
-      // Remover clientes mesclados do grupo
       const updatedClients = selectedGroup!.clients.filter(
         c => c.id !== secondaryClient.id
       );
 
       if (updatedClients.length <= 1) {
-        // Se sobrou só um cliente, remover o grupo
         setDuplicateGroups(prev => prev.filter(g => g.id !== selectedGroup!.id));
         setSelectedGroup(null);
       } else {
-        // Atualizar grupo com clientes restantes
         const updatedGroup = { ...selectedGroup!, clients: updatedClients };
         setDuplicateGroups(prev => 
           prev.map(g => g.id === selectedGroup!.id ? updatedGroup : g)
@@ -327,6 +508,11 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
       setSecondaryClient(null);
       setShowMergePreview(false);
       setRelationshipsMap(new Map());
+      setIsBatchReviewMode(false);
+      setReviewIndex(0);
+      setBatchError(null);
+      setSkippedGroups(new Set());
+      setProcessedCount(0);
     }
   };
 
@@ -337,6 +523,7 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
   }, [isOpen, clients]);
 
   const totalDuplicates = duplicateGroups.reduce((sum, group) => sum + group.clients.length, 0);
+  const totalGroups = duplicateGroups.length;
 
   const getRelationshipCount = (clientId: string) => {
     const rel = relationshipsMap.get(clientId);
@@ -349,6 +536,155 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
     };
   };
 
+  // Batch Review UI
+  if (isBatchReviewMode) {
+    const progressPercentage = totalGroups > 0 ? ((reviewIndex + 1) / totalGroups) * 100 : 0;
+    
+    return (
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Users size={16} />
+            Deduplicar ({totalDuplicates > 0 ? totalDuplicates : 0})
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+          {/* Header com progresso */}
+          <div className="flex-shrink-0 space-y-3 pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-amber-500" />
+                <div>
+                  <h2 className="font-semibold">Revisão em Lote</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Grupo {reviewIndex + 1} de {totalGroups}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="text-xs">
+                  ✓ {processedCount} mesclados
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  ⏭ {skippedGroups.size} pulados
+                </Badge>
+                <Button variant="ghost" size="sm" onClick={handleExitBatchMode}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="space-y-1">
+              <Progress value={progressPercentage} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Revisando {reviewIndex + 1} de {totalGroups}</span>
+                <span>{Math.round(progressPercentage)}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Error banner */}
+          {batchError && (
+            <div className="flex-shrink-0 p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <div className="flex-1">
+                <p className="font-medium text-destructive">Erro na mesclagem</p>
+                <p className="text-sm text-muted-foreground">{batchError}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setBatchError(null)}>
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+
+          {/* Main content */}
+          <div className="flex-1 overflow-y-auto py-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin mr-3" />
+                <span>Carregando próximo par...</span>
+              </div>
+            ) : primaryClient && secondaryClient ? (
+              <SafeMergePreview
+                primaryClient={primaryClient}
+                secondaryClient={secondaryClient}
+                primaryRelationships={relationshipsMap.get(primaryClient.id) || {
+                  clientId: primaryClient.id,
+                  apolicesCount: 0,
+                  appointmentsCount: 0,
+                  sinistrosCount: 0
+                }}
+                secondaryRelationships={relationshipsMap.get(secondaryClient.id) || {
+                  clientId: secondaryClient.id,
+                  apolicesCount: 0,
+                  appointmentsCount: 0,
+                  sinistrosCount: 0
+                }}
+                smartMergeFields={smartMergeFields}
+                onConfirm={handleBatchMerge}
+                onCancel={handleBatchSkip}
+                onSwap={handleSwapClients}
+                isProcessing={isMerging}
+                batchMode={true}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <CheckCircle className="mx-auto mb-4 text-emerald-500" size={48} />
+                <h3 className="text-lg font-medium">Revisão concluída!</h3>
+              </div>
+            )}
+          </div>
+
+          {/* Footer fixo com botões de ação */}
+          {primaryClient && secondaryClient && (
+            <div className="flex-shrink-0 border-t pt-4 bg-background">
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-sm text-muted-foreground">
+                  <kbd className="px-2 py-1 bg-muted rounded text-xs">S</kbd> Pular
+                  <span className="mx-2">•</span>
+                  <kbd className="px-2 py-1 bg-muted rounded text-xs">Enter</kbd> Mesclar
+                </div>
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleBatchSkip}
+                    disabled={isMerging}
+                    className="min-w-[120px]"
+                  >
+                    <SkipForward className="h-4 w-4 mr-2" />
+                    Pular
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      const fieldsToInherit = smartMergeFields.filter(f => f.willInherit);
+                      handleBatchMerge(fieldsToInherit);
+                    }}
+                    disabled={isMerging}
+                    className="min-w-[160px] bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {isMerging ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Mesclando...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        Mesclar & Próximo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Modo normal (não batch)
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -380,9 +716,21 @@ export function ClientDeduplicationModal({ clients, onDeduplicationComplete }: C
             {!selectedGroup ? (
               // Lista de grupos de duplicatas
               <div className="space-y-3">
-                <p className="text-muted-foreground">
-                  Encontradas {duplicateGroups.length} possíveis duplicatas envolvendo {totalDuplicates} clientes:
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-muted-foreground">
+                    Encontradas {duplicateGroups.length} possíveis duplicatas envolvendo {totalDuplicates} clientes:
+                  </p>
+                  
+                  {/* Botão Iniciar Revisão em Lote */}
+                  <Button 
+                    onClick={handleStartBatchReview}
+                    className="gap-2 bg-amber-600 hover:bg-amber-700"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Iniciar Revisão em Lote
+                  </Button>
+                </div>
+
                 {duplicateGroups.map((group) => (
                   <Card key={group.id}>
                     <CardHeader className="pb-3">

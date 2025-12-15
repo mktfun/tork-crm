@@ -42,6 +42,7 @@ interface SafeMergePreviewProps {
   onCancel: () => void;
   onSwap: () => void;
   isProcessing: boolean;
+  batchMode?: boolean; // Quando true, esconde os botões de ação (são controlados externamente)
 }
 
 export function SafeMergePreview({
@@ -54,6 +55,7 @@ export function SafeMergePreview({
   onCancel,
   onSwap,
   isProcessing,
+  batchMode = false,
 }: SafeMergePreviewProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedInheritFields, setSelectedInheritFields] = useState<Set<keyof Client>>(
@@ -300,75 +302,79 @@ export function SafeMergePreview({
         </div>
       </div>
 
-      {/* Botões de ação */}
-      <div className="flex justify-end gap-3 pt-2">
-        <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
-          Cancelar
-        </Button>
-        <Button 
-          onClick={handleConfirmClick} 
-          disabled={isProcessing}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Processando...
-            </>
-          ) : (
-            <>
-              <Check className="h-4 w-4 mr-2" />
-              Confirmar Mesclagem
-            </>
-          )}
-        </Button>
-      </div>
+      {/* Botões de ação - escondidos em batch mode */}
+      {!batchMode && (
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmClick} 
+            disabled={isProcessing}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar Mesclagem
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
-      {/* Dialog de confirmação final */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Confirmação Final
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>Você está prestes a:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  {secondaryRelationships.apolicesCount > 0 && (
-                    <li>Transferir <strong>{secondaryRelationships.apolicesCount}</strong> apólice(s) para "{primaryClient.name}"</li>
-                  )}
-                  {secondaryRelationships.appointmentsCount > 0 && (
-                    <li>Transferir <strong>{secondaryRelationships.appointmentsCount}</strong> agendamento(s)</li>
-                  )}
-                  {secondaryRelationships.sinistrosCount > 0 && (
-                    <li>Transferir <strong>{secondaryRelationships.sinistrosCount}</strong> sinistro(s)</li>
-                  )}
-                  {selectedInheritFields.size > 0 && (
-                    <li>Herdar <strong>{selectedInheritFields.size}</strong> campo(s) do cliente secundário</li>
-                  )}
-                  <li className="text-destructive font-medium">
-                    EXCLUIR permanentemente o cadastro "{secondaryClient.name}"
-                  </li>
-                </ul>
-                <p className="font-medium text-destructive">
-                  Esta ação NÃO PODE ser desfeita.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleFinalConfirm}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Confirmar Exclusão
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialog de confirmação final - apenas em modo manual */}
+      {!batchMode && (
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Confirmação Final
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>Você está prestes a:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {secondaryRelationships.apolicesCount > 0 && (
+                      <li>Transferir <strong>{secondaryRelationships.apolicesCount}</strong> apólice(s) para "{primaryClient.name}"</li>
+                    )}
+                    {secondaryRelationships.appointmentsCount > 0 && (
+                      <li>Transferir <strong>{secondaryRelationships.appointmentsCount}</strong> agendamento(s)</li>
+                    )}
+                    {secondaryRelationships.sinistrosCount > 0 && (
+                      <li>Transferir <strong>{secondaryRelationships.sinistrosCount}</strong> sinistro(s)</li>
+                    )}
+                    {selectedInheritFields.size > 0 && (
+                      <li>Herdar <strong>{selectedInheritFields.size}</strong> campo(s) do cliente secundário</li>
+                    )}
+                    <li className="text-destructive font-medium">
+                      EXCLUIR permanentemente o cadastro "{secondaryClient.name}"
+                    </li>
+                  </ul>
+                  <p className="font-medium text-destructive">
+                    Esta ação NÃO PODE ser desfeita.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleFinalConfirm}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Confirmar Exclusão
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
