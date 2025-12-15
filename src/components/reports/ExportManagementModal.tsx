@@ -53,7 +53,7 @@ export function ExportManagementModal({
   const [dateRange, setDateRange] = useState<DateRange | undefined>(initialDateRange);
 
   // ========================================
-  // BUSCA DE DADOS INTERNA
+  // BUSCA DE DADOS INTERNA - SEM AGRUPAMENTO "OUTROS"
   // ========================================
   const { 
     apolicesFiltradas, 
@@ -71,7 +71,7 @@ export function ExportManagementModal({
     ramos: [],
     produtorIds: [],
     statusIds: []
-  });
+  }, { limitResults: false }); // 🎯 FALSE = Lista completa SEM "Outros"
 
   // Calcular KPIs da carteira
   const portfolioData = useMemo(() => {
