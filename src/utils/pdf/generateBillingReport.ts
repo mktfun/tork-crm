@@ -44,15 +44,15 @@ interface ReportData {
 }
 
 // ========================================
-// LARGURAS FIXAS EM MM (Total ~182mm usável em A4)
+// LARGURAS FIXAS EM MM (Total = 180mm para caber em A4 com margens)
 // ========================================
 const COLUMN_CONFIG: Record<ColumnKey, { header: string; width: number; align: 'left' | 'center' | 'right' }> = {
-  date: { header: 'DATA', width: 22, align: 'center' },
-  description: { header: 'DESCRIÇÃO', width: 58, align: 'left' },
-  client: { header: 'CLIENTE', width: 42, align: 'left' },
-  type: { header: 'TIPO', width: 28, align: 'left' },
+  date: { header: 'DATA', width: 20, align: 'center' },
+  description: { header: 'DESCRIÇÃO', width: 50, align: 'left' },
+  client: { header: 'CLIENTE', width: 38, align: 'left' },
+  type: { header: 'TIPO', width: 24, align: 'left' },
   status: { header: 'STATUS', width: 18, align: 'center' },
-  value: { header: 'VALOR (R$)', width: 28, align: 'right' },
+  value: { header: 'VALOR (R$)', width: 30, align: 'right' },
 };
 
 // SANITIZAÇÃO + TRUNCAMENTO - NUNCA retornar "undefined"

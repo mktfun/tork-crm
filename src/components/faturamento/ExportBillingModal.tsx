@@ -14,11 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, Download } from 'lucide-react';
 import { generateBillingReport, ReportOptions, ColumnKey } from '@/utils/pdf/generateBillingReport';
 import { useToast } from '@/hooks/use-toast';
 import { Transaction, Client, Policy, TransactionType } from '@/types';
 import { DateRange } from 'react-day-picker';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface ExportBillingModalProps {
   transactions: Transaction[];
@@ -55,10 +57,12 @@ export function ExportBillingModal({
 }: ExportBillingModalProps) {
   const [open, setOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFetchingAll, setIsFetchingAll] = useState(false);
   const [title, setTitle] = useState('Relatório de Faturamento');
   const [notes, setNotes] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const [selectedColumns, setSelectedColumns] = useState<ColumnKey[]>(['date', 'description', 'client', 'type', 'status', 'value']);
+  const [totalTransactionsCount, setTotalTransactionsCount] = useState<number | null>(null);
   
   const { toast } = useToast();
 
@@ -82,19 +86,74 @@ export function ExportBillingModal({
 
     try {
       setIsGenerating(true);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      setIsFetchingAll(true);
 
-      // Filtrar transações por status (confia nos dados que a tela já filtrou por data)
-      let filteredTransactions = [...transactions];
+      // ========================================
+      // FETCH TODAS AS TRANSAÇÕES DO PERÍODO (SEM PAGINAÇÃO)
+      // ========================================
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const startDate = dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '2000-01-01';
+      const endDate = dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '2099-12-31';
+
+      console.log('🔄 Buscando TODAS as transações para o período:', { startDate, endDate });
+
+      const { data: rpcData, error } = await supabase.rpc('get_faturamento_data', {
+        p_user_id: user.id,
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_page: 1,
+        p_page_size: 5000, // Busca até 5000 registros
+        p_timezone: 'America/Sao_Paulo'
+      });
+
+      setIsFetchingAll(false);
+
+      if (error) {
+        console.error('Erro ao buscar transações:', error);
+        throw error;
+      }
+
+      // Parse dos dados da RPC (type assertion para evitar erros TS)
+      const rpcResult = rpcData as { transactions?: any[]; total?: number } | null;
+      const allTransactions: Transaction[] = (rpcResult?.transactions || []).map((t: any) => ({
+        id: t.id,
+        userId: t.user_id,
+        typeId: t.type_id,
+        amount: Number(t.amount) || 0,
+        description: t.description,
+        date: t.date,
+        dueDate: t.due_date,
+        transactionDate: t.transaction_date,
+        status: t.status,
+        policyId: t.policy_id,
+        clientId: t.client_id,
+        nature: t.nature,
+        companyId: t.company_id,
+        ramoId: t.ramo_id,
+        producerId: t.producer_id,
+        brokerageId: t.brokerage_id,
+        paidDate: t.paid_date,
+        createdAt: t.created_at,
+        updatedAt: t.updated_at
+      }));
+
+      console.log('📊 Total de transações encontradas:', allTransactions.length);
+
+      // Filtrar transações por status
+      let filteredTransactions = [...allTransactions];
       if (statusFilter === 'paid') {
-        filteredTransactions = transactions.filter(t => t.status === 'PAGO');
+        filteredTransactions = allTransactions.filter(t => t.status === 'PAGO');
       } else if (statusFilter === 'pending') {
-        filteredTransactions = transactions.filter(t => t.status === 'PENDENTE' || t.status === 'PARCIALMENTE_PAGO');
+        filteredTransactions = allTransactions.filter(t => t.status === 'PENDENTE' || t.status === 'PARCIALMENTE_PAGO');
       }
 
       // Log para debug
       console.log('📋 ExportModal - Transações filtradas:', {
-        total: transactions.length,
+        total: allTransactions.length,
         filtradas: filteredTransactions.length,
         filtro: statusFilter
       });
@@ -110,9 +169,11 @@ export function ExportBillingModal({
       }
 
       // Recalcular métricas baseado no filtro
+      // Nota: O banco usa 'RECEITA'/'DESPESA', mas o PDF espera 'GANHO'/'PERDA'
       const filteredMetrics = filteredTransactions.reduce((acc, t) => {
         const transactionType = transactionTypes.find(tt => tt.id === t.typeId);
-        const isGanho = transactionType?.nature === 'GANHO';
+        const natureFromDb = transactionType?.nature || t.nature;
+        const isGanho = natureFromDb === 'GANHO' || natureFromDb === 'RECEITA';
         const amount = Math.abs(t.amount);
         
         if (t.status === 'PAGO') {
@@ -145,6 +206,10 @@ export function ExportBillingModal({
         // Remove qualquer "undefined" residual
         safeDescription = safeDescription.replace(/undefined/gi, '').trim() || transactionType?.name || 'Lançamento';
         
+        // Mapear nature do banco (RECEITA/DESPESA) para formato do PDF (GANHO/PERDA)
+        const natureFromDb = transactionType?.nature || t.nature || 'RECEITA';
+        const mappedNature: 'GANHO' | 'PERDA' = (natureFromDb === 'RECEITA' || natureFromDb === 'GANHO') ? 'GANHO' : 'PERDA';
+        
         return {
           date: new Date(t.date).toLocaleDateString('pt-BR'),
           description: safeDescription,
@@ -153,7 +218,7 @@ export function ExportBillingModal({
           policyNumber: policy?.policyNumber || null,
           status: t.status === 'PAGO' ? 'Pago' : t.status === 'PARCIALMENTE_PAGO' ? 'Parcial' : 'Pendente',
           amount: t.amount,
-          nature: (transactionType?.nature || 'GANHO') as 'GANHO' | 'PERDA'
+          nature: mappedNature
         };
       });
 
@@ -176,7 +241,7 @@ export function ExportBillingModal({
 
       toast({
         title: "Relatório gerado",
-        description: "O download do PDF foi iniciado.",
+        description: `PDF exportado com ${filteredTransactions.length} transações.`,
       });
 
       setOpen(false);
@@ -189,6 +254,7 @@ export function ExportBillingModal({
       });
     } finally {
       setIsGenerating(false);
+      setIsFetchingAll(false);
     }
   };
 
@@ -285,8 +351,8 @@ export function ExportBillingModal({
             </div>
           </div>
 
-          {/* Contador de transações */}
-          <div className="rounded-lg bg-muted/50 p-3 text-center">
+          {/* Contador de transações e aviso */}
+          <div className="rounded-lg bg-muted/50 p-3 text-center space-y-1">
             <span className="text-sm text-muted-foreground">
               <strong className="text-foreground">
                 {statusFilter === 'paid' 
@@ -294,8 +360,11 @@ export function ExportBillingModal({
                   : statusFilter === 'pending'
                   ? transactions.filter(t => t.status === 'PENDENTE' || t.status === 'PARCIALMENTE_PAGO').length
                   : transactions.length}
-              </strong> transações selecionadas para exportação
+              </strong> transações visíveis na página atual
             </span>
+            <p className="text-xs text-muted-foreground">
+              O PDF incluirá <strong>todas</strong> as transações do período selecionado.
+            </p>
           </div>
         </div>
 
@@ -307,10 +376,13 @@ export function ExportBillingModal({
             {isGenerating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Gerando...
+                {isFetchingAll ? 'Buscando dados...' : 'Gerando PDF...'}
               </>
             ) : (
-              'Gerar Relatório'
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Gerar Relatório
+              </>
             )}
           </Button>
         </DialogFooter>
