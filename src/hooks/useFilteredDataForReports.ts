@@ -14,7 +14,13 @@ interface FiltrosGlobais {
   statusIds: string[];
 }
 
-export function useFilteredDataForReports(filtros: FiltrosGlobais) {
+interface ReportOptions {
+  /** Se true, agrupa itens pequenos em "Outros" (para gráficos). Default: true */
+  limitResults?: boolean;
+}
+
+export function useFilteredDataForReports(filtros: FiltrosGlobais, options: ReportOptions = {}) {
+  const { limitResults = true } = options;
   // ✅ BUSCAR DEPENDÊNCIAS DIRETAMENTE DENTRO DO HOOK
   const { data: ramos, isLoading: ramosLoading } = useQuery({
     queryKey: ['ramos'],
@@ -321,7 +327,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
 
   // 📊 DISTRIBUIÇÃO POR RAMOS (baseada em RPC otimizada)
   const { data: branchDistributionFromRPC } = useQuery({
-    queryKey: ['reports-branch-distribution', filtros],
+    queryKey: ['reports-branch-distribution', filtros, limitResults],
     queryFn: async () => {
       if (!filtros.intervalo?.from || !filtros.intervalo?.to) return [];
 
@@ -330,7 +336,8 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
 
       console.log('🔍 [Relatórios] Buscando distribuição de ramos via RPC...', {
         from: filtros.intervalo.from,
-        to: filtros.intervalo.to
+        to: filtros.intervalo.to,
+        limitResults
       });
 
       const { data, error } = await supabase.rpc('get_producao_por_ramo', {
@@ -353,9 +360,14 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
         valor: Number(item.total_premio),
         valorComissao: Number(item.total_comissao),
         taxaMediaComissao: Number(item.taxa_media_comissao)
-      }));
+      })).sort((a, b) => b.valor - a.valor);
 
-      // Agrupar itens pequenos (menos de 5% do total) em "Outros"
+      // 🎯 SE limitResults=false, retorna lista completa SEM agrupamento
+      if (!limitResults) {
+        return distribution;
+      }
+
+      // Agrupar itens pequenos (menos de 5% do total) em "Outros" - APENAS para gráficos
       const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
       const threshold = totalValue * 0.05;
       
@@ -441,7 +453,12 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
       };
     }).sort((a, b) => b.valor - a.valor);
     
-    // Agrupar itens pequenos em "Outros" (< 5% do total)
+    // 🎯 SE limitResults=false, retorna lista completa SEM agrupamento
+    if (!limitResults) {
+      return distribution;
+    }
+    
+    // Agrupar itens pequenos em "Outros" (< 5% do total) - APENAS para gráficos
     const totalValue = distribution.reduce((sum, item) => sum + item.valor, 0);
     const threshold = totalValue * 0.05;
     
@@ -464,7 +481,7 @@ export function useFilteredDataForReports(filtros: FiltrosGlobais) {
     }
     
     return distribution;
-  }, [transacoesFiltradas, seguradoras]);
+  }, [transacoesFiltradas, seguradoras, limitResults]);
 
   const isLoading = supabaseLoading || ramosLoading || seguradorasLoading || !isDataReady;
 
