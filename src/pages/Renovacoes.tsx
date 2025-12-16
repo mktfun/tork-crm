@@ -23,14 +23,12 @@ export default function Renovacoes() {
   const [filterPeriod, setFilterPeriod] = useState<string>('60');
   const [currentPage, setCurrentPage] = useState(1);
   
-  const pageSize = 12;
+  const pageSize = 12; // 12 cards por página
 
-  // Converter "all" para -1 (sem limite de período)
-  const periodValue = filterPeriod === 'all' ? -1 : parseInt(filterPeriod);
-
+  // Usar o novo hook especializado
   const { renewals, totalCount, loading, error, refetch } = useSupabaseRenewals(
     {
-      period: periodValue,
+      period: parseInt(filterPeriod),
       renewalStatus: filterStatus
     },
     {
@@ -213,7 +211,6 @@ export default function Renovacoes() {
                     <SelectItem value="60">60 dias</SelectItem>
                     <SelectItem value="90">90 dias</SelectItem>
                     <SelectItem value="120">120 dias</SelectItem>
-                    <SelectItem value="all">Todas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -46,7 +46,12 @@ export const useSupabaseRenewals = (
     setError(null);
 
     try {
-      // Query base: buscar apólices ativas
+      // Calcular data limite baseada no período
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + filters.period);
+
+      // Query base: buscar apenas apólices ativas que estão próximas do vencimento
       let query = supabase
         .from('apolices')
         .select(`
@@ -59,15 +64,8 @@ export const useSupabaseRenewals = (
           )
         `, { count: 'exact' })
         .eq('user_id', user.id)
-        .eq('status', 'Ativa');
-
-      // Só aplica filtro de data se período NÃO for -1 (Todas)
-      if (filters.period !== -1) {
-        const today = new Date();
-        const futureDate = new Date();
-        futureDate.setDate(today.getDate() + filters.period);
-        query = query.lte('expiration_date', futureDate.toISOString().split('T')[0]);
-      }
+        .eq('status', 'Ativa')
+        .lte('expiration_date', futureDate.toISOString().split('T')[0]);
 
       // Aplicar filtro de status de renovação se especificado
       if (filters.renewalStatus && filters.renewalStatus !== 'all') {
