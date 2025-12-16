@@ -46,12 +46,7 @@ export const useSupabaseRenewals = (
     setError(null);
 
     try {
-      // Calcular data limite baseada no período
-      const today = new Date();
-      const futureDate = new Date();
-      futureDate.setDate(today.getDate() + filters.period);
-
-      // Query base: buscar apenas apólices ativas que estão próximas do vencimento
+      // Query base: buscar apenas apólices ativas
       let query = supabase
         .from('apolices')
         .select(`
@@ -61,11 +56,19 @@ export const useSupabaseRenewals = (
             name,
             phone,
             email
-          )
+          ),
+          companies:insurance_company(id, name)
         `, { count: 'exact' })
         .eq('user_id', user.id)
-        .eq('status', 'Ativa')
-        .lte('expiration_date', futureDate.toISOString().split('T')[0]);
+        .eq('status', 'Ativa');
+
+      // Aplicar filtro de período apenas se NÃO for "todas" (period !== -1)
+      if (filters.period !== -1) {
+        const today = new Date();
+        const futureDate = new Date();
+        futureDate.setDate(today.getDate() + filters.period);
+        query = query.lte('expiration_date', futureDate.toISOString().split('T')[0]);
+      }
 
       // Aplicar filtro de status de renovação se especificado
       if (filters.renewalStatus && filters.renewalStatus !== 'all') {
@@ -109,10 +112,13 @@ export const useSupabaseRenewals = (
           producerId: item.producer_id,
           brokerageId: item.brokerage_id,
           userId: item.user_id,
-          automaticRenewal: item.automatic_renewal || true, // ✅ ADICIONADO: Campo obrigatório do banco
+          automaticRenewal: item.automatic_renewal || true,
           // Dados adicionais para a UI
           clientName: item.clientes?.name || 'Cliente não encontrado',
-          diasParaVencer: daysUntilExpiration
+          clientPhone: item.clientes?.phone || null,
+          clientEmail: item.clientes?.email || null,
+          diasParaVencer: daysUntilExpiration,
+          companies: item.companies
         };
       });
 

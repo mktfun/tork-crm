@@ -11,6 +11,7 @@ import { useSupabaseRenewals } from '@/hooks/useSupabaseRenewals';
 import { usePolicies } from '@/hooks/useAppData';
 import { Policy } from '@/types';
 import { RenewPolicyModal } from '@/components/policies/RenewPolicyModal';
+import { ExportRenewalsModal } from '@/components/policies/ExportRenewalsModal';
 
 export default function Renovacoes() {
   usePageTitle('Renovações');
@@ -26,9 +27,12 @@ export default function Renovacoes() {
   const pageSize = 12; // 12 cards por página
 
   // Usar o novo hook especializado
+  // Converter para número: "all" = -1, outros = parseInt
+  const periodNumber = filterPeriod === 'all' ? -1 : parseInt(filterPeriod);
+  
   const { renewals, totalCount, loading, error, refetch } = useSupabaseRenewals(
     {
-      period: parseInt(filterPeriod),
+      period: periodNumber,
       renewalStatus: filterStatus
     },
     {
@@ -194,50 +198,56 @@ export default function Renovacoes() {
         {/* Filtros */}
         <div className="mb-6">
           <AppCard className="p-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300">Filtros:</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-400">Período:</label>
-                <Select value={filterPeriod} onValueChange={(value) => handleFilterChange(value, 'period')}>
-                  <SelectTrigger className="w-32 bg-slate-800 border-slate-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">30 dias</SelectItem>
-                    <SelectItem value="60">60 dias</SelectItem>
-                    <SelectItem value="90">90 dias</SelectItem>
-                    <SelectItem value="120">120 dias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-400">Status:</label>
-                <Select value={filterStatus} onValueChange={(value) => handleFilterChange(value, 'status')}>
-                  <SelectTrigger className="w-40 bg-slate-800 border-slate-600">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Pendente">Pendente</SelectItem>
-                    <SelectItem value="Em Contato">Em Contato</SelectItem>
-                    <SelectItem value="Proposta Enviada">Proposta Enviada</SelectItem>
-                    <SelectItem value="Renovada">Renovada</SelectItem>
-                    <SelectItem value="Não Renovada">Não Renovada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {loading && (
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Carregando...</span>
+            <div className="flex items-center gap-4 flex-wrap justify-between">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm text-slate-300">Filtros:</span>
                 </div>
-              )}
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-400">Período:</label>
+                  <Select value={filterPeriod} onValueChange={(value) => handleFilterChange(value, 'period')}>
+                    <SelectTrigger className="w-32 bg-slate-800 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 dias</SelectItem>
+                      <SelectItem value="60">60 dias</SelectItem>
+                      <SelectItem value="90">90 dias</SelectItem>
+                      <SelectItem value="120">120 dias</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-400">Status:</label>
+                  <Select value={filterStatus} onValueChange={(value) => handleFilterChange(value, 'status')}>
+                    <SelectTrigger className="w-40 bg-slate-800 border-slate-600">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="Pendente">Pendente</SelectItem>
+                      <SelectItem value="Em Contato">Em Contato</SelectItem>
+                      <SelectItem value="Proposta Enviada">Proposta Enviada</SelectItem>
+                      <SelectItem value="Renovada">Renovada</SelectItem>
+                      <SelectItem value="Não Renovada">Não Renovada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {loading && (
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Carregando...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão Exportar */}
+              <ExportRenewalsModal disabled={loading || renewals.length === 0} />
             </div>
           </AppCard>
         </div>
