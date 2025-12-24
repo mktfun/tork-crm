@@ -243,13 +243,59 @@ serve(async (req) => {
           );
         }
 
-        // 2. Se não tem conversa vinculada, sucesso silencioso
-        if (!deal.chatwoot_conversation_id) {
-          console.log('No Chatwoot conversation linked to deal:', deal_id);
-          return new Response(
-            JSON.stringify({ success: true, message: 'No Chatwoot conversation to sync' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        // 2. Verificar/recuperar conversa vinculada
+        let conversationId = deal.chatwoot_conversation_id;
+
+        if (!conversationId) {
+          console.log(`🔍 Deal [${deal_id}] missing conversation ID, attempting recovery via contact...`);
+          
+          const clientContactId = deal.client?.chatwoot_contact_id;
+          
+          if (clientContactId) {
+            console.log(`🔗 Buscando conversas do contato ${clientContactId}...`);
+            
+            try {
+              const conversations = await chatwootRequest(
+                config,
+                `/contacts/${clientContactId}/conversations`
+              );
+              
+              if (conversations.payload?.length > 0) {
+                conversationId = conversations.payload[0].id;
+                console.log(`✅ Conversa recuperada: ${conversationId}`);
+                
+                // AUTO-REPARO: Salvar o ID no deal para futuras sincronizações
+                const { error: updateError } = await supabase
+                  .from('crm_deals')
+                  .update({ chatwoot_conversation_id: conversationId })
+                  .eq('id', deal_id);
+                
+                if (updateError) {
+                  console.warn(`⚠️ Erro ao salvar conversation_id no deal:`, updateError.message);
+                } else {
+                  console.log(`💾 Conversation ID salvo no deal (auto-reparo)`);
+                }
+              } else {
+                console.log(`⚠️ Contato ${clientContactId} não tem conversas abertas no Chatwoot`);
+              }
+            } catch (convError: any) {
+              console.warn(`❌ Erro ao buscar conversas do contato:`, convError.message);
+            }
+          } else {
+            console.log(`⚠️ Cliente não tem chatwoot_contact_id, sincronize o cliente primeiro`);
+          }
+          
+          // Se ainda não tem conversa após recuperação, retornar erro informativo
+          if (!conversationId) {
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                message: 'Nenhuma conversa ativa encontrada para este cliente no Chatwoot',
+                hint: 'Inicie uma conversa com o cliente no Chatwoot ou sincronize o negócio novamente.'
+              }),
+              { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
 
         // 3. Buscar TODAS as etapas do usuário para ter a lista completa de labels
@@ -287,7 +333,7 @@ serve(async (req) => {
           // 5. Buscar etiquetas atuais da conversa no Chatwoot
           const conversation = await chatwootRequest(
             config,
-            `/conversations/${deal.chatwoot_conversation_id}`
+            `/conversations/${conversationId}`
           );
           const currentLabels: string[] = conversation.labels || [];
 
@@ -333,7 +379,7 @@ serve(async (req) => {
               
               await chatwootRequest(
                 config,
-                `/conversations/${deal.chatwoot_conversation_id}/labels/${encodedLabel}`,
+                `/conversations/${conversationId}/labels/${encodedLabel}`,
                 'DELETE'
               );
               console.log(`✅ Etiqueta removida com sucesso: "${labelToRemove}"`);
@@ -352,7 +398,7 @@ serve(async (req) => {
             console.log(`➕ Adicionando nova etiqueta: "${newLabel}"`);
             await chatwootRequest(
               config,
-              `/conversations/${deal.chatwoot_conversation_id}/labels`,
+              `/conversations/${conversationId}/labels`,
               'POST',
               { labels: [newLabel] }
             );
@@ -364,7 +410,7 @@ serve(async (req) => {
           // 9. Verificação: Buscar labels finais para confirmar
           const updatedConversation = await chatwootRequest(
             config,
-            `/conversations/${deal.chatwoot_conversation_id}`
+            `/conversations/${conversationId}`
           );
           const confirmedLabels = updatedConversation.labels || [];
 
@@ -813,6 +859,20 @@ serve(async (req) => {
               console.log('Applied stage label to conversation:', deal.stage.chatwoot_label);
             } catch (labelError: any) {
               console.warn('Could not apply label:', labelError.message);
+            }
+          }
+
+          // ✅ PERSISTIR conversation_id no deal para futuras sincronizações
+          if (conversationId) {
+            const { error: saveConvError } = await supabase
+              .from('crm_deals')
+              .update({ chatwoot_conversation_id: conversationId })
+              .eq('id', deal_id);
+            
+            if (saveConvError) {
+              console.warn('⚠️ Erro ao salvar conversation_id no deal:', saveConvError.message);
+            } else {
+              console.log('✅ Conversation ID linked to Deal:', conversationId);
             }
           }
         }
