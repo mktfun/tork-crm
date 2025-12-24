@@ -14,7 +14,8 @@ import {
   BarChart3,
   ShieldAlert,
   LucideIcon,
-  Megaphone
+  Megaphone,
+  Kanban
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChangelogs } from '@/hooks/useChangelogs';
@@ -27,6 +28,12 @@ const menuSections = [
       { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/dashboard/reports' },
       { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/dashboard/faturamento' },
+    ]
+  },
+  {
+    title: 'Comercial',
+    items: [
+      { id: 'crm', name: 'CRM', icon: Kanban, path: '/dashboard/crm' },
     ]
   },
   {
