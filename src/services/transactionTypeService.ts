@@ -8,56 +8,25 @@ export const DEFAULT_TRANSACTION_TYPES = {
 
 export async function ensureDefaultTransactionTypes(userId: string) {
   try {
-    // Run both checks in parallel for better performance
-    const [commissionResult, expenseResult] = await Promise.all([
-      supabase
-        .from('transaction_types')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('name', 'Comissão')
-        .eq('nature', 'GANHO')
-        .maybeSingle(),
-      
-      supabase
-        .from('transaction_types')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('name', 'Despesa')
-        .eq('nature', 'PERDA')
-        .maybeSingle()
-    ]);
-
-    const insertPromises = [];
-
-    // Prepare inserts to run in parallel
-    if (!commissionResult.data) {
-      insertPromises.push(
-        supabase
-          .from('transaction_types')
-          .insert({
-            user_id: userId,
-            name: 'Comissão',
-            nature: 'GANHO'
-          })
-      );
-    }
-
-    if (!expenseResult.data) {
-      insertPromises.push(
-        supabase
-          .from('transaction_types')
-          .insert({
-            user_id: userId,
-            name: 'Despesa',
-            nature: 'PERDA'
-          })
-      );
-    }
-
-    // Execute all inserts in parallel
-    if (insertPromises.length > 0) {
-      await Promise.allSettled(insertPromises);
-    }
+    // Use upsert with ON CONFLICT to prevent duplicates
+    // The unique constraint (user_id, name, nature) will handle conflicts
+    await supabase
+      .from('transaction_types')
+      .upsert([
+        {
+          user_id: userId,
+          name: 'Comissão',
+          nature: 'GANHO'
+        },
+        {
+          user_id: userId,
+          name: 'Despesa',
+          nature: 'PERDA'
+        }
+      ], {
+        onConflict: 'user_id,name,nature',
+        ignoreDuplicates: true
+      });
   } catch (error) {
     // Silent fail - don't block the auth process
     if (process.env.NODE_ENV === 'development') {
