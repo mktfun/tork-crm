@@ -140,17 +140,25 @@ export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModa
 
   // Sync deal attributes to Chatwoot in background (non-blocking)
   const syncChatwootInBackground = async (dealId: string) => {
+    // Toast imediato de "sincronizando"
+    toast.loading('Sincronizando negócio com Chatwoot...', { id: 'chatwoot-sync' });
+    
     try {
-      const { error } = await supabase.functions.invoke('chatwoot-sync', {
+      const { data, error } = await supabase.functions.invoke('chatwoot-sync', {
         body: { action: 'sync_deal_attributes', deal_id: dealId }
       });
+      
       if (error) throw error;
-      console.log('Chatwoot sync completed for deal:', dealId);
+      
+      if (data?.success) {
+        toast.success('Negócio sincronizado com Chatwoot!', { id: 'chatwoot-sync' });
+      } else {
+        toast.warning(data?.message || 'Sincronização parcial com Chatwoot', { id: 'chatwoot-sync' });
+      }
+      console.log('Chatwoot sync completed for deal:', dealId, data);
     } catch (error) {
       console.warn('Chatwoot sync failed (non-blocking):', error);
-      toast.warning('Negócio criado, mas sincronização com Chatwoot falhou', {
-        duration: 4000
-      });
+      toast.warning('Negócio salvo, mas Chatwoot não respondeu', { id: 'chatwoot-sync' });
     }
   };
 
