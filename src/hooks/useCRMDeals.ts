@@ -194,26 +194,29 @@ export function useCRMDeals() {
 
       if (error) throw error;
 
-      // Trigger Chatwoot sync if stage changed
-      if (updates.stage_id) {
-        try {
-          await supabase.functions.invoke('chatwoot-sync', {
+      return { data, newSyncToken, stageChanged: !!updates.stage_id };
+    },
+    onSuccess: async ({ data, newSyncToken, stageChanged }) => {
+      queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+      
+      // Sync com Chatwoot se a etapa mudou
+      if (stageChanged) {
+        toast.promise(
+          supabase.functions.invoke('chatwoot-sync', {
             body: {
               action: 'update_deal_stage',
-              deal_id: id,
-              new_stage_id: updates.stage_id,
+              deal_id: data.id,
+              new_stage_id: data.stage_id,
               sync_token: newSyncToken
             }
-          });
-        } catch (syncError) {
-          console.error('Chatwoot sync failed:', syncError);
-        }
+          }),
+          {
+            loading: 'Sincronizando nova etapa...',
+            success: 'Etapa atualizada no Chatwoot!',
+            error: 'Erro ao sincronizar etapa'
+          }
+        );
       }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
     },
     onError: (error: any) => {
       toast.error('Erro ao atualizar negócio');
@@ -258,24 +261,27 @@ export function useCRMDeals() {
 
       if (error) throw error;
 
-      // Trigger Chatwoot sync
-      try {
-        await supabase.functions.invoke('chatwoot-sync', {
+      return { data, newSyncToken };
+    },
+    onSuccess: async ({ data, newSyncToken }) => {
+      queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+      
+      // Sync com Chatwoot com feedback visual
+      toast.promise(
+        supabase.functions.invoke('chatwoot-sync', {
           body: {
             action: 'update_deal_stage',
-            deal_id: dealId,
-            new_stage_id: newStageId,
+            deal_id: data.id,
+            new_stage_id: data.stage_id,
             sync_token: newSyncToken
           }
-        });
-      } catch (syncError) {
-        console.error('Chatwoot sync failed:', syncError);
-      }
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+        }),
+        {
+          loading: 'Sincronizando nova etapa...',
+          success: 'Etapa atualizada no Chatwoot!',
+          error: 'Erro ao sincronizar etapa'
+        }
+      );
     }
   });
 

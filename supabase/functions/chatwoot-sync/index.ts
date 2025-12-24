@@ -214,7 +214,7 @@ serve(async (req) => {
       case 'update_deal_stage': {
         const { deal_id, new_stage_id, sync_token } = body;
 
-        // Get deal with conversation ID
+        // 1. Buscar o deal para pegar chatwoot_conversation_id
         const { data: deal, error: dealError } = await supabase
           .from('crm_deals')
           .select('*, client:clientes(*)')
@@ -228,7 +228,7 @@ serve(async (req) => {
           );
         }
 
-        // If no Chatwoot conversation linked, skip sync
+        // 2. Se não tem conversa vinculada, sucesso silencioso
         if (!deal.chatwoot_conversation_id) {
           console.log('No Chatwoot conversation linked to deal:', deal_id);
           return new Response(
@@ -237,29 +237,78 @@ serve(async (req) => {
           );
         }
 
-        // Get old and new stage labels
-        const { data: stages } = await supabase
+        // 3. Buscar TODAS as etapas do usuário para ter a lista completa de labels
+        const { data: allStages } = await supabase
           .from('crm_stages')
-          .select('id, chatwoot_label')
+          .select('id, name, chatwoot_label')
           .eq('user_id', user.id);
 
-        const newStage = stages?.find(s => s.id === new_stage_id);
-        const oldStage = stages?.find(s => s.id === deal.stage_id);
+        const allStageLabels = (allStages || [])
+          .map(s => (s.chatwoot_label || s.name.toLowerCase().replace(/\s+/g, '_')).toLowerCase())
+          .filter(Boolean);
 
-        if (newStage?.chatwoot_label) {
-          await updateConversationLabels(
-            config,
-            deal.chatwoot_conversation_id,
-            newStage.chatwoot_label,
-            oldStage?.chatwoot_label
+        // 4. Buscar a nova etapa pelo ID recebido
+        const newStage = allStages?.find(s => s.id === new_stage_id);
+        const newLabel = newStage?.chatwoot_label || newStage?.name?.toLowerCase().replace(/\s+/g, '_');
+
+        if (!newLabel) {
+          console.log('New stage label not found for:', new_stage_id);
+          return new Response(
+            JSON.stringify({ success: false, message: 'New stage label not found' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
-          console.log('Updated Chatwoot labels for conversation:', deal.chatwoot_conversation_id);
         }
 
-        return new Response(
-          JSON.stringify({ success: true, message: 'Chatwoot sync completed' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        try {
+          // 5. Buscar etiquetas atuais da conversa no Chatwoot
+          const conversation = await chatwootRequest(
+            config,
+            `/conversations/${deal.chatwoot_conversation_id}`
+          );
+          const currentLabels: string[] = conversation.labels || [];
+
+          console.log('Current labels on conversation:', currentLabels);
+          console.log('All CRM stage labels:', allStageLabels);
+          console.log('New stage label to apply:', newLabel);
+
+          // 6. LIMPEZA: Remover TODAS as etiquetas que pertencem às crm_stages
+          const cleanedLabels = currentLabels.filter(
+            label => !allStageLabels.includes(label.toLowerCase())
+          );
+
+          // 7. Adicionar a nova etiqueta
+          if (!cleanedLabels.includes(newLabel)) {
+            cleanedLabels.push(newLabel);
+          }
+
+          console.log('Final labels to apply:', cleanedLabels);
+
+          // 8. Enviar o array final para o Chatwoot
+          await chatwootRequest(
+            config,
+            `/conversations/${deal.chatwoot_conversation_id}/labels`,
+            'POST',
+            { labels: cleanedLabels }
+          );
+
+          console.log('Successfully updated labels on conversation:', deal.chatwoot_conversation_id);
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'Stage label updated in Chatwoot',
+              old_labels: currentLabels,
+              new_labels: cleanedLabels
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error: any) {
+          console.error('Failed to update labels:', error);
+          return new Response(
+            JSON.stringify({ success: false, message: error.message }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       // ========== UPSERT CONTACT ==========
