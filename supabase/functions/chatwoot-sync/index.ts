@@ -279,6 +279,72 @@ serve(async (req) => {
         }
       }
 
+      case 'sync_stages': {
+        // Buscar todas as etapas do usuário
+        const { data: stages, error: stagesError } = await supabase
+          .from('crm_stages')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('position', { ascending: true });
+
+        if (stagesError) {
+          console.error('Failed to fetch stages:', stagesError);
+          return new Response(
+            JSON.stringify({ error: 'Failed to fetch stages' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let synced = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+
+        console.log(`Syncing ${stages?.length || 0} stages to Chatwoot labels...`);
+
+        for (const stage of stages || []) {
+          const labelTitle = stage.chatwoot_label || stage.name.toLowerCase().replace(/\s+/g, '_');
+          const labelColor = stage.color?.replace('#', '') || '3B82F6';
+          
+          try {
+            await chatwootRequest(
+              config,
+              '/labels',
+              'POST',
+              {
+                title: labelTitle,
+                description: `Etapa CRM: ${stage.name}`,
+                color: labelColor
+              }
+            );
+            synced++;
+            console.log(`Created label: ${stage.name} -> ${labelTitle}`);
+          } catch (error: any) {
+            // Ignorar erro 422 (label já existe)
+            if (error.message?.includes('422')) {
+              skipped++;
+              console.log(`Label already exists: ${stage.name}`);
+            } else {
+              errors.push(`${stage.name}: ${error.message}`);
+              console.error(`Failed to create label ${stage.name}:`, error.message);
+            }
+          }
+        }
+
+        console.log(`Sync completed: ${synced} created, ${skipped} skipped, ${errors.length} errors`);
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            synced,
+            skipped,
+            total: stages?.length || 0,
+            errors: errors.length > 0 ? errors : undefined,
+            message: `Sincronizado! ${synced} etiquetas criadas, ${skipped} já existiam.`
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),

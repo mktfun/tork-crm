@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useCRMDeals, useCRMStages } from '@/hooks/useCRMDeals';
+import type { CRMStage } from '@/hooks/useCRMDeals';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +36,7 @@ interface ClientOption {
 
 export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModalProps) {
   const { user } = useAuth();
-  const { stages } = useCRMStages();
+  const { stages, isLoading: loadingStages } = useCRMStages();
   const { createDeal, deals } = useCRMDeals();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<ClientOption[]>([]);
@@ -163,20 +164,33 @@ export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModa
               required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a etapa" />
+                <SelectValue placeholder={loadingStages ? "Carregando..." : "Selecione a etapa"} />
               </SelectTrigger>
               <SelectContent>
-                {stages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
+                {loadingStages ? (
+                  <SelectItem value="loading" disabled>
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      {stage.name}
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Carregando etapas...
                     </div>
                   </SelectItem>
-                ))}
+                ) : !stages || stages.length === 0 ? (
+                  <SelectItem value="empty" disabled>
+                    Nenhuma etapa encontrada
+                  </SelectItem>
+                ) : (
+                  stages.map((stage: CRMStage) => (
+                    <SelectItem key={stage.id} value={stage.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: stage.color }}
+                        />
+                        {stage.name}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -219,7 +233,7 @@ export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModa
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !formData.title || !formData.stage_id}>
+            <Button type="submit" disabled={loading || loadingStages || !formData.title || !formData.stage_id}>
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (

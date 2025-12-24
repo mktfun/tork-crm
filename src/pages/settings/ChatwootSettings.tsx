@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Save, MessageCircle, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Save, MessageCircle, ExternalLink, Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react';
 
 interface CRMSettings {
   id?: string;
@@ -20,6 +20,7 @@ export default function ChatwootSettings() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [settings, setSettings] = useState<CRMSettings>({
@@ -94,6 +95,33 @@ export default function ChatwootSettings() {
       toast.error('Erro ao salvar configurações');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSyncLabels = async () => {
+    if (!settings.chatwoot_url || !settings.chatwoot_api_key || !settings.chatwoot_account_id) {
+      toast.error('Configure as credenciais do Chatwoot primeiro');
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('chatwoot-sync', {
+        body: { action: 'sync_stages' }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(data.message || 'Etiquetas sincronizadas!');
+      } else {
+        toast.error(data?.message || 'Erro ao sincronizar');
+      }
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast.error('Erro ao sincronizar etiquetas');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -211,14 +239,29 @@ export default function ChatwootSettings() {
             </p>
           </div>
 
-          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Salvar Configurações
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salvar Configurações
+            </Button>
+
+            <Button 
+              variant="outline" 
+              onClick={handleSyncLabels} 
+              disabled={syncing || !settings.chatwoot_url || !settings.chatwoot_api_key || !settings.chatwoot_account_id}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Sincronizar Etiquetas
+            </Button>
+          </div>
         </div>
       </AppCard>
 
