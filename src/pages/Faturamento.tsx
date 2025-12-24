@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { formatDate } from '@/utils/dateUtils';
 import { AppCard } from '@/components/ui/app-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -391,7 +392,7 @@ export default function Faturamento() {
                         </TableCell>
 
                         <TableCell className="text-slate-400">
-                          {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                          {formatDate(transaction.date)}
                         </TableCell>
 
                         <TableCell>

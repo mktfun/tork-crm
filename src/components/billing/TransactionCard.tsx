@@ -8,6 +8,7 @@ import { useTransactionTypes } from '@/hooks/useAppData';
 import { ModalBaixaParcial } from '@/components/faturamento/ModalBaixaParcial';
 import { HistoricoPagamentos } from '@/components/faturamento/HistoricoPagamentos';
 import { useState } from 'react';
+import { formatDate } from '@/utils/dateUtils';
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -91,7 +92,7 @@ export function TransactionCard({ transaction, onMarkAsRealized }: TransactionCa
             <div>
               <p className="text-white/60">Vencimento</p>
               <p className="font-medium text-white">
-                {new Date(transaction.dueDate).toLocaleDateString('pt-BR')}
+                {formatDate(transaction.dueDate)}
               </p>
             </div>
           </div>

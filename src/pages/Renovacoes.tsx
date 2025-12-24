@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Calendar, Clock, AlertTriangle, CheckCircle, RotateCcw, Filter, Loader2 } from 'lucide-react';
+import { formatDate } from '@/utils/dateUtils';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { useSupabaseRenewals } from '@/hooks/useSupabaseRenewals';
@@ -110,7 +111,7 @@ export default function Renovacoes() {
         <div>
           <p className="text-slate-400">Vencimento</p>
           <p className="text-white font-medium">
-            {new Date(policy.expirationDate).toLocaleDateString('pt-BR')}
+            {formatDate(policy.expirationDate)}
           </p>
         </div>
         <div>

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DollarSign, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatDate } from '@/utils/dateUtils';
 
 interface CommissionExtractProps {
   policy: Policy;
@@ -114,7 +115,7 @@ export function CommissionExtract({ policy }: CommissionExtractProps) {
                   <div>
                     <p className="font-medium text-white">{transaction.description}</p>
                     <p className="text-sm text-slate-400">
-                      {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                      {formatDate(transaction.date)}
                     </p>
                   </div>
                   <div className="text-right">

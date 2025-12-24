@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppCard } from '@/components/ui/app-card';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/utils/dateUtils';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -338,7 +339,7 @@ export default function Sinistros() {
                       <div>
                         <span className="text-white/60">Ocorrência:</span>
                         <p className="text-white font-medium">
-                          {new Date(sinistro.occurrence_date).toLocaleDateString('pt-BR')}
+                          {formatDate(sinistro.occurrence_date)}
                         </p>
                       </div>
                     </div>

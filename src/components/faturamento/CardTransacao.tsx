@@ -6,6 +6,7 @@ import { Check, DollarSign, ExternalLink } from 'lucide-react';
 import { Transaction } from '@/types';
 import { useTransactionTypes, useClients, usePolicies, useCompanies } from '@/hooks/useAppData';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '@/utils/dateUtils';
 
 interface CardTransacaoProps {
   transaction: Transaction;
@@ -87,7 +88,7 @@ export function CardTransacao({ transaction, onMarkAsRealized }: CardTransacaoPr
             <div>
               <p className="text-gray-500">Data</p>
               <p className="font-medium">
-                {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                {formatDate(transaction.date)}
               </p>
             </div>
             <div>

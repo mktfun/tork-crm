@@ -25,6 +25,7 @@ import { AutoRenewalIndicator } from './AutoRenewalIndicator';
 import { PolicyRenewalSection } from './PolicyRenewalSection';
 import { PolicyCancelConfirmModal } from './PolicyCancelConfirmModal';
 import { toast } from '@/hooks/use-toast';
+import { formatDate } from '@/utils/dateUtils';
 
 interface PolicyModalProps {
   policy: Policy | null;
@@ -231,20 +232,20 @@ export function PolicyModal({ policy, isOpen, onClose, onEdit, onRenew }: Policy
                       <div className="flex justify-between">
                         <span className="text-slate-400">Início:</span>
                         <span className="text-white">
-                          {new Date(policy.startDate).toLocaleDateString('pt-BR')}
+                          {formatDate(policy.startDate)}
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span className="text-slate-400">Vencimento:</span>
                       <span className="text-white">
-                        {new Date(policy.expirationDate).toLocaleDateString('pt-BR')}
+                        {formatDate(policy.expirationDate)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-400">Criada em:</span>
                       <span className="text-white">
-                        {new Date(policy.createdAt).toLocaleDateString('pt-BR')}
+                        {formatDate(policy.createdAt)}
                       </span>
                     </div>
                   </div>

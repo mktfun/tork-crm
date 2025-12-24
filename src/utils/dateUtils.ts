@@ -1,9 +1,25 @@
+/**
+ * Faz parse de uma string de data (YYYY-MM-DD) como data LOCAL
+ * Evita o problema de timezone onde a data muda 1 dia
+ */
+export function parseLocalDate(dateString: string): Date {
+  if (!dateString) return new Date();
+  
+  // Se a string já inclui horário (timestamp), usar como está
+  if (dateString.includes('T')) {
+    return new Date(dateString);
+  }
+  
+  // Para strings no formato YYYY-MM-DD, criar como data local
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function formatDate(dateString: string): string {
   if (!dateString) return '';
   
   // Parse the date in the local timezone to avoid timezone shifts
-  const [year, month, day] = dateString.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
+  const date = parseLocalDate(dateString);
   
   return date.toLocaleDateString('pt-BR');
 }

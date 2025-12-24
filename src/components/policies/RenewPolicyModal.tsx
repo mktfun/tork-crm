@@ -10,11 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { CalendarIcon, RotateCcw } from 'lucide-react';
-import { format, addMonths, addYears, isAfter } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, addYears, isAfter } from 'date-fns';
 import { useSupabasePolicies } from '@/hooks/useSupabasePolicies';
 import { useToast } from '@/hooks/use-toast';
 import { Policy } from '@/types';
+import { formatDate, parseLocalDate } from '@/utils/dateUtils';
 
 const renewalSchema = z.object({
   newPremiumValue: z.number().min(0.01, 'Valor do prêmio deve ser maior que zero'),
@@ -90,7 +90,7 @@ export function RenewPolicyModal({ policy, isOpen, onClose, onSuccess }: RenewPo
   const calculateNewExpirationDate = (type: string) => {
     if (!policy?.expirationDate) return '';
     
-    const currentExpiration = new Date(policy.expirationDate);
+    const currentExpiration = parseLocalDate(policy.expirationDate);
     let newDate: Date;
     
     switch (type) {
@@ -248,7 +248,7 @@ export function RenewPolicyModal({ policy, isOpen, onClose, onSuccess }: RenewPo
               <div>
                 <span className="text-slate-400">Vencimento:</span>
                 <span className="text-white ml-2">
-                  {new Date(policy.expirationDate).toLocaleDateString('pt-BR')}
+                  {formatDate(policy.expirationDate)}
                 </span>
               </div>
             </div>

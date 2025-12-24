@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { DollarSign } from 'lucide-react';
 import { Transaction, TransactionType } from '@/types';
 import { Link } from 'react-router-dom';
+import { formatDate } from '@/utils/dateUtils';
 
 interface ClientFinancialHistoryProps {
   transactions: Transaction[];
@@ -49,7 +50,7 @@ export function ClientFinancialHistory({ transactions, transactionTypes }: Clien
                   </div>
                   <div className="text-sm text-slate-300 space-y-1">
                     <p><span className="font-medium">Tipo:</span> {transactionType?.name}</p>
-                    <p><span className="font-medium">Data:</span> {new Date(transaction.date).toLocaleDateString('pt-BR')}</p>
+                    <p><span className="font-medium">Data:</span> {formatDate(transaction.date)}</p>
                     <p>
                       <span className="font-medium">Valor:</span>
                       <span className={`ml-1 font-bold ${transactionType?.nature === 'GANHO' ? 'text-green-400' : 'text-red-400'}`}>

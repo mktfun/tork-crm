@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle, Download, Upload } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, addDays, isWithinInterval, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
+import { formatDate, parseLocalDate } from '@/utils/dateUtils';
 import { PolicyFilters } from '@/hooks/useFilteredPolicies';
 import { Badge } from '@/components/ui/badge';
 import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
@@ -378,7 +379,7 @@ export default function Policies() {
         {filteredPolicies.map(policy => {
           const client = clients.find(c => c.id === policy.clientId);
           const producer = producers.find(p => p.id === policy.producerId);
-          const isExpiringSoon = differenceInDays(new Date(policy.expirationDate), new Date()) <= 30;
+          const isExpiringSoon = differenceInDays(parseLocalDate(policy.expirationDate), new Date()) <= 30;
 
           return (
             <div
@@ -448,10 +449,10 @@ export default function Policies() {
                   <div className="text-right">
                     <p className="text-slate-400 text-sm">Vencimento</p>
                     <p className={`font-medium ${isExpiringSoon ? 'text-red-400' : 'text-white'}`}>
-                      {new Date(policy.expirationDate).toLocaleDateString('pt-BR')}
+                      {formatDate(policy.expirationDate)}
                     </p>
                     <p className="text-slate-500 text-xs">
-                      {differenceInDays(new Date(policy.expirationDate), new Date())} dias
+                      {differenceInDays(parseLocalDate(policy.expirationDate), new Date())} dias
                     </p>
                   </div>
                 </div>

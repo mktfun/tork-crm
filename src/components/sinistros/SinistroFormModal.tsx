@@ -12,6 +12,7 @@ import { Loader2, Plus, Calendar, AlertTriangle, MapPin, Search, User, FileText 
 import { useCreateSinistro } from '@/hooks/useSinistros';
 import { useClients, usePolicies } from '@/hooks/useAppData';
 import { format } from 'date-fns';
+import { formatDate } from '@/utils/dateUtils';
 
 const sinistroSchema = z.object({
   policy_id: z.string().optional(), // Agora opcional
@@ -460,7 +461,7 @@ export function SinistroFormModal({ children, onSuccess }: SinistroFormModalProp
                         <span className="text-white/60 text-sm">Vigência:</span>
                         <p className="text-white">
                           {selectedPolicy.expirationDate &&
-                            new Date(selectedPolicy.expirationDate).toLocaleDateString('pt-BR')}
+                            formatDate(selectedPolicy.expirationDate)}
                         </p>
                       </div>
                       <div>

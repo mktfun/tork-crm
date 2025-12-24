@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react';
 import { Policy } from '@/types';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { Link } from 'react-router-dom';
+import { formatDate } from '@/utils/dateUtils';
 
 interface ClientPoliciesHistoryProps {
   policies: Policy[];
@@ -52,7 +53,7 @@ export function ClientPoliciesHistory({ policies }: ClientPoliciesHistoryProps) 
                   <p><span className="font-medium">Bem Segurado:</span> {policy.insuredAsset}</p>
                 )}
                 {policy.expirationDate && (
-                  <p><span className="font-medium">Vencimento:</span> {new Date(policy.expirationDate).toLocaleDateString('pt-BR')}</p>
+                  <p><span className="font-medium">Vencimento:</span> {formatDate(policy.expirationDate)}</p>
                 )}
                 {policy.premiumValue > 0 && (
                   <p><span className="font-medium">Prêmio:</span> R$ {policy.premiumValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
