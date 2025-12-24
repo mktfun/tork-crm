@@ -28,6 +28,9 @@ export function DealCard({ deal, isDragging, onClick, stageColor = '#3B82F6' }: 
     transform: CSS.Transform.toString(transform),
     transition,
     borderLeftColor: stageColor,
+    // Fixed width to prevent stretching during drag
+    width: '100%',
+    minWidth: '288px',
   };
 
   return (
@@ -36,8 +39,9 @@ export function DealCard({ deal, isDragging, onClick, stageColor = '#3B82F6' }: 
       style={style}
       {...attributes}
       {...listeners}
-      layout
-      layoutId={deal.id}
+      // Disable layout animation during drag to prevent "stretching" effect
+      layout={!isSortableDragging}
+      layoutId={isSortableDragging ? undefined : deal.id}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ 
         opacity: isSortableDragging ? 0.5 : 1, 
@@ -49,7 +53,7 @@ export function DealCard({ deal, isDragging, onClick, stageColor = '#3B82F6' }: 
         glass-component rounded-xl p-4 cursor-pointer
         transition-all duration-200
         border-l-4
-        ${isDragging ? 'shadow-2xl ring-2 ring-primary/50' : 'shadow-lg hover:shadow-xl'}
+        ${isDragging ? 'shadow-2xl ring-2 ring-primary/50 cursor-grabbing' : 'shadow-lg hover:shadow-xl'}
         ${isSortableDragging ? 'opacity-50' : ''}
       `}
     >

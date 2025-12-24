@@ -571,9 +571,21 @@ serve(async (req) => {
 
         for (const stage of stages || []) {
           const labelTitle = stage.chatwoot_label || stage.name.toLowerCase().replace(/\s+/g, '_');
-          const labelColor = (stage.color?.replace('#', '') || '3B82F6').toUpperCase();
           
-          console.log('Processing label:', labelTitle, 'color:', labelColor);
+          // Robust color handling - ensure valid hex, never use black
+          let rawColor = stage.color || '#3B82F6';
+          // Remove # if present
+          let labelColor = rawColor.replace('#', '').toUpperCase();
+          // Validate hex format (6 characters)
+          if (!/^[0-9A-F]{6}$/i.test(labelColor)) {
+            labelColor = '3B82F6'; // Default to blue if invalid
+          }
+          // Never use black as it's not visible
+          if (labelColor === '000000') {
+            labelColor = '3B82F6';
+          }
+          
+          console.log('Processing label:', labelTitle, 'color:', labelColor, '(original:', rawColor, ')');
           
           // Verificar se a etiqueta já existe
           const existingLabel = existingLabels.find(

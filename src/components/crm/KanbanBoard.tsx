@@ -271,23 +271,26 @@ export function KanbanBoard() {
           duration: 250,
           easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)'
         }}>
-          <AnimatePresence>
-            {activeDeal && (
-              <motion.div
-                initial={{ scale: 1.02, opacity: 0.9, rotate: 0 }}
-                animate={{ scale: 1.05, opacity: 0.95, rotate: 3 }}
-                exit={{ scale: 1, opacity: 1, rotate: 0 }}
-                className="shadow-2xl"
-              >
-                <DealCard deal={activeDeal} isDragging />
-              </motion.div>
-            )}
-            {activeStage && (
-              <motion.div
-                initial={{ scale: 1.02, opacity: 0.8 }}
-                animate={{ scale: 1.02, opacity: 0.9 }}
-                className="w-80 glass-component rounded-xl p-4"
-                style={{ borderTopColor: activeStage.color, borderTopWidth: '3px' }}
+          {activeDeal && (
+            <div 
+              className="w-80 cursor-grabbing"
+              style={{ pointerEvents: 'none' }}
+            >
+              <DealCard 
+                deal={activeDeal} 
+                isDragging 
+                stageColor={stages.find(s => s.id === activeDeal.stage_id)?.color}
+              />
+            </div>
+          )}
+          {activeStage && (
+            <div 
+              className="w-80 cursor-grabbing"
+              style={{ pointerEvents: 'none' }}
+            >
+              <div 
+                className="glass-component rounded-xl p-4"
+                style={{ borderTop: `3px solid ${activeStage.color}` }}
               >
                 <div className="flex items-center gap-2">
                   <div 
@@ -295,10 +298,13 @@ export function KanbanBoard() {
                     style={{ backgroundColor: activeStage.color }}
                   />
                   <h3 className="font-semibold text-foreground">{activeStage.name}</h3>
+                  <span className="ml-auto text-xs font-medium px-2 py-1 rounded-full bg-secondary/50 text-muted-foreground">
+                    {dealsByStage[activeStage.id]?.length || 0}
+                  </span>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </div>
+            </div>
+          )}
         </DragOverlay>
       </DndContext>
 
