@@ -286,11 +286,26 @@ export function useCRMDeals() {
             new_stage_id: data.stage_id,
             sync_token: newSyncToken
           }
+        }).then(response => {
+          console.log('📬 Chatwoot sync response:', response);
+          if (response.error) {
+            throw new Error(response.error.message || 'Erro na sincronização');
+          }
+          if (response.data && !response.data.success) {
+            throw new Error(response.data.message || 'Sincronização falhou');
+          }
+          return response;
         }),
         {
-          loading: 'Sincronizando nova etapa...',
-          success: 'Etapa atualizada no Chatwoot!',
-          error: 'Erro ao sincronizar etapa'
+          loading: 'Sincronizando etapa...',
+          success: (response) => {
+            const data = response.data;
+            if (data?.warnings) {
+              return `Etapa atualizada com avisos: ${data.warnings}`;
+            }
+            return 'Etapa atualizada no Chatwoot!';
+          },
+          error: (err) => `Erro: ${err.message}`
         }
       );
     }
