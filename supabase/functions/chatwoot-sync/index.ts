@@ -83,6 +83,11 @@ async function chatwootRequest(
     throw new Error(`Chatwoot API error: ${response.status} - ${errorText}`);
   }
 
+  // DELETE retorna 204 No Content (sem body JSON)
+  if (response.status === 204 || method === 'DELETE') {
+    return { success: true };
+  }
+
   return response.json();
 }
 
@@ -271,34 +276,65 @@ serve(async (req) => {
           console.log('All CRM stage labels:', allStageLabels);
           console.log('New stage label to apply:', newLabel);
 
-          // 6. LIMPEZA: Remover TODAS as etiquetas que pertencem às crm_stages
-          const cleanedLabels = currentLabels.filter(
-            label => !allStageLabels.includes(label.toLowerCase())
+          // 6. LIMPEZA: Identificar quais labels de CRM estão na conversa (exceto a nova)
+          const labelsToRemove = currentLabels.filter(
+            label => allStageLabels.includes(label.toLowerCase()) && 
+                     label.toLowerCase() !== newLabel.toLowerCase()
           );
 
-          // 7. Adicionar a nova etiqueta
-          if (!cleanedLabels.includes(newLabel)) {
-            cleanedLabels.push(newLabel);
+          console.log('Labels to remove (explicit DELETE):', labelsToRemove);
+
+          // 7. DELETAR cada label antiga explicitamente via DELETE
+          const removedLabels: string[] = [];
+          for (const oldLabel of labelsToRemove) {
+            try {
+              const encodedLabel = encodeURIComponent(oldLabel);
+              await chatwootRequest(
+                config,
+                `/conversations/${deal.chatwoot_conversation_id}/labels/${encodedLabel}`,
+                'DELETE'
+              );
+              removedLabels.push(oldLabel);
+              console.log(`Removed label: ${oldLabel}`);
+            } catch (deleteError: any) {
+              console.warn(`Could not delete label "${oldLabel}":`, deleteError.message);
+              // Continuar mesmo se falhar uma
+            }
           }
 
-          console.log('Final labels to apply:', cleanedLabels);
-
-          // 8. Enviar o array final para o Chatwoot
-          await chatwootRequest(
-            config,
-            `/conversations/${deal.chatwoot_conversation_id}/labels`,
-            'POST',
-            { labels: cleanedLabels }
+          // 8. ADICIONAR a nova etiqueta (se não existir já)
+          const alreadyHasNewLabel = currentLabels.some(
+            l => l.toLowerCase() === newLabel.toLowerCase()
           );
+          
+          if (!alreadyHasNewLabel) {
+            await chatwootRequest(
+              config,
+              `/conversations/${deal.chatwoot_conversation_id}/labels`,
+              'POST',
+              { labels: [newLabel] }
+            );
+            console.log(`Added label: ${newLabel}`);
+          } else {
+            console.log(`Label ${newLabel} already exists on conversation`);
+          }
 
-          console.log('Successfully updated labels on conversation:', deal.chatwoot_conversation_id);
+          // 9. Buscar labels finais para confirmar
+          const updatedConversation = await chatwootRequest(
+            config,
+            `/conversations/${deal.chatwoot_conversation_id}`
+          );
+          const finalLabels = updatedConversation.labels || [];
+
+          console.log('Final labels after update:', finalLabels);
 
           return new Response(
             JSON.stringify({ 
               success: true, 
               message: 'Stage label updated in Chatwoot',
-              old_labels: currentLabels,
-              new_labels: cleanedLabels
+              removed: removedLabels,
+              added: alreadyHasNewLabel ? null : newLabel,
+              final_labels: finalLabels
             }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
@@ -435,7 +471,7 @@ serve(async (req) => {
 
         for (const stage of stages || []) {
           const labelTitle = stage.chatwoot_label || stage.name.toLowerCase().replace(/\s+/g, '_');
-          const labelColor = stage.color?.replace('#', '') || '3B82F6';
+          const labelColor = (stage.color?.replace('#', '') || '3B82F6').toUpperCase();
           
           console.log('Processing label:', labelTitle, 'color:', labelColor);
           
