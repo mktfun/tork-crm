@@ -345,6 +345,153 @@ serve(async (req) => {
         );
       }
 
+      case 'sync_deal_attributes': {
+        const { deal_id } = body;
+
+        if (!deal_id) {
+          return new Response(
+            JSON.stringify({ error: 'deal_id is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('Syncing deal attributes to Chatwoot for deal:', deal_id);
+
+        // Fetch deal with client and stage info
+        const { data: deal, error: dealError } = await supabase
+          .from('crm_deals')
+          .select('*, client:clientes(*), stage:crm_stages(name, chatwoot_label)')
+          .eq('id', deal_id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (dealError || !deal) {
+          console.error('Deal not found:', dealError);
+          return new Response(
+            JSON.stringify({ error: 'Deal not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // If no client linked, nothing to sync
+        if (!deal.client_id || !deal.client) {
+          console.log('No client linked to deal, skipping sync');
+          return new Response(
+            JSON.stringify({ success: true, message: 'No client to sync' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const client = deal.client;
+        let chatwootContactId = client.chatwoot_contact_id;
+
+        // If client doesn't have Chatwoot ID, try to find or create contact
+        if (!chatwootContactId) {
+          console.log('Creating/finding Chatwoot contact for client:', client.id);
+          
+          try {
+            // Search for existing contact by email or phone
+            const searchParams = new URLSearchParams();
+            if (client.email) {
+              searchParams.set('q', client.email);
+            } else if (client.phone) {
+              searchParams.set('q', client.phone.replace(/\D/g, ''));
+            }
+
+            let foundContact = null;
+            if (searchParams.toString()) {
+              try {
+                const searchResult = await chatwootRequest(
+                  config,
+                  `/contacts/search?${searchParams.toString()}`
+                );
+                if (searchResult.payload?.length > 0) {
+                  foundContact = searchResult.payload[0];
+                  chatwootContactId = foundContact.id;
+                  console.log('Found existing Chatwoot contact:', chatwootContactId);
+                }
+              } catch (searchError) {
+                console.log('Contact search failed, will create new:', searchError);
+              }
+            }
+
+            // Create new contact if not found
+            if (!chatwootContactId) {
+              const newContact = await chatwootRequest(
+                config,
+                '/contacts',
+                'POST',
+                {
+                  name: client.name,
+                  email: client.email || undefined,
+                  phone_number: client.phone?.replace(/\D/g, '') || undefined,
+                  custom_attributes: {
+                    source: 'crm_sync',
+                    synced_at: new Date().toISOString()
+                  }
+                }
+              );
+              chatwootContactId = newContact.payload?.contact?.id;
+              console.log('Created new Chatwoot contact:', chatwootContactId);
+            }
+
+            // Save Chatwoot ID back to client
+            if (chatwootContactId) {
+              await supabase
+                .from('clientes')
+                .update({
+                  chatwoot_contact_id: chatwootContactId,
+                  chatwoot_synced_at: new Date().toISOString()
+                })
+                .eq('id', client.id);
+            }
+          } catch (contactError: any) {
+            console.error('Failed to create/find Chatwoot contact:', contactError);
+            return new Response(
+              JSON.stringify({ 
+                success: false, 
+                error: 'Failed to sync contact',
+                details: contactError.message 
+              }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Update contact custom attributes with deal info
+        if (chatwootContactId) {
+          try {
+            await chatwootRequest(
+              config,
+              `/contacts/${chatwootContactId}`,
+              'PUT',
+              {
+                custom_attributes: {
+                  deal_value: deal.value || 0,
+                  expected_close_date: deal.expected_close_date || null,
+                  crm_stage: deal.stage?.name || 'Desconhecido',
+                  deal_title: deal.title,
+                  last_sync: new Date().toISOString()
+                }
+              }
+            );
+            console.log('Updated Chatwoot contact attributes for:', chatwootContactId);
+          } catch (updateError: any) {
+            console.error('Failed to update contact attributes:', updateError);
+            // Non-fatal, contact was created/found
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            chatwoot_contact_id: chatwootContactId,
+            message: 'Deal attributes synced to Chatwoot' 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Unknown action' }),
