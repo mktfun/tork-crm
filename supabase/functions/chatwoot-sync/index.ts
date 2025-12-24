@@ -369,52 +369,98 @@ serve(async (req) => {
         }
 
         let synced = 0;
-        let skipped = 0;
+        let updated = 0;
         const errors: string[] = [];
 
         console.log(`Syncing ${stages?.length || 0} stages to Chatwoot labels...`);
+
+        // Buscar todas as etiquetas existentes no Chatwoot
+        let existingLabels: any[] = [];
+        try {
+          const allLabels = await chatwootRequest(config, '/labels');
+          existingLabels = allLabels.payload || allLabels || [];
+          console.log('Found existing labels in Chatwoot:', existingLabels.length);
+        } catch (e) {
+          console.log('Could not fetch existing labels, will create all');
+        }
 
         for (const stage of stages || []) {
           const labelTitle = stage.chatwoot_label || stage.name.toLowerCase().replace(/\s+/g, '_');
           const labelColor = stage.color?.replace('#', '') || '3B82F6';
           
-          console.log('Creating label:', labelTitle, 'color:', labelColor);
+          console.log('Processing label:', labelTitle, 'color:', labelColor);
           
-          try {
-            const response = await chatwootRequest(
-              config,
-              '/labels',
-              'POST',
-              {
-                title: labelTitle,
-                description: `Etapa CRM: ${stage.name}`,
-                color: labelColor
+          // Verificar se a etiqueta já existe
+          const existingLabel = existingLabels.find(
+            (l: any) => l.title?.toLowerCase() === labelTitle.toLowerCase()
+          );
+          
+          if (existingLabel) {
+            // ATUALIZAR a cor da etiqueta existente via PATCH
+            try {
+              await chatwootRequest(config, `/labels/${existingLabel.id}`, 'PATCH', {
+                color: labelColor,
+                description: `Etapa CRM: ${stage.name}`
+              });
+              updated++;
+              console.log(`Updated label color: ${labelTitle} -> #${labelColor}`);
+            } catch (updateError: any) {
+              console.warn(`Could not update label ${labelTitle}:`, updateError.message);
+              errors.push(`${stage.name}: ${updateError.message}`);
+            }
+          } else {
+            // Criar nova etiqueta
+            try {
+              const response = await chatwootRequest(
+                config,
+                '/labels',
+                'POST',
+                {
+                  title: labelTitle,
+                  description: `Etapa CRM: ${stage.name}`,
+                  color: labelColor
+                }
+              );
+              synced++;
+              console.log(`Created label: ${stage.name} -> ${labelTitle}`, 'Response:', JSON.stringify(response));
+            } catch (error: any) {
+              // Tratar erro 422 (já existe) fazendo update
+              if (error.message?.includes('422')) {
+                try {
+                  // Buscar novamente para pegar o ID
+                  const refreshLabels = await chatwootRequest(config, '/labels');
+                  const foundLabel = (refreshLabels.payload || refreshLabels || []).find(
+                    (l: any) => l.title?.toLowerCase() === labelTitle.toLowerCase()
+                  );
+                  if (foundLabel) {
+                    await chatwootRequest(config, `/labels/${foundLabel.id}`, 'PATCH', {
+                      color: labelColor,
+                      description: `Etapa CRM: ${stage.name}`
+                    });
+                    updated++;
+                    console.log(`Updated existing label after 422: ${labelTitle}`);
+                  }
+                } catch (retryError: any) {
+                  console.warn(`Could not update label after 422:`, retryError.message);
+                }
+              } else {
+                errors.push(`${stage.name}: ${error.message}`);
+                console.error(`Failed to create label ${stage.name}:`, error.message);
               }
-            );
-            synced++;
-            console.log(`Created label: ${stage.name} -> ${labelTitle}`, 'Response:', JSON.stringify(response));
-          } catch (error: any) {
-            // Ignorar erro 422 (label já existe)
-            if (error.message?.includes('422')) {
-              skipped++;
-              console.log(`Label already exists: ${stage.name}`);
-            } else {
-              errors.push(`${stage.name}: ${error.message}`);
-              console.error(`Failed to create label ${stage.name}:`, error.message);
             }
           }
         }
 
-        console.log(`Sync completed: ${synced} created, ${skipped} skipped, ${errors.length} errors`);
+        console.log(`Sync completed: ${synced} created, ${updated} updated, ${errors.length} errors`);
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             synced,
-            skipped,
+            updated,
             total: stages?.length || 0,
             errors: errors.length > 0 ? errors : undefined,
-            message: `Sincronizado! ${synced} etiquetas criadas, ${skipped} já existiam.`
+            message: `Sincronização concluída! ${synced} criadas, ${updated} atualizadas no Chatwoot.`
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -466,52 +512,81 @@ serve(async (req) => {
           console.log('Creating/finding Chatwoot contact for client:', client.id);
           
           try {
-            // Search for existing contact by email or phone
-            const searchParams = new URLSearchParams();
+            // 1. Buscar por EMAIL primeiro
             if (client.email) {
-              searchParams.set('q', client.email);
-            } else if (client.phone) {
-              searchParams.set('q', client.phone.replace(/\D/g, ''));
-            }
-
-            let foundContact = null;
-            if (searchParams.toString()) {
               try {
-                const searchResult = await chatwootRequest(
+                const searchByEmail = await chatwootRequest(
                   config,
-                  `/contacts/search?${searchParams.toString()}`
+                  `/contacts/search?q=${encodeURIComponent(client.email)}`
                 );
-                if (searchResult.payload?.length > 0) {
-                  foundContact = searchResult.payload[0];
-                  chatwootContactId = foundContact.id;
-                  console.log('Found existing Chatwoot contact:', chatwootContactId);
+                if (searchByEmail.payload?.length > 0) {
+                  chatwootContactId = searchByEmail.payload[0].id;
+                  console.log('Found contact by email:', chatwootContactId);
                 }
-              } catch (searchError) {
-                console.log('Contact search failed, will create new:', searchError);
+              } catch (e) {
+                console.log('Email search failed, trying phone');
               }
             }
 
-            // Create new contact if not found - USE E.164 FORMAT
+            // 2. Buscar por TELEFONE se não achou por email
+            if (!chatwootContactId && client.phone) {
+              const cleanPhone = client.phone.replace(/\D/g, '');
+              try {
+                const searchByPhone = await chatwootRequest(
+                  config,
+                  `/contacts/search?q=${encodeURIComponent(cleanPhone)}`
+                );
+                if (searchByPhone.payload?.length > 0) {
+                  chatwootContactId = searchByPhone.payload[0].id;
+                  console.log('Found contact by phone:', chatwootContactId);
+                }
+              } catch (e) {
+                console.log('Phone search failed, will create new');
+              }
+            }
+
+            // 3. Criar novo contato apenas se não encontrou
             if (!chatwootContactId) {
               const formattedPhone = formatPhoneToE164(client.phone);
               console.log('Creating contact with phone:', formattedPhone);
               
-              const newContact = await chatwootRequest(
-                config,
-                '/contacts',
-                'POST',
-                {
-                  name: client.name,
-                  email: client.email || undefined,
-                  phone_number: formattedPhone,
-                  custom_attributes: {
-                    source: 'crm_sync',
-                    synced_at: new Date().toISOString()
+              try {
+                const newContact = await chatwootRequest(
+                  config,
+                  '/contacts',
+                  'POST',
+                  {
+                    name: client.name,
+                    email: client.email || undefined,
+                    phone_number: formattedPhone,
+                    custom_attributes: {
+                      source: 'crm_sync',
+                      synced_at: new Date().toISOString()
+                    }
                   }
+                );
+                chatwootContactId = newContact.payload?.contact?.id;
+                console.log('Created new Chatwoot contact:', chatwootContactId);
+              } catch (createError: any) {
+                // Se der erro 422 (duplicata), tentar busca genérica por nome
+                if (createError.message?.includes('422')) {
+                  console.log('Contact exists (422), searching by name...');
+                  try {
+                    const searchByName = await chatwootRequest(
+                      config,
+                      `/contacts/search?q=${encodeURIComponent(client.name)}`
+                    );
+                    if (searchByName.payload?.length > 0) {
+                      chatwootContactId = searchByName.payload[0].id;
+                      console.log('Found contact by name after 422:', chatwootContactId);
+                    }
+                  } catch (e) {
+                    console.log('Name search also failed');
+                  }
+                } else {
+                  throw createError;
                 }
-              );
-              chatwootContactId = newContact.payload?.contact?.id;
-              console.log('Created new Chatwoot contact:', chatwootContactId);
+              }
             }
 
             // Save Chatwoot ID back to client
@@ -523,6 +598,7 @@ serve(async (req) => {
                   chatwoot_synced_at: new Date().toISOString()
                 })
                 .eq('id', client.id);
+              console.log('Saved chatwoot_contact_id to client:', chatwootContactId);
             }
           } catch (contactError: any) {
             console.error('Failed to create/find Chatwoot contact:', contactError);
