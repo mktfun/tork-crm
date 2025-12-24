@@ -197,10 +197,12 @@ export function useCRMDeals() {
       return { data, newSyncToken, stageChanged: !!updates.stage_id };
     },
     onSuccess: async ({ data, newSyncToken, stageChanged }) => {
+      console.log('📝 Updating Deal:', data.id, 'stage_id:', data.stage_id);
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
       
       // Sync com Chatwoot se a etapa mudou
-      if (stageChanged) {
+      if (stageChanged && data.stage_id) {
+        console.log('🔄 Stage changed! Syncing to Chatwoot:', { deal_id: data.id, new_stage_id: data.stage_id });
         toast.promise(
           supabase.functions.invoke('chatwoot-sync', {
             body: {
@@ -264,7 +266,16 @@ export function useCRMDeals() {
       return { data, newSyncToken };
     },
     onSuccess: async ({ data, newSyncToken }) => {
+      console.log('🚀 Moving Deal:', data.id, 'to Stage:', data.stage_id);
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+      
+      // Validar que stage_id existe antes de sincronizar
+      if (!data.stage_id) {
+        console.error('❌ stage_id is undefined! Cannot sync to Chatwoot.');
+        return;
+      }
+      
+      console.log('📦 Invoking chatwoot-sync:', { deal_id: data.id, new_stage_id: data.stage_id, sync_token: newSyncToken });
       
       // Sync com Chatwoot com feedback visual
       toast.promise(

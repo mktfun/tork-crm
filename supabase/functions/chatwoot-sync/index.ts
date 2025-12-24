@@ -272,69 +272,80 @@ serve(async (req) => {
           );
           const currentLabels: string[] = conversation.labels || [];
 
-          console.log('Current labels on conversation:', currentLabels);
-          console.log('All CRM stage labels:', allStageLabels);
-          console.log('New stage label to apply:', newLabel);
+          console.log('📋 Current labels on conversation:', currentLabels);
+          console.log('🏷️ All CRM stage labels (blacklist):', allStageLabels);
+          console.log('🆕 New stage label to apply:', newLabel);
 
-          // 6. LIMPEZA: Identificar quais labels de CRM estão na conversa (exceto a nova)
-          const labelsToRemove = currentLabels.filter(
-            label => allStageLabels.includes(label.toLowerCase()) && 
-                     label.toLowerCase() !== newLabel.toLowerCase()
+          // 6. ESTRATÉGIA ATÔMICA: Matemática de Conjuntos
+          // Preservar labels que NÃO são etapas do CRM (ex: "vip", "urgente")
+          const preservedLabels = currentLabels.filter(
+            label => !allStageLabels.includes(label.toLowerCase())
           );
 
-          console.log('Labels to remove (explicit DELETE):', labelsToRemove);
-
-          // 7. DELETAR cada label antiga explicitamente via DELETE
-          const removedLabels: string[] = [];
-          for (const oldLabel of labelsToRemove) {
-            try {
-              const encodedLabel = encodeURIComponent(oldLabel);
-              await chatwootRequest(
-                config,
-                `/conversations/${deal.chatwoot_conversation_id}/labels/${encodedLabel}`,
-                'DELETE'
-              );
-              removedLabels.push(oldLabel);
-              console.log(`Removed label: ${oldLabel}`);
-            } catch (deleteError: any) {
-              console.warn(`Could not delete label "${oldLabel}":`, deleteError.message);
-              // Continuar mesmo se falhar uma
-            }
+          // Lista final = Labels preservadas + Nova etapa
+          const finalLabels = [...preservedLabels];
+          if (!finalLabels.some(l => l.toLowerCase() === newLabel.toLowerCase())) {
+            finalLabels.push(newLabel);
           }
 
-          // 8. ADICIONAR a nova etiqueta (se não existir já)
-          const alreadyHasNewLabel = currentLabels.some(
-            l => l.toLowerCase() === newLabel.toLowerCase()
-          );
-          
-          if (!alreadyHasNewLabel) {
+          console.log('🧮 Math: Current', currentLabels, '- CRM stages =', preservedLabels, '+ new =', finalLabels);
+
+          // 7. ATUALIZAÇÃO ATÔMICA: Único POST que substitui todas as labels
+          try {
+            await chatwootRequest(
+              config,
+              `/conversations/${deal.chatwoot_conversation_id}/labels`,
+              'POST',
+              { labels: finalLabels }
+            );
+            console.log('✅ Atomic POST successful with labels:', finalLabels);
+          } catch (postError: any) {
+            console.warn('⚠️ Atomic POST failed, trying fallback with parallel DELETE:', postError.message);
+            
+            // FALLBACK: DELETE paralelo das labels antigas + POST da nova
+            const labelsToRemove = currentLabels.filter(
+              label => allStageLabels.includes(label.toLowerCase()) && 
+                       label.toLowerCase() !== newLabel.toLowerCase()
+            );
+            
+            // DELETE em paralelo com silenciador de erro individual
+            await Promise.all(
+              labelsToRemove.map(label =>
+                chatwootRequest(
+                  config,
+                  `/conversations/${deal.chatwoot_conversation_id}/labels/${encodeURIComponent(label)}`,
+                  'DELETE'
+                ).catch(err => console.warn(`Ignored delete error for "${label}":`, err.message))
+              )
+            );
+            
+            // Adiciona a nova
             await chatwootRequest(
               config,
               `/conversations/${deal.chatwoot_conversation_id}/labels`,
               'POST',
               { labels: [newLabel] }
             );
-            console.log(`Added label: ${newLabel}`);
-          } else {
-            console.log(`Label ${newLabel} already exists on conversation`);
+            console.log('✅ Fallback completed: removed', labelsToRemove, 'added', newLabel);
           }
 
-          // 9. Buscar labels finais para confirmar
+          // 8. Verificação: Buscar labels finais para confirmar
           const updatedConversation = await chatwootRequest(
             config,
             `/conversations/${deal.chatwoot_conversation_id}`
           );
-          const finalLabels = updatedConversation.labels || [];
+          const confirmedLabels = updatedConversation.labels || [];
 
-          console.log('Final labels after update:', finalLabels);
+          console.log('🏁 Final labels after update:', confirmedLabels);
 
           return new Response(
             JSON.stringify({ 
               success: true, 
-              message: 'Stage label updated in Chatwoot',
-              removed: removedLabels,
-              added: alreadyHasNewLabel ? null : newLabel,
-              final_labels: finalLabels
+              message: 'Stage label updated in Chatwoot (atomic)',
+              previous_labels: currentLabels,
+              preserved_labels: preservedLabels,
+              new_label: newLabel,
+              final_labels: confirmedLabels
             }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
