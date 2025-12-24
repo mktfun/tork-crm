@@ -200,9 +200,9 @@ export function useCRMDeals() {
       console.log('📝 Updating Deal:', data.id, 'stage_id:', data.stage_id);
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
       
-      // Sync com Chatwoot se a etapa mudou
+      // Sync com Chat Tork se a etapa mudou
       if (stageChanged && data.stage_id) {
-        console.log('🔄 Stage changed! Syncing to Chatwoot:', { deal_id: data.id, new_stage_id: data.stage_id });
+        console.log('🔄 Stage changed! Syncing to Chat Tork:', { deal_id: data.id, new_stage_id: data.stage_id });
         toast.promise(
           supabase.functions.invoke('chatwoot-sync', {
             body: {
@@ -214,7 +214,7 @@ export function useCRMDeals() {
           }),
           {
             loading: 'Sincronizando nova etapa...',
-            success: 'Etapa atualizada no Chatwoot!',
+            success: 'Etapa atualizada no Chat Tork!',
             error: 'Erro ao sincronizar etapa'
           }
         );
@@ -277,7 +277,7 @@ export function useCRMDeals() {
       
       console.log('📦 Invoking chatwoot-sync:', { deal_id: data.id, new_stage_id: data.stage_id, sync_token: newSyncToken });
       
-      // Sync com Chatwoot com feedback visual
+      // Sync com Chat Tork com feedback visual
       toast.promise(
         supabase.functions.invoke('chatwoot-sync', {
           body: {
@@ -287,7 +287,7 @@ export function useCRMDeals() {
             sync_token: newSyncToken
           }
         }).then(response => {
-          console.log('📬 Chatwoot sync response:', response);
+          console.log('📬 Chat Tork sync response:', response);
           if (response.error) {
             throw new Error(response.error.message || 'Erro na sincronização');
           }
@@ -303,7 +303,7 @@ export function useCRMDeals() {
             if (data?.warnings) {
               return `Etapa atualizada com avisos: ${data.warnings}`;
             }
-            return 'Etapa atualizada no Chatwoot!';
+            return 'Etapa atualizada no Chat Tork!';
           },
           error: (err) => `Erro: ${err.message}`
         }

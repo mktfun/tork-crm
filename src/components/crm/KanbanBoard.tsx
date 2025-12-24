@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCRMStages, useCRMDeals, CRMStage, CRMDeal } from '@/hooks/useCRMDeals';
 import { KanbanColumn } from './KanbanColumn';
 import { DealCard } from './DealCard';
+import { DealDetailsModal } from './DealDetailsModal';
 import { NewDealModal } from './NewDealModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Sparkles } from 'lucide-react';
@@ -25,6 +26,7 @@ export function KanbanBoard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showNewDealModal, setShowNewDealModal] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<CRMDeal | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -100,6 +102,10 @@ export function KanbanBoard() {
     setShowNewDealModal(true);
   };
 
+  const handleDealClick = (deal: CRMDeal) => {
+    setSelectedDeal(deal);
+  };
+
   if (stagesLoading || dealsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -152,6 +158,7 @@ export function KanbanBoard() {
               stage={stage}
               deals={dealsByStage[stage.id] || []}
               onAddDeal={() => handleAddDeal(stage.id)}
+              onDealClick={handleDealClick}
             />
           ))}
         </div>
@@ -176,6 +183,12 @@ export function KanbanBoard() {
         open={showNewDealModal}
         onOpenChange={setShowNewDealModal}
         defaultStageId={selectedStageId}
+      />
+
+      <DealDetailsModal
+        deal={selectedDeal}
+        open={!!selectedDeal}
+        onOpenChange={(open) => !open && setSelectedDeal(null)}
       />
     </>
   );

@@ -141,7 +141,7 @@ export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModa
   // Sync deal attributes to Chatwoot in background (non-blocking)
   const syncChatwootInBackground = async (dealId: string) => {
     // Toast imediato de "sincronizando"
-    toast.loading('Sincronizando negócio com Chatwoot...', { id: 'chatwoot-sync' });
+    toast.loading('Sincronizando negócio com Chat Tork...', { id: 'chattork-sync' });
     
     try {
       const { data, error } = await supabase.functions.invoke('chatwoot-sync', {
@@ -151,14 +151,14 @@ export function NewDealModal({ open, onOpenChange, defaultStageId }: NewDealModa
       if (error) throw error;
       
       if (data?.success) {
-        toast.success('Negócio sincronizado com Chatwoot!', { id: 'chatwoot-sync' });
+        toast.success('Negócio sincronizado com Chat Tork!', { id: 'chattork-sync' });
       } else {
-        toast.warning(data?.message || 'Sincronização parcial com Chatwoot', { id: 'chatwoot-sync' });
+        toast.warning(data?.message || 'Sincronização parcial com Chat Tork', { id: 'chattork-sync' });
       }
-      console.log('Chatwoot sync completed for deal:', dealId, data);
+      console.log('Chat Tork sync completed for deal:', dealId, data);
     } catch (error) {
-      console.warn('Chatwoot sync failed (non-blocking):', error);
-      toast.warning('Negócio salvo, mas Chatwoot não respondeu', { id: 'chatwoot-sync' });
+      console.warn('Chat Tork sync failed (non-blocking):', error);
+      toast.warning('Negócio salvo, mas Chat Tork não respondeu', { id: 'chattork-sync' });
     }
   };
 

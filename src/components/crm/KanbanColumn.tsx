@@ -11,9 +11,10 @@ interface KanbanColumnProps {
   stage: CRMStage;
   deals: CRMDeal[];
   onAddDeal: () => void;
+  onDealClick?: (deal: CRMDeal) => void;
 }
 
-export function KanbanColumn({ stage, deals, onAddDeal }: KanbanColumnProps) {
+export function KanbanColumn({ stage, deals, onAddDeal, onDealClick }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -64,7 +65,11 @@ export function KanbanColumn({ stage, deals, onAddDeal }: KanbanColumnProps) {
         >
           <div className="space-y-3">
             {deals.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
+              <DealCard 
+                key={deal.id} 
+                deal={deal} 
+                onClick={() => onDealClick?.(deal)}
+              />
             ))}
           </div>
         </SortableContext>

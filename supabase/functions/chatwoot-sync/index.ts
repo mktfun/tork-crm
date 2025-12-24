@@ -880,21 +880,24 @@ serve(async (req) => {
         // Update contact custom attributes with deal info
         if (chatwootContactId) {
           try {
+            // Get app URL for direct CRM link
+            const appUrl = Deno.env.get('APP_URL') || 'https://jaouwhckqqnaxqyfvgyq.lovableproject.com';
+            
             await chatwootRequest(
               config,
               `/contacts/${chatwootContactId}`,
               'PUT',
               {
                 custom_attributes: {
-                  deal_value: deal.value || 0,
-                  expected_close_date: deal.expected_close_date || null,
-                  crm_stage: deal.stage?.name || 'Desconhecido',
-                  deal_title: deal.title,
+                  crm_titulo_negocio: deal.title,
+                  crm_valor_negocio: deal.value || 0,
+                  crm_etapa_atual: deal.stage?.name || 'Desconhecido',
+                  crm_link_direto: `${appUrl}/dashboard/crm`,
                   last_sync: new Date().toISOString()
                 }
               }
             );
-            console.log('Updated Chatwoot contact attributes for:', chatwootContactId);
+            console.log('Chat Tork: Updated contact attributes for:', chatwootContactId);
           } catch (updateError: any) {
             console.error('Failed to update contact attributes:', updateError);
             // Non-fatal, contact was created/found

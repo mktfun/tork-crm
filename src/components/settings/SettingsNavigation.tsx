@@ -41,8 +41,8 @@ const navItems = [
     description: 'Tipos de operações'
   },
   {
-    name: 'Chatwoot',
-    path: '/dashboard/settings/chatwoot',
+    name: 'Chat Tork',
+    path: '/dashboard/settings/chat-tork',
     icon: MessageCircle,
     description: 'Integração CRM'
   }

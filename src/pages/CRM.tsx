@@ -31,10 +31,10 @@ export default function CRM() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => navigate('/dashboard/settings/chatwoot')}
+            onClick={() => navigate('/dashboard/settings/chat-tork')}
           >
             <MessageCircle className="h-4 w-4 mr-2" />
-            Chatwoot
+            Chat Tork
           </Button>
         </div>
       </motion.div>

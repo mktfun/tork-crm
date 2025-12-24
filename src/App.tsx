@@ -33,7 +33,7 @@ import TransactionSettings from "./pages/settings/TransactionSettings";
 import RamoSettings from "./pages/settings/RamoSettings";
 import Novidades from "./pages/Novidades";
 import CRM from "./pages/CRM";
-import ChatwootSettings from "./pages/settings/ChatwootSettings";
+import ChatTorkSettings from "./pages/settings/ChatTorkSettings";
 
 // Helper to redirect legacy detail routes to dashboard namespace
 function ParamRedirect({ toBase }: { toBase: string }) {
@@ -110,7 +110,7 @@ function App() {
                     <Route path="companies" element={<CompanySettings />} />
                     <Route path="ramos" element={<RamoSettings />} />
                     <Route path="transactions" element={<TransactionSettings />} />
-                    <Route path="chatwoot" element={<ChatwootSettings />} />
+                    <Route path="chat-tork" element={<ChatTorkSettings />} />
                   </Route>
                 </Route>
                 
