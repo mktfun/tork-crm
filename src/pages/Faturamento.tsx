@@ -21,7 +21,7 @@ import {
 import { ModalNovaTransacao } from '@/components/faturamento/ModalNovaTransacao';
 import { ModalBaixaParcial } from '@/components/faturamento/ModalBaixaParcial';
 import { HistoricoPagamentos } from '@/components/faturamento/HistoricoPagamentos';
-import { FiltrosFaturamento } from '@/components/faturamento/FiltrosFaturamento';
+import { FiltrosFaturamento, SourceFilter } from '@/components/faturamento/FiltrosFaturamento';
 import { BackfillCommissionsButton } from '@/components/faturamento/BackfillCommissionsButton';
 import { EditTransactionModal } from '@/components/faturamento/EditTransactionModal';
 import { ExportBillingModal } from '@/components/faturamento/ExportBillingModal';
@@ -41,6 +41,7 @@ export default function Faturamento() {
   const { toast } = useToast();
   
   const [selectedCompany, setSelectedCompany] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -65,7 +66,8 @@ export default function Faturamento() {
     page: currentPage,
     pageSize,
     dateRange,
-    clientId: clientParam
+    clientId: clientParam,
+    sourceFilter
   });
 
   const { clients } = useClients();
@@ -96,6 +98,11 @@ export default function Faturamento() {
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setDateRange(range);
+    setCurrentPage(1);
+  };
+
+  const handleSourceFilterChange = (source: SourceFilter) => {
+    setSourceFilter(source);
     setCurrentPage(1);
   };
 
@@ -159,6 +166,8 @@ export default function Faturamento() {
           onCompanyChange={handleCompanyChange}
           dateRange={dateRange}
           onDateRangeChange={handleDateRangeChange}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={handleSourceFilterChange}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -321,6 +330,7 @@ export default function Faturamento() {
                 <TableHeader>
                   <TableRow className="border-b-white/10 hover:bg-white/5">
                     <TableHead className="text-white">Descrição</TableHead> 
+                    <TableHead className="text-white">Origem</TableHead>
                     <TableHead className="text-white">Tipo</TableHead>
                     <TableHead className="text-white">Data</TableHead>
                     <TableHead className="text-white">Status</TableHead>
@@ -334,6 +344,7 @@ export default function Faturamento() {
                     const policy = policies.find(p => p.id === transaction.policyId);
                     const transactionType = transactionTypes.find(tt => tt.id === transaction.typeId);
                     const isGanho = transactionType?.nature === 'GANHO';
+                    const isManual = transaction.policyId === null;
 
                     return (
                       <TableRow 
@@ -385,6 +396,19 @@ export default function Faturamento() {
                           </div>
                         </TableCell>
                         
+                        {/* Coluna Origem */}
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={isManual 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                              : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            }
+                          >
+                            {isManual ? '✏️ Manual' : '🔄 Apólice'}
+                          </Badge>
+                        </TableCell>
+
                         <TableCell>
                           <Badge variant={isGanho ? 'default' : 'destructive'}>
                             {transactionType?.name || (isGanho ? 'GANHO' : 'PERDA')}
