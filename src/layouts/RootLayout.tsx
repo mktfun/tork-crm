@@ -16,12 +16,12 @@ export function RootLayout() {
   useRealtimeClients();
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900">
-      {/* Background Image Overlay */}
+    <div className="flex h-screen w-full overflow-hidden bg-zinc-950">
+      {/* Gradiente radial sutil para profundidade - estilo fintech */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+        className="absolute inset-0 pointer-events-none"
         style={{ 
-          backgroundImage: 'url(/background.jpg)'
+          background: 'radial-gradient(ellipse at 50% 0%, rgba(39, 39, 42, 0.5) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(24, 24, 27, 0.3) 0%, transparent 40%)'
         }}
       />
       

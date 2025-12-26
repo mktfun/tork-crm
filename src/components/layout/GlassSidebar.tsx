@@ -106,14 +106,19 @@ export function GlassSidebar() {
     <div 
       className={cn(
         "h-full transition-all duration-300 ease-out flex-shrink-0 relative",
-        "bg-black/20 backdrop-blur-xl border-r border-white/10",
+        "bg-zinc-900 border-r border-white/5",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Header */}
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
+      {/* Header com Logo */}
+      <div className="p-4 border-b border-white/5 flex items-center gap-3">
+        <img 
+          src="/tork_symbol_favicon.png" 
+          alt="Tork CRM" 
+          className="w-8 h-8 rounded-lg flex-shrink-0"
+        />
         {!isCollapsed && (
-          <h1 className="text-lg font-semibold text-white">
+          <h1 className="text-lg font-bold text-white">
             Tork CRM
           </h1>
         )}
@@ -121,9 +126,9 @@ export function GlassSidebar() {
         <button
           onClick={toggleSidebar}
           className={cn(
-            "p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors",
-            "text-white/80 hover:text-white",
-            isCollapsed && "mx-auto"
+            "p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors ml-auto",
+            "text-zinc-400 hover:text-white",
+            isCollapsed && "mx-auto ml-0"
           )}
         >
           {isCollapsed ? (
@@ -148,10 +153,10 @@ export function GlassSidebar() {
                   key={item.id}
                   onClick={() => handleNavigation(item.path)}
                   className={cn(
-                    "w-full flex items-center justify-center p-3 rounded-lg transition-all duration-200 relative",
-                    "text-white/80 hover:text-white hover:bg-white/10",
+                    "w-full flex items-center justify-center p-3 rounded-md transition-all duration-200 relative",
+                    "text-zinc-400 hover:text-white hover:bg-white/5",
                     "focus:outline-none focus:ring-2 focus:ring-white/20",
-                    isActive && "bg-white/15 text-white"
+                    isActive && "bg-white/10 text-white"
                   )}
                   title={item.name}
                 >
@@ -162,7 +167,7 @@ export function GlassSidebar() {
                     )}
                   </div>
                   {isActive && (
-                    <div className="absolute right-0 w-1 h-8 bg-blue-400 rounded-l-full" />
+                    <div className="absolute left-0 w-0.5 h-6 bg-primary rounded-r-full" />
                   )}
                 </button>
               );
@@ -183,8 +188,8 @@ export function GlassSidebar() {
               >
                 <AccordionTrigger 
                   className={cn(
-                    "px-3 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider",
-                    "hover:text-white/70 hover:no-underline rounded-lg hover:bg-white/5",
+                    "px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider",
+                    "hover:text-zinc-300 hover:no-underline rounded-md hover:bg-white/5",
                     "[&[data-state=open]>svg]:rotate-180"
                   )}
                 >
@@ -201,10 +206,10 @@ export function GlassSidebar() {
                           key={item.id}
                           onClick={() => handleNavigation(item.path)}
                           className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 relative",
-                            "text-white/80 hover:text-white hover:bg-white/10",
+                            "w-full flex items-center gap-3 p-3 rounded-md transition-all duration-200 relative",
+                            "text-zinc-400 hover:text-white hover:bg-white/5",
                             "focus:outline-none focus:ring-2 focus:ring-white/20",
-                            isActive && "bg-white/15 text-white font-medium"
+                            isActive && "bg-white/10 text-white font-medium border-l-2 border-primary"
                           )}
                         >
                           <div className="relative">
@@ -216,9 +221,6 @@ export function GlassSidebar() {
                           <span className="text-sm font-medium">
                             {item.name}
                           </span>
-                          {isActive && (
-                            <div className="absolute right-0 w-1 h-8 bg-blue-400 rounded-l-full" />
-                          )}
                         </button>
                       );
                     })}
