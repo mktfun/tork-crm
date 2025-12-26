@@ -1891,6 +1891,18 @@ export type Database = {
         Returns: string
       }
       check_upcoming_appointments: { Args: never; Returns: undefined }
+      create_financial_movement: {
+        Args: {
+          p_description: string
+          p_movements: Json
+          p_reference_number?: string
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_transaction_date: string
+        }
+        Returns: string
+      }
+      ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
       get_client_kpis: {
         Args: { p_search_term?: string; p_status?: string; p_user_id: string }
@@ -1985,6 +1997,28 @@ export type Database = {
         }
         Returns: Json
       }
+      get_financial_accounts_by_type: {
+        Args: { p_type: string }
+        Returns: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          parent_id: string | null
+          status: Database["public"]["Enums"]["financial_account_status"]
+          type: Database["public"]["Enums"]["financial_account_type"]
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "financial_accounts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
       get_producao_por_ramo: {
         Args: { end_range: string; p_user_id: string; start_range: string }
@@ -1994,6 +2028,19 @@ export type Database = {
           total_apolices: number
           total_comissao: number
           total_premio: number
+        }[]
+      }
+      get_recent_financial_transactions: {
+        Args: { p_limit?: number; p_offset?: number; p_type?: string }
+        Returns: {
+          account_names: string
+          created_at: string
+          description: string
+          id: string
+          is_void: boolean
+          reference_number: string
+          total_amount: number
+          transaction_date: string
         }[]
       }
       get_schema_info: { Args: never; Returns: Json }
