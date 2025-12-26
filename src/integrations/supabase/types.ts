@@ -2145,6 +2145,7 @@ export type Database = {
           description: string
           id: string
           is_void: boolean
+          legacy_status: string
           reference_number: string
           total_amount: number
           transaction_date: string

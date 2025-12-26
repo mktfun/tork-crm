@@ -484,6 +484,7 @@ interface RevenueTransaction {
   is_void: boolean;
   total_amount: number;
   account_names: string;
+  legacy_status: string | null;
 }
 
 /**

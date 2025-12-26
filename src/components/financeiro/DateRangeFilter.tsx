@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -20,41 +19,14 @@ interface DateRangeFilterProps {
 }
 
 export function DateRangeFilter({ value, onChange, className }: DateRangeFilterProps) {
-  const presets = useMemo(() => {
-    const now = new Date();
-    return [
-      {
-        label: 'Este Mês',
-        range: { from: startOfMonth(now), to: endOfMonth(now) }
-      },
-      {
-        label: 'Mês Passado',
-        range: { from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) }
-      },
-      {
-        label: 'Últimos 3 Meses',
-        range: { from: startOfMonth(subMonths(now, 2)), to: endOfMonth(now) }
-      },
-      {
-        label: 'Este Ano',
-        range: { from: startOfYear(now), to: endOfYear(now) }
-      }
-    ];
-  }, []);
-
-  const handlePresetClick = (range: DateRange) => {
-    onChange(range);
-  };
-
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {/* Date Picker */}
+    <div className={cn("flex items-center gap-2", className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             className={cn(
-              "min-w-[200px] justify-start text-left font-normal",
+              "min-w-[220px] justify-start text-left font-normal",
               !value && "text-muted-foreground"
             )}
           >
@@ -85,21 +57,6 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
           />
         </PopoverContent>
       </Popover>
-
-      {/* Preset Buttons */}
-      <div className="flex items-center gap-1">
-        {presets.map((preset) => (
-          <Button
-            key={preset.label}
-            variant="ghost"
-            size="sm"
-            className="text-xs h-8 px-2 hidden sm:inline-flex"
-            onClick={() => handlePresetClick(preset.range)}
-          >
-            {preset.label}
-          </Button>
-        ))}
-      </div>
     </div>
   );
 }
