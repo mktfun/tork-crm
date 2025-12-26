@@ -1924,6 +1924,7 @@ export type Database = {
       }
       count_pending_legacy_transactions: { Args: never; Returns: number }
       count_problematic_descriptions: { Args: never; Returns: number }
+      count_wrong_backfill_dates: { Args: never; Returns: number }
       create_financial_movement: {
         Args: {
           p_description: string
@@ -1941,6 +1942,7 @@ export type Database = {
       }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
+      fix_backfill_dates: { Args: never; Returns: Json }
       fix_ledger_descriptions: { Args: never; Returns: Json }
       get_cash_flow_data: {
         Args: {

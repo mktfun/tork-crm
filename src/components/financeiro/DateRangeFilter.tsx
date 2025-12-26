@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -19,6 +19,19 @@ interface DateRangeFilterProps {
 }
 
 export function DateRangeFilter({ value, onChange, className }: DateRangeFilterProps) {
+  // FASE 10: Normalizar datas para início/fim do dia no fuso local
+  const handleSelect = (range: DateRange | undefined) => {
+    if (range?.from) {
+      const normalizedRange: DateRange = {
+        from: startOfDay(range.from),
+        to: range.to ? endOfDay(range.to) : endOfDay(range.from)
+      };
+      onChange(normalizedRange);
+    } else {
+      onChange(range);
+    }
+  };
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Popover>
@@ -51,7 +64,7 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
             mode="range"
             defaultMonth={value?.from}
             selected={value}
-            onSelect={onChange}
+            onSelect={handleSelect}
             numberOfMonths={2}
             className="pointer-events-auto"
           />
