@@ -578,11 +578,14 @@ export async function countProblematicDescriptions(): Promise<number> {
 
 interface BulkConfirmResult {
   confirmedCount: number;
+  skippedCount: number;
   success: boolean;
+  message?: string;
 }
 
 /**
- * Confirma recebimento em lote de transações selecionadas
+ * Confirma recebimento em lote de transações selecionadas.
+ * Ignora transações que já estão pagas/confirmadas (proteção anti-baixa dupla).
  */
 export async function bulkConfirmReceipts(transactionIds: string[]): Promise<BulkConfirmResult> {
   const { data, error } = await supabase.rpc('bulk_confirm_receipts', {
@@ -594,7 +597,9 @@ export async function bulkConfirmReceipts(transactionIds: string[]): Promise<Bul
   const result = data as any;
   return {
     confirmedCount: result?.confirmed_count ?? 0,
-    success: result?.success ?? false
+    skippedCount: result?.skipped_count ?? 0,
+    success: result?.success ?? false,
+    message: result?.message
   };
 }
 

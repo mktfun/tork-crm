@@ -301,21 +301,37 @@ function FixDescriptionsCard() {
   );
 }
 
-// ============ FIX DATES CARD (FASE 10) ============
+// ============ FIX DATES CARD (FASE 11 - COM CONFIRMAÇÃO) ============
 
 function FixDatesCard() {
-  const { data: wrongDatesCount = 0, isLoading: countLoading } = useWrongDatesCount();
+  const [confirmText, setConfirmText] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  
+  const { data: wrongDatesCount = 0, isLoading: countLoading, refetch } = useWrongDatesCount();
   const fixMutation = useFixBackfillDates();
   
-  const handleFix = async () => {
+  const handleInitFix = () => {
+    if (wrongDatesCount === 0) return;
+    setShowConfirm(true);
+    setConfirmText('');
+  };
+  
+  const handleConfirmFix = async () => {
+    if (confirmText !== 'CORRIGIR') return;
+    
     try {
       const result = await fixMutation.mutateAsync();
       
       if (result.updated_count > 0) {
-        toast.success(`${result.updated_count} datas foram corrigidas!`);
+        toast.success(`${result.updated_count} datas foram corrigidas com sucesso!`);
       } else {
         toast.info('Nenhuma data precisava de correção.');
       }
+      
+      // Reconsultar para atualizar o número
+      await refetch();
+      setShowConfirm(false);
+      setConfirmText('');
     } catch (error: any) {
       console.error('Erro ao corrigir datas:', error);
       toast.error(error.message || 'Erro ao corrigir datas');
@@ -356,24 +372,64 @@ function FixDatesCard() {
           </div>
         )}
         
-        <Button 
-          variant="outline" 
-          className="gap-2"
-          onClick={handleFix}
-          disabled={fixMutation.isPending || wrongDatesCount === 0}
-        >
-          {fixMutation.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Corrigindo...
-            </>
-          ) : (
-            <>
-              <CalendarClock className="w-4 h-4" />
-              Corrigir Datas Históricas
-            </>
-          )}
-        </Button>
+        {showConfirm ? (
+          <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border">
+            <p className="text-sm text-muted-foreground">
+              Esta ação irá corrigir <span className="font-semibold text-foreground">{wrongDatesCount}</span> transações.
+              Digite <span className="font-mono text-amber-500">CORRIGIR</span> para confirmar:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                placeholder="Digite CORRIGIR"
+                className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+              />
+              <Button 
+                variant="default"
+                size="sm"
+                onClick={handleConfirmFix}
+                disabled={confirmText !== 'CORRIGIR' || fixMutation.isPending}
+              >
+                {fixMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Confirmar'
+                )}
+              </Button>
+              <Button 
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowConfirm(false);
+                  setConfirmText('');
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={handleInitFix}
+            disabled={fixMutation.isPending || wrongDatesCount === 0}
+          >
+            {fixMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Corrigindo...
+              </>
+            ) : (
+              <>
+                <CalendarClock className="w-4 h-4" />
+                Corrigir Datas Históricas
+              </>
+            )}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

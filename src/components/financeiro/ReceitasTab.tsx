@@ -370,9 +370,15 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
       const result = await bulkConfirm.mutateAsync(Array.from(selectedIds));
       
       if (result.confirmedCount > 0) {
-        toast.success(`${result.confirmedCount} receita(s) confirmada(s) com sucesso!`);
+        let message = `${result.confirmedCount} receita(s) confirmada(s) com sucesso!`;
+        if (result.skippedCount > 0) {
+          message += ` (${result.skippedCount} já estavam pagas/confirmadas)`;
+        }
+        toast.success(message);
+      } else if (result.skippedCount > 0) {
+        toast.info(`${result.skippedCount} transações já estavam pagas/confirmadas.`);
       } else {
-        toast.info('Nenhuma receita foi confirmada (podem já estar pagas).');
+        toast.info('Nenhuma receita foi confirmada.');
       }
       setSelectedIds(new Set());
     } catch (error: any) {
