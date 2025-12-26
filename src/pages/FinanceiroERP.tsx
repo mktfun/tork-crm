@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
 import { 
@@ -190,23 +190,33 @@ interface VisaoGeralProps {
 function VisaoGeral({ dateRange }: VisaoGeralProps) {
   const { isLoading: accountsLoading, isEnsuring } = useFinancialAccountsWithDefaults();
 
-  // Usar o dateRange passado por props
+  // Usar o dateRange passado por props - FASE 10: Normalizar com startOfDay/endOfDay
   const { startDate, endDate } = useMemo(() => {
     const from = dateRange?.from || startOfMonth(new Date());
     const to = dateRange?.to || endOfMonth(new Date());
+    
+    // Forçar início e fim do dia no fuso local para evitar problemas de timezone
+    const normalizedFrom = startOfDay(from);
+    const normalizedTo = endOfDay(to);
+    
     return {
-      startDate: format(from, 'yyyy-MM-dd'),
-      endDate: format(to, 'yyyy-MM-dd')
+      startDate: format(normalizedFrom, 'yyyy-MM-dd'),
+      endDate: format(normalizedTo, 'yyyy-MM-dd')
     };
   }, [dateRange]);
 
-  // Período para o gráfico (mesmo do filtro)
+  // Período para o gráfico (mesmo do filtro) - FASE 10: Normalizar timezone
   const chartPeriod = useMemo(() => {
     const from = dateRange?.from || subMonths(new Date(), 1);
     const to = dateRange?.to || new Date();
+    
+    // Normalizar para evitar problemas de timezone
+    const normalizedFrom = startOfDay(from);
+    const normalizedTo = endOfDay(to);
+    
     return {
-      startDate: format(from, 'yyyy-MM-dd'),
-      endDate: format(to, 'yyyy-MM-dd')
+      startDate: format(normalizedFrom, 'yyyy-MM-dd'),
+      endDate: format(normalizedTo, 'yyyy-MM-dd')
     };
   }, [dateRange]);
 

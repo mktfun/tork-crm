@@ -618,6 +618,40 @@ interface TransactionDetails {
 /**
  * Busca detalhes completos de uma transação
  */
+// ============ CORREÇÃO DE DATAS DO BACKFILL (FASE 10) ============
+
+interface FixBackfillResult {
+  success: boolean;
+  updated_count: number;
+  message: string;
+}
+
+/**
+ * Conta quantas transações financeiras estão com data divergente do legado
+ */
+export async function countWrongDates(): Promise<number> {
+  const { data, error } = await supabase.rpc('count_wrong_backfill_dates');
+  
+  if (error) throw error;
+  return data || 0;
+}
+
+/**
+ * Corrige as datas das transações financeiras baseadas na origem (legado)
+ */
+export async function fixBackfillDates(): Promise<FixBackfillResult> {
+  const { data, error } = await supabase.rpc('fix_backfill_dates');
+  
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    success: result.success ?? true,
+    updated_count: result.updated_count ?? 0,
+    message: result.message ?? 'Datas corrigidas com sucesso.'
+  };
+}
+
 export async function getTransactionDetails(transactionId: string): Promise<TransactionDetails> {
   const { data, error } = await supabase.rpc('get_transaction_details', {
     p_transaction_id: transactionId

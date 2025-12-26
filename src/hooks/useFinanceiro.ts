@@ -349,3 +349,36 @@ export function useTransactionDetails(transactionId: string | null) {
     enabled: !!transactionId
   });
 }
+
+// ============ HOOKS PARA CORREÇÃO DE DATAS (FASE 10) ============
+
+/**
+ * Hook para contar datas erradas do backfill
+ */
+export function useWrongDatesCount() {
+  return useQuery({
+    queryKey: ['wrong-dates-count'],
+    queryFn: financialService.countWrongDates,
+    staleTime: 1000 * 60 * 2 // 2 minutos
+  });
+}
+
+/**
+ * Hook para corrigir datas do backfill
+ */
+export function useFixBackfillDates() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: financialService.fixBackfillDates,
+    onSuccess: () => {
+      // Invalidar todos os caches afetados
+      queryClient.invalidateQueries({ queryKey: ['wrong-dates-count'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
+    }
+  });
+}
