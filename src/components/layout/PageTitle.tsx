@@ -46,7 +46,7 @@ const getTitleFromPath = (pathname: string): string => {
   // Se não achar, tenta achar um match parcial (para rotas com ID)
   // Ex: /clients/123-abc vai dar match com /clients
   const baseRoute = '/' + pathname.split('/')[1];
-  return routeTitles[baseRoute] || 'SGC Pro'; // Fallback final
+  return routeTitles[baseRoute] || 'Tork CRM'; // Fallback final
 };
 
 export const PageTitle = () => {

@@ -26,7 +26,7 @@ export const PDF_COLORS = {
 };
 
 /**
- * Desenha o cabeçalho padrão do PDF SGC Pro
+ * Desenha o cabeçalho padrão do PDF Tork CRM
  * @returns posição Y após o cabeçalho (para continuar renderizando)
  */
 export function drawPDFHeader(doc: jsPDF, config: PDFHeaderConfig): number {
@@ -35,24 +35,24 @@ export function drawPDFHeader(doc: jsPDF, config: PDFHeaderConfig): number {
   
   let yPos = 18;
   
-  // Logo placeholder (círculo cinza escuro com "SGC")
-  doc.setFillColor(71, 85, 105);
+  // Logo placeholder (círculo azul com "T")
+  doc.setFillColor(59, 130, 246); // blue-500
   doc.circle(margin + 5, yPos, 5, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(7);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('SGC', margin + 5, yPos + 2, { align: 'center' });
+  doc.text('T', margin + 5, yPos + 2.5, { align: 'center' });
   
   // Nome da corretora
   doc.setTextColor(PDF_COLORS.text.primary);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(config.brokerName || 'SGC Pro', margin + 14, yPos + 1);
+  doc.text(config.brokerName || 'Tork CRM', margin + 14, yPos + 1);
   
   doc.setFontSize(7);
   doc.setTextColor(PDF_COLORS.text.secondary);
   doc.setFont('helvetica', 'normal');
-  doc.text('Sistema de Gestão de Corretora', margin + 14, yPos + 6);
+  doc.text('Gestão Inteligente de Seguros', margin + 14, yPos + 6);
   
   // Lado direito - título do relatório
   doc.setFontSize(8);
@@ -102,7 +102,7 @@ export function drawPDFFooter(doc: jsPDF): void {
     doc.setTextColor(PDF_COLORS.text.muted);
     doc.setFont('helvetica', 'normal');
     doc.text(
-      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} via SGC Pro • Este documento não tem valor fiscal`,
+      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} via Tork CRM • Este documento não tem valor fiscal`,
       margin,
       pageHeight - 8
     );
