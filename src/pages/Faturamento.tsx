@@ -398,15 +398,15 @@ export default function Faturamento() {
                         
                         {/* Coluna Origem */}
                         <TableCell>
-                          <Badge 
-                            variant="outline"
-                            className={isManual 
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                              : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                            }
-                          >
-                            {isManual ? '✏️ Manual' : '🔄 Apólice'}
-                          </Badge>
+                            <Badge 
+                              variant="outline"
+                              className={isManual 
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                                : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              }
+                            >
+                              {isManual ? 'Manual' : 'Apólice'}
+                            </Badge>
                         </TableCell>
 
                         <TableCell>
