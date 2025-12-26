@@ -62,9 +62,17 @@ export function CardTransacao({ transaction, onMarkAsRealized }: CardTransacaoPr
             <div className={`p-2 rounded-lg ${transactionType.nature === 'GANHO' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
               <DollarSign className={`w-4 h-4 ${transactionType.nature === 'GANHO' ? 'text-emerald-400' : 'text-rose-400'}`} />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-white">{transaction.description}</h3>
               <p className="text-sm text-zinc-400">{transactionType.name}</p>
+              {/* Fallback inteligente: Apólice ou Cliente • Ramo • Seguradora */}
+              {associatedData.policy?.policyNumber ? (
+                <p className="text-xs text-purple-400 mt-0.5">Apólice #{associatedData.policy.policyNumber}</p>
+              ) : (associatedData.client || associatedData.policy?.ramos?.nome || associatedData.policy?.companies?.name) ? (
+                <p className="text-xs text-zinc-500 mt-0.5 truncate" title={`${associatedData.client?.name || 'Cliente não ident.'} • ${associatedData.policy?.ramos?.nome || 'Div.'} • ${associatedData.policy?.companies?.name || ''}`}>
+                  {associatedData.client?.name || 'Cliente não ident.'} • {associatedData.policy?.ramos?.nome || 'Div.'} {associatedData.policy?.companies?.name && `• ${associatedData.policy.companies.name}`}
+                </p>
+              ) : null}
             </div>
             <Badge 
               variant="outline"
