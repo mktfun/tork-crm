@@ -14,7 +14,6 @@ import PolicyDetails from "./pages/PolicyDetails";
 import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import Appointments from "./pages/Appointments";
-import Faturamento from "./pages/Faturamento";
 import FinanceiroERP from "./pages/FinanceiroERP";
 import Tasks from "./pages/Tasks";
 import Renovacoes from "./pages/Renovacoes";
@@ -76,7 +75,7 @@ function App() {
                 <Route path="/clients" element={<Navigate to="/dashboard/clients" replace />} />
                 <Route path="/clients/:id" element={<ParamRedirect toBase="/dashboard/clients" />} />
                 <Route path="/tasks" element={<Navigate to="/dashboard/tasks" replace />} />
-                <Route path="/faturamento" element={<Navigate to="/dashboard/faturamento" replace />} />
+                <Route path="/faturamento" element={<Navigate to="/dashboard/financeiro" replace />} />
                 <Route path="/renovacoes" element={<Navigate to="/dashboard/renovacoes" replace />} />
                 <Route path="/sinistros" element={<Navigate to="/dashboard/sinistros" replace />} />
                 <Route path="/reports" element={<Navigate to="/dashboard/reports" replace />} />
@@ -93,7 +92,6 @@ function App() {
                   <Route path="clients" element={<Clients />} />
                   <Route path="clients/:id" element={<ClientDetails />} />
                   <Route path="appointments" element={<Appointments />} />
-                  <Route path="faturamento" element={<Faturamento />} />
                   <Route path="financeiro" element={<FinanceiroERP />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="renovacoes" element={<Renovacoes />} />

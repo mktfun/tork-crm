@@ -2,7 +2,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   FinancialAccount, 
   FinancialAccountType,
-  LedgerEntryInput,
   CashFlowDataPoint,
   FinancialSummary,
   DreRow,
@@ -131,21 +130,18 @@ export async function createAccount(account: {
 
 /**
  * Registra uma despesa (Conta Ativo → Conta Despesa)
- * Converte a intenção do usuário para partidas dobradas
  */
 export async function registerExpense(payload: {
   description: string;
   amount: number;
   transactionDate: string;
-  expenseAccountId: string; // Categoria de despesa
-  assetAccountId: string;   // Conta bancária de saída
+  expenseAccountId: string;
+  assetAccountId: string;
   referenceNumber?: string;
   memo?: string;
 }): Promise<string> {
   const movements: Array<{ account_id: string; amount: number; memo?: string }> = [
-    // DÉBITO na conta de despesa (+) - aumenta a despesa
     { account_id: payload.expenseAccountId, amount: payload.amount, memo: payload.memo },
-    // CRÉDITO na conta de ativo (-) - diminui o saldo bancário
     { account_id: payload.assetAccountId, amount: -payload.amount, memo: payload.memo }
   ];
 
@@ -169,15 +165,13 @@ export async function registerRevenue(payload: {
   description: string;
   amount: number;
   transactionDate: string;
-  revenueAccountId: string; // Categoria de receita
-  assetAccountId: string;   // Conta bancária de entrada
+  revenueAccountId: string;
+  assetAccountId: string;
   referenceNumber?: string;
   memo?: string;
 }): Promise<string> {
   const movements: Array<{ account_id: string; amount: number; memo?: string }> = [
-    // DÉBITO na conta de ativo (+) - aumenta o saldo bancário
     { account_id: payload.assetAccountId, amount: payload.amount, memo: payload.memo },
-    // CRÉDITO na conta de receita (-) - aumenta a receita
     { account_id: payload.revenueAccountId, amount: -payload.amount, memo: payload.memo }
   ];
 
@@ -232,7 +226,7 @@ export async function voidTransaction(transactionId: string, reason: string): Pr
   if (error) throw error;
 }
 
-// ============ FLUXO DE CAIXA (FASE 3) ============
+// ============ FLUXO DE CAIXA ============
 
 /**
  * Busca dados de fluxo de caixa para o gráfico
@@ -272,7 +266,6 @@ export async function getFinancialSummary(params: {
 
   if (error) throw error;
   
-  // Cast para any para acessar propriedades dinamicamente
   const row = (data as any)?.[0] || {};
   return {
     totalIncome: Number(row.total_income) || 0,
@@ -282,7 +275,7 @@ export async function getFinancialSummary(params: {
   };
 }
 
-// ============ DRE (FASE 4) ============
+// ============ DRE ============
 
 /**
  * Busca dados do DRE para um ano específico
@@ -313,7 +306,7 @@ export async function getDreData(year?: number): Promise<DreRow[]> {
   }));
 }
 
-// ============ IMPORTAÇÃO EM MASSA (FASE 5) ============
+// ============ IMPORTAÇÃO EM MASSA ============
 
 /**
  * Importa múltiplas transações de forma atômica
@@ -337,7 +330,6 @@ export async function bulkImportTransactions(
 
   if (error) throw error;
   
-  // O retorno é JSONB, então já é objeto
   const result = data as any;
   
   return {
@@ -348,39 +340,7 @@ export async function bulkImportTransactions(
   };
 }
 
-// ============ BACKFILL E GESTÃO DE CONTAS (FASE 6) ============
-
-interface BackfillResult {
-  successCount: number;
-  errorCount: number;
-  errors: Array<{ transaction_id: string; error: string }>;
-}
-
-/**
- * Migra transações legadas para o sistema financeiro
- */
-export async function backfillLegacyTransactions(): Promise<BackfillResult> {
-  const { data, error } = await supabase.rpc('backfill_legacy_transactions');
-  
-  if (error) throw error;
-  
-  const result = data as any;
-  return {
-    successCount: result.success_count || 0,
-    errorCount: result.error_count || 0,
-    errors: result.errors || []
-  };
-}
-
-/**
- * Conta transações legadas pendentes de migração
- */
-export async function countPendingLegacyTransactions(): Promise<number> {
-  const { data, error } = await supabase.rpc('count_pending_legacy_transactions');
-  
-  if (error) throw error;
-  return data || 0;
-}
+// ============ GESTÃO DE CONTAS ============
 
 /**
  * Atualiza uma conta financeira
@@ -427,7 +387,7 @@ export async function archiveAccount(accountId: string): Promise<boolean> {
   return data;
 }
 
-// ============ SAFE DELETE E RECEITAS (FASE 7) ============
+// ============ SAFE DELETE E RECEITAS ============
 
 interface SafeDeleteResult {
   success: boolean;
@@ -475,11 +435,11 @@ export async function deleteAccountSafe(
   };
 }
 
-// Interface alinhada com o retorno real da RPC get_revenue_transactions
+// Interface para transações de receita
 export interface RevenueTransaction {
   id: string;
   description: string;
-  transaction_date: string; // date retornado como string YYYY-MM-DD
+  transaction_date: string;
   amount: number;
   account_name: string | null;
   is_confirmed: boolean;
@@ -504,7 +464,6 @@ export async function getRevenueTransactions(params: {
 
   if (error) throw error;
   
-  // Garantir que os dados sejam mapeados corretamente
   return (data || []).map((row: any) => ({
     id: row.id,
     description: row.description || '',
@@ -524,7 +483,7 @@ interface RevenueTotals {
 }
 
 /**
- * Busca totais de receita para comparação legado vs financeiro
+ * Busca totais de receita
  */
 export async function getRevenueTotals(params: {
   startDate: string;
@@ -544,37 +503,7 @@ export async function getRevenueTotals(params: {
   };
 }
 
-// ============ CORREÇÃO E BAIXA EM LOTE (FASE 8) ============
-
-interface FixDescriptionsResult {
-  fixedCount: number;
-  success: boolean;
-}
-
-/**
- * Corrige descrições "undefined" ou vazias nas transações financeiras
- */
-export async function fixLedgerDescriptions(): Promise<FixDescriptionsResult> {
-  const { data, error } = await supabase.rpc('fix_ledger_descriptions');
-  
-  if (error) throw error;
-  
-  const result = data as any;
-  return {
-    fixedCount: result?.fixed_count ?? 0,
-    success: result?.success ?? false
-  };
-}
-
-/**
- * Conta transações com descrições problemáticas
- */
-export async function countProblematicDescriptions(): Promise<number> {
-  const { data, error } = await supabase.rpc('count_problematic_descriptions');
-  
-  if (error) throw error;
-  return data || 0;
-}
+// ============ BAIXA EM LOTE ============
 
 interface BulkConfirmResult {
   confirmedCount: number;
@@ -585,7 +514,6 @@ interface BulkConfirmResult {
 
 /**
  * Confirma recebimento em lote de transações selecionadas.
- * Ignora transações que já estão pagas/confirmadas (proteção anti-baixa dupla).
  */
 export async function bulkConfirmReceipts(transactionIds: string[]): Promise<BulkConfirmResult> {
   const { data, error } = await supabase.rpc('bulk_confirm_receipts', {
@@ -636,40 +564,6 @@ interface TransactionDetails {
 /**
  * Busca detalhes completos de uma transação
  */
-// ============ CORREÇÃO DE DATAS DO BACKFILL (FASE 10) ============
-
-interface FixBackfillResult {
-  success: boolean;
-  updated_count: number;
-  message: string;
-}
-
-/**
- * Conta quantas transações financeiras estão com data divergente do legado
- */
-export async function countWrongDates(): Promise<number> {
-  const { data, error } = await supabase.rpc('count_wrong_backfill_dates');
-  
-  if (error) throw error;
-  return data || 0;
-}
-
-/**
- * Corrige as datas das transações financeiras baseadas na origem (legado)
- */
-export async function fixBackfillDates(): Promise<FixBackfillResult> {
-  const { data, error } = await supabase.rpc('fix_backfill_dates');
-  
-  if (error) throw error;
-  
-  const result = data as any;
-  return {
-    success: result.success ?? true,
-    updated_count: result.updated_count ?? 0,
-    message: result.message ?? 'Datas corrigidas com sucesso.'
-  };
-}
-
 export async function getTransactionDetails(transactionId: string): Promise<TransactionDetails> {
   const { data, error } = await supabase.rpc('get_transaction_details', {
     p_transaction_id: transactionId
@@ -711,55 +605,5 @@ export async function getTransactionDetails(transactionId: string): Promise<Tran
       originalAmount: result.legacy_data.original_amount,
       originalStatus: result.legacy_data.original_status
     } : null
-  };
-}
-
-// ============ RECONCILIAÇÃO DE INTEGRIDADE (FASE 12) ============
-
-export interface LedgerGapsResult {
-  missing_count: number;
-  missing_value: number;
-}
-
-export interface MigrateGapsResult {
-  migrated_count: number;
-  total_value: number;
-}
-
-/**
- * Diagnóstico: Conta transações órfãs (pagas mas não no Ledger)
- */
-export async function diagnoseLedgerGaps(): Promise<LedgerGapsResult> {
-  const { data, error } = await supabase.rpc('diagnose_ledger_gaps');
-  
-  if (error) {
-    console.error('Erro ao diagnosticar gaps:', error);
-    throw new Error(error.message);
-  }
-  
-  const result = data as { missing_count: number; missing_value: number } | null;
-  
-  return {
-    missing_count: result?.missing_count ?? 0,
-    missing_value: result?.missing_value ?? 0
-  };
-}
-
-/**
- * Migração: Move transações órfãs para o Ledger
- */
-export async function migrateGapsToLedger(): Promise<MigrateGapsResult> {
-  const { data, error } = await supabase.rpc('migrate_missing_transactions');
-  
-  if (error) {
-    console.error('Erro ao migrar transações:', error);
-    throw new Error(error.message);
-  }
-  
-  const result = data as { migrated_count: number; total_value: number } | null;
-  
-  return {
-    migrated_count: result?.migrated_count ?? 0,
-    total_value: result?.total_value ?? 0
   };
 }
