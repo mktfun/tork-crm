@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Transaction } from '@/types';
 import { useTransactionTypes, useClients, usePolicies, useCompanies } from '@/hooks/useAppData';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/utils/dateUtils';
+import { getTransactionDisplayTitle } from '@/utils/transactionUtils';
 
 interface CardTransacaoProps {
   transaction: Transaction;
@@ -63,7 +63,7 @@ export function CardTransacao({ transaction, onMarkAsRealized }: CardTransacaoPr
               <DollarSign className={`w-4 h-4 ${transactionType.nature === 'GANHO' ? 'text-emerald-400' : 'text-rose-400'}`} />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{transaction.description}</h3>
+              <h3 className="font-semibold text-white truncate max-w-xs">{getTransactionDisplayTitle(transaction, policies, clients)}</h3>
               <p className="text-sm text-zinc-400">{transactionType.name}</p>
             </div>
             <Badge 
