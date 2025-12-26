@@ -777,6 +777,160 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_accounts: {
+        Row: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          parent_id: string | null
+          status: Database["public"]["Enums"]["financial_account_status"]
+          type: Database["public"]["Enums"]["financial_account_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          parent_id?: string | null
+          status?: Database["public"]["Enums"]["financial_account_status"]
+          type: Database["public"]["Enums"]["financial_account_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          parent_id?: string | null
+          status?: Database["public"]["Enums"]["financial_account_status"]
+          type?: Database["public"]["Enums"]["financial_account_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_ledger: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          id: string
+          memo: string | null
+          transaction_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          memo?: string | null
+          transaction_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          memo?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_ledger_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          is_void: boolean | null
+          reference_number: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          transaction_date: string
+          user_id: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          is_void?: boolean | null
+          reference_number?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          transaction_date?: string
+          user_id: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          is_void?: boolean | null
+          reference_number?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          transaction_date?: string
+          user_id?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: []
+      }
       migration_ramos_log: {
         Row: {
           created_at: string | null
@@ -1571,6 +1725,39 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_account_balances: {
+        Row: {
+          balance: number | null
+          code: string | null
+          created_at: string | null
+          description: string | null
+          entry_count: number | null
+          id: string | null
+          is_system: boolean | null
+          name: string | null
+          parent_id: string | null
+          status: Database["public"]["Enums"]["financial_account_status"] | null
+          type: Database["public"]["Enums"]["financial_account_type"] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sinistros_complete: {
         Row: {
           analysis_deadline: string | null
@@ -1905,12 +2092,23 @@ export type Database = {
       settle_due_commissions_v2: { Args: never; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      validate_financial_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       validate_user_data_access: {
         Args: { target_user_id: string }
         Returns: boolean
       }
     }
     Enums: {
+      financial_account_status: "active" | "archived"
+      financial_account_type:
+        | "asset"
+        | "liability"
+        | "equity"
+        | "revenue"
+        | "expense"
       user_role: "admin" | "corretor" | "assistente"
     }
     CompositeTypes: {
@@ -2039,6 +2237,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      financial_account_status: ["active", "archived"],
+      financial_account_type: [
+        "asset",
+        "liability",
+        "equity",
+        "revenue",
+        "expense",
+      ],
       user_role: ["admin", "corretor", "assistente"],
     },
   },
