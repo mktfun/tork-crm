@@ -4,7 +4,7 @@ import {
   Tags, 
   Plus, 
   Edit2, 
-  Archive, 
+  Trash2, 
   Loader2, 
   RefreshCw,
   AlertTriangle,
@@ -18,23 +18,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 import { AccountFormModal } from './AccountFormModal';
+import { DeleteAccountModal } from './DeleteAccountModal';
 import { 
   useFinancialAccountsWithDefaults, 
   usePendingLegacyCount,
   useBackfillLegacy,
-  useArchiveAccount
+  useLedgerEntryCount
 } from '@/hooks/useFinanceiro';
 import { FinancialAccount, FinancialAccountType, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 
@@ -47,7 +38,7 @@ interface AccountListProps {
   accounts: FinancialAccount[];
   accountType: FinancialAccountType;
   onEdit: (account: FinancialAccount) => void;
-  onArchive: (account: FinancialAccount) => void;
+  onDelete: (account: FinancialAccount) => void;
   isLoading: boolean;
 }
 
@@ -58,7 +49,7 @@ function AccountListSection({
   accounts, 
   accountType,
   onEdit, 
-  onArchive,
+  onDelete,
   isLoading 
 }: AccountListProps) {
   const [showModal, setShowModal] = useState(false);
@@ -124,9 +115,9 @@ function AccountListSection({
                         size="icon" 
                         variant="ghost" 
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => onArchive(account)}
+                        onClick={() => onDelete(account)}
                       >
-                        <Archive className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   )}
@@ -235,10 +226,9 @@ function BackfillCard() {
 
 export function ConfiguracoesTab() {
   const { data: accounts = [], isLoading } = useFinancialAccountsWithDefaults();
-  const archiveAccount = useArchiveAccount();
   
   const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
-  const [archiveConfirm, setArchiveConfirm] = useState<FinancialAccount | null>(null);
+  const [deleteAccount, setDeleteAccount] = useState<FinancialAccount | null>(null);
   
   // Filtrar contas por tipo
   const assetAccounts = accounts.filter(a => a.type === 'asset');
@@ -250,21 +240,8 @@ export function ConfiguracoesTab() {
     setEditingAccount(account);
   };
 
-  const handleArchive = (account: FinancialAccount) => {
-    setArchiveConfirm(account);
-  };
-
-  const confirmArchive = async () => {
-    if (!archiveConfirm) return;
-    
-    try {
-      await archiveAccount.mutateAsync(archiveConfirm.id);
-      toast.success(`Conta "${archiveConfirm.name}" arquivada com sucesso.`);
-      setArchiveConfirm(null);
-    } catch (error: any) {
-      console.error('Erro ao arquivar:', error);
-      toast.error(error.message || 'Erro ao arquivar conta');
-    }
+  const handleDelete = (account: FinancialAccount) => {
+    setDeleteAccount(account);
   };
 
   return (
@@ -286,7 +263,7 @@ export function ConfiguracoesTab() {
           accounts={assetAccounts}
           accountType="asset"
           onEdit={handleEdit}
-          onArchive={handleArchive}
+          onDelete={handleDelete}
           isLoading={isLoading}
         />
         
@@ -297,7 +274,7 @@ export function ConfiguracoesTab() {
           accounts={categoryAccounts}
           accountType="expense"
           onEdit={handleEdit}
-          onArchive={handleArchive}
+          onDelete={handleDelete}
           isLoading={isLoading}
         />
       </div>
@@ -317,30 +294,12 @@ export function ConfiguracoesTab() {
         />
       )}
 
-      {/* Archive Confirmation */}
-      <AlertDialog open={!!archiveConfirm} onOpenChange={() => setArchiveConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Arquivar conta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A conta "{archiveConfirm?.name}" será arquivada e não aparecerá mais nas listas.
-              Esta ação pode ser revertida no banco de dados se necessário.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmArchive}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {archiveAccount.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Arquivar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Modal with Safe Migration */}
+      <DeleteAccountModal
+        open={!!deleteAccount}
+        onOpenChange={(open) => !open && setDeleteAccount(null)}
+        account={deleteAccount}
+      />
     </div>
   );
 }

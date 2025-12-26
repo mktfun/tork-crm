@@ -1914,6 +1914,10 @@ export type Database = {
         Returns: Json
       }
       check_upcoming_appointments: { Args: never; Returns: undefined }
+      count_ledger_entries_by_account: {
+        Args: { p_account_id: string }
+        Returns: number
+      }
       count_pending_legacy_transactions: { Args: never; Returns: number }
       create_financial_movement: {
         Args: {
@@ -1925,6 +1929,10 @@ export type Database = {
           p_transaction_date: string
         }
         Returns: string
+      }
+      delete_financial_account_safe: {
+        Args: { p_migrate_to_account_id?: string; p_target_account_id: string }
+        Returns: Json
       }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
@@ -2105,6 +2113,26 @@ export type Database = {
       }
       get_recent_financial_transactions: {
         Args: { p_limit?: number; p_offset?: number; p_type?: string }
+        Returns: {
+          account_names: string
+          created_at: string
+          description: string
+          id: string
+          is_void: boolean
+          reference_number: string
+          total_amount: number
+          transaction_date: string
+        }[]
+      }
+      get_revenue_totals: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          financial_total: number
+          legacy_total: number
+        }[]
+      }
+      get_revenue_transactions: {
+        Args: { p_end_date: string; p_limit?: number; p_start_date: string }
         Returns: {
           account_names: string
           created_at: string

@@ -426,3 +426,106 @@ export async function archiveAccount(accountId: string): Promise<boolean> {
   if (error) throw error;
   return data;
 }
+
+// ============ SAFE DELETE E RECEITAS (FASE 7) ============
+
+interface SafeDeleteResult {
+  success: boolean;
+  error?: string;
+  entryCount?: number;
+  requiresMigration?: boolean;
+  migratedEntries?: number;
+  message?: string;
+}
+
+/**
+ * Conta lançamentos de uma conta no ledger
+ */
+export async function countLedgerEntriesByAccount(accountId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('count_ledger_entries_by_account', {
+    p_account_id: accountId
+  });
+
+  if (error) throw error;
+  return data || 0;
+}
+
+/**
+ * Exclusão segura de conta com migração opcional
+ */
+export async function deleteAccountSafe(
+  targetAccountId: string,
+  migrateToAccountId?: string
+): Promise<SafeDeleteResult> {
+  const { data, error } = await supabase.rpc('delete_financial_account_safe', {
+    p_target_account_id: targetAccountId,
+    p_migrate_to_account_id: migrateToAccountId || null
+  });
+
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    success: result.success,
+    error: result.error,
+    entryCount: result.entry_count,
+    requiresMigration: result.requires_migration,
+    migratedEntries: result.migrated_entries,
+    message: result.message
+  };
+}
+
+interface RevenueTransaction {
+  id: string;
+  description: string;
+  transaction_date: string;
+  reference_number: string | null;
+  created_at: string;
+  is_void: boolean;
+  total_amount: number;
+  account_names: string;
+}
+
+/**
+ * Busca transações de receita com filtro de data
+ */
+export async function getRevenueTransactions(params: {
+  startDate: string;
+  endDate: string;
+  limit?: number;
+}): Promise<RevenueTransaction[]> {
+  const { data, error } = await supabase.rpc('get_revenue_transactions', {
+    p_start_date: params.startDate,
+    p_end_date: params.endDate,
+    p_limit: params.limit || 50
+  });
+
+  if (error) throw error;
+  return data || [];
+}
+
+interface RevenueTotals {
+  financialTotal: number;
+  legacyTotal: number;
+}
+
+/**
+ * Busca totais de receita para comparação legado vs financeiro
+ */
+export async function getRevenueTotals(params: {
+  startDate: string;
+  endDate: string;
+}): Promise<RevenueTotals> {
+  const { data, error } = await supabase.rpc('get_revenue_totals', {
+    p_start_date: params.startDate,
+    p_end_date: params.endDate
+  });
+
+  if (error) throw error;
+  
+  const row = (data as any)?.[0] || {};
+  return {
+    financialTotal: Number(row.financial_total) || 0,
+    legacyTotal: Number(row.legacy_total) || 0
+  };
+}

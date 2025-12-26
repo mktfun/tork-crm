@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { DateRange } from 'react-day-picker';
 import { 
   Wallet, 
   TrendingDown, 
@@ -25,6 +26,8 @@ import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
 import { ImportTransactionsModal } from '@/components/financeiro/ImportTransactionsModal';
 import { ConfiguracoesTab } from '@/components/financeiro/ConfiguracoesTab';
+import { DateRangeFilter } from '@/components/financeiro/DateRangeFilter';
+import { ReceitasTab } from '@/components/financeiro/ReceitasTab';
 import { 
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
@@ -180,26 +183,32 @@ function TransactionsList() {
 
 // ============ VISÃO GERAL (COM KPIS E GRÁFICO) ============
 
-function VisaoGeral() {
+interface VisaoGeralProps {
+  dateRange: DateRange | undefined;
+}
+
+function VisaoGeral({ dateRange }: VisaoGeralProps) {
   const { isLoading: accountsLoading, isEnsuring } = useFinancialAccountsWithDefaults();
 
-  // Calcular período do mês atual
+  // Usar o dateRange passado por props
   const { startDate, endDate } = useMemo(() => {
-    const now = new Date();
+    const from = dateRange?.from || startOfMonth(new Date());
+    const to = dateRange?.to || endOfMonth(new Date());
     return {
-      startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
-      endDate: format(endOfMonth(now), 'yyyy-MM-dd')
+      startDate: format(from, 'yyyy-MM-dd'),
+      endDate: format(to, 'yyyy-MM-dd')
     };
-  }, []);
+  }, [dateRange]);
 
-  // Período dos últimos 30 dias para o gráfico
+  // Período para o gráfico (mesmo do filtro)
   const chartPeriod = useMemo(() => {
-    const now = new Date();
+    const from = dateRange?.from || subMonths(new Date(), 1);
+    const to = dateRange?.to || new Date();
     return {
-      startDate: format(subMonths(now, 1), 'yyyy-MM-dd'),
-      endDate: format(now, 'yyyy-MM-dd')
+      startDate: format(from, 'yyyy-MM-dd'),
+      endDate: format(to, 'yyyy-MM-dd')
     };
-  }, []);
+  }, [dateRange]);
 
   // Hooks de dados
   const { data: summary, isLoading: summaryLoading } = useFinancialSummary(startDate, endDate);
@@ -227,13 +236,13 @@ function VisaoGeral() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <FinancialKpiCard
-          title="Receita do Mês"
+          title="Receita do Período"
           value={summary?.totalIncome ?? 0}
           icon={TrendingUp}
           variant="success"
         />
         <FinancialKpiCard
-          title="Despesas do Mês"
+          title="Despesas do Período"
           value={summary?.totalExpense ?? 0}
           icon={TrendingDown}
           variant="danger"
@@ -277,7 +286,11 @@ function VisaoGeral() {
 
 // ============ DESPESAS TAB ============
 
-function DespesasTab() {
+interface DespesasTabProps {
+  dateRange: DateRange | undefined;
+}
+
+function DespesasTab({ dateRange }: DespesasTabProps) {
   const { data: transactions = [], isLoading } = useRecentTransactions('expense');
 
   return (
@@ -333,21 +346,6 @@ function DespesasTab() {
   );
 }
 
-// ============ LEGADO TAB ============
-
-function LegadoTab() {
-  return (
-    <div className="text-center py-12">
-      <TrendingUp className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
-      <h3 className="text-lg font-medium mb-2">Módulo Legado</h3>
-      <p className="text-muted-foreground max-w-md mx-auto">
-        As comissões marcadas como "Pago" na tela de Faturamento são sincronizadas automaticamente 
-        para este módulo. Elas aparecerão no gráfico de Fluxo de Caixa da Visão Geral.
-      </p>
-    </div>
-  );
-}
-
 // ============ DRE TAB ============
 
 function DreTab() {
@@ -369,10 +367,16 @@ function DreTab() {
 export default function FinanceiroERP() {
   usePageTitle('Financeiro');
 
+  // Estado global de filtro de datas
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
             <Wallet className="w-6 h-6 text-primary" />
@@ -385,7 +389,10 @@ export default function FinanceiroERP() {
           </div>
         </div>
         
-        <ImportTransactionsModal />
+        <div className="flex items-center gap-2">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <ImportTransactionsModal />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -399,13 +406,13 @@ export default function FinanceiroERP() {
             <TrendingDown className="w-4 h-4" />
             Despesas
           </TabsTrigger>
+          <TabsTrigger value="receitas" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Receitas
+          </TabsTrigger>
           <TabsTrigger value="dre" className="gap-2">
             <FileSpreadsheet className="w-4 h-4" />
             DRE / Relatórios
-          </TabsTrigger>
-          <TabsTrigger value="legado" className="gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Receitas (Legado)
           </TabsTrigger>
           <TabsTrigger value="config" className="gap-2">
             <Settings className="w-4 h-4" />
@@ -414,19 +421,19 @@ export default function FinanceiroERP() {
         </TabsList>
 
         <TabsContent value="visao-geral">
-          <VisaoGeral />
+          <VisaoGeral dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="despesas">
-          <DespesasTab />
+          <DespesasTab dateRange={dateRange} />
+        </TabsContent>
+
+        <TabsContent value="receitas">
+          <ReceitasTab dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="dre">
           <DreTab />
-        </TabsContent>
-
-        <TabsContent value="legado">
-          <LegadoTab />
         </TabsContent>
 
         <TabsContent value="config">
