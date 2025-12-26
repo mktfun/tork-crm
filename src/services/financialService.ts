@@ -4,7 +4,8 @@ import {
   FinancialAccountType,
   LedgerEntryInput,
   CashFlowDataPoint,
-  FinancialSummary
+  FinancialSummary,
+  DreRow
 } from '@/types/financeiro';
 
 // ============ TIPOS PARA AS RPCs ============
@@ -277,4 +278,35 @@ export async function getFinancialSummary(params: {
     netResult: Number(row.net_result) || 0,
     transactionCount: Number(row.transaction_count) || 0
   };
+}
+
+// ============ DRE (FASE 4) ============
+
+/**
+ * Busca dados do DRE para um ano específico
+ */
+export async function getDreData(year?: number): Promise<DreRow[]> {
+  const { data, error } = await supabase.rpc('get_dre_data', {
+    p_year: year || new Date().getFullYear()
+  });
+
+  if (error) throw error;
+  
+  return (data || []).map((row: any) => ({
+    category: row.category,
+    account_type: row.account_type as 'revenue' | 'expense',
+    jan: Number(row.jan) || 0,
+    fev: Number(row.fev) || 0,
+    mar: Number(row.mar) || 0,
+    abr: Number(row.abr) || 0,
+    mai: Number(row.mai) || 0,
+    jun: Number(row.jun) || 0,
+    jul: Number(row.jul) || 0,
+    ago: Number(row.ago) || 0,
+    set: Number(row.set) || 0,
+    out: Number(row.out) || 0,
+    nov: Number(row.nov) || 0,
+    dez: Number(row.dez) || 0,
+    total: Number(row.total) || 0
+  }));
 }

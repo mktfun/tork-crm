@@ -142,3 +142,15 @@ export function useFinancialSummary(startDate: string, endDate: string) {
     enabled: !!startDate && !!endDate
   });
 }
+
+// ============ HOOKS PARA DRE (FASE 4) ============
+
+/**
+ * Hook para buscar dados do DRE (Demonstrativo de Resultado)
+ */
+export function useDreData(year?: number) {
+  return useQuery({
+    queryKey: ['dre-data', year],
+    queryFn: () => financialService.getDreData(year)
+  });
+}
