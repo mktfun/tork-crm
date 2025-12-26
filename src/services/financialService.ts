@@ -475,16 +475,17 @@ export async function deleteAccountSafe(
   };
 }
 
-interface RevenueTransaction {
+// Interface alinhada com o retorno real da RPC get_revenue_transactions
+export interface RevenueTransaction {
   id: string;
   description: string;
-  transaction_date: string;
-  reference_number: string | null;
-  created_at: string;
-  is_void: boolean;
-  total_amount: number;
-  account_names: string;
+  transaction_date: string; // date retornado como string YYYY-MM-DD
+  amount: number;
+  account_name: string | null;
+  is_confirmed: boolean;
   legacy_status: string | null;
+  client_name: string | null;
+  policy_number: string | null;
 }
 
 /**
@@ -498,11 +499,23 @@ export async function getRevenueTransactions(params: {
   const { data, error } = await supabase.rpc('get_revenue_transactions', {
     p_start_date: params.startDate,
     p_end_date: params.endDate,
-    p_limit: params.limit || 50
+    p_limit: params.limit || 100
   });
 
   if (error) throw error;
-  return data || [];
+  
+  // Garantir que os dados sejam mapeados corretamente
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    description: row.description || '',
+    transaction_date: row.transaction_date,
+    amount: Number(row.amount) || 0,
+    account_name: row.account_name || null,
+    is_confirmed: row.is_confirmed ?? false,
+    legacy_status: row.legacy_status || null,
+    client_name: row.client_name || null,
+    policy_number: row.policy_number || null
+  }));
 }
 
 interface RevenueTotals {

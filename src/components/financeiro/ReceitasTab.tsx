@@ -6,7 +6,8 @@ import {
   AlertTriangle, 
   CheckCircle2,
   ArrowRightLeft,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -34,6 +36,7 @@ import {
   useRevenueTotals,
   useBulkConfirmReceipts 
 } from '@/hooks/useFinanceiro';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 // Helper para verificar se está pago
 function isPaidStatus(status: string | null): boolean {
@@ -42,7 +45,15 @@ function isPaidStatus(status: string | null): boolean {
   return upperStatus === 'PAGO' || upperStatus === 'REALIZADO';
 }
 
-function formatCurrency(value: number): string {
+// Helper para verificar se já está confirmado no financeiro
+function isConfirmedInFinancial(isConfirmed: boolean | null, legacyStatus: string | null): boolean {
+  // Se já está marcado como confirmado no financeiro OU
+  // Se o status legado indica que já foi pago
+  return isConfirmed === true || isPaidStatus(legacyStatus);
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null || isNaN(value)) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
@@ -187,14 +198,15 @@ function TransactionsTable({
     );
   }
 
-  // Filtrar apenas transações pendentes para seleção
-  const pendingTransactions = transactions.filter(tx => !isPaidStatus(tx.legacy_status));
-  const allPendingSelected = pendingTransactions.length > 0 && 
-    pendingTransactions.every(tx => selectedIds.has(tx.id));
+  // Filtrar apenas transações que podem ser selecionadas (não pagas/não confirmadas)
+  const selectableTransactions = transactions.filter(tx => 
+    !isConfirmedInFinancial(tx.is_confirmed, tx.legacy_status)
+  );
+  const allSelectableSelected = selectableTransactions.length > 0 && 
+    selectableTransactions.every(tx => selectedIds.has(tx.id));
 
-  const handleSelectAllPending = (checked: boolean) => {
+  const handleSelectAllSelectable = (checked: boolean) => {
     if (checked) {
-      // Seleciona apenas os que NÃO estão pagos
       onSelectAll(true);
     } else {
       onSelectAll(false);
@@ -202,77 +214,104 @@ function TransactionsTable({
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">
-            <Checkbox 
-              checked={allPendingSelected}
-              onCheckedChange={(checked) => handleSelectAllPending(!!checked)}
-              disabled={pendingTransactions.length === 0}
-            />
-          </TableHead>
-          <TableHead className="w-24">Data</TableHead>
-          <TableHead className="min-w-[280px]">Descrição</TableHead>
-          <TableHead className="w-40">Categoria</TableHead>
-          <TableHead className="w-24">Status</TableHead>
-          <TableHead className="text-right w-32">Valor</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {transactions.map((tx) => {
-          const isPaid = isPaidStatus(tx.legacy_status);
-          
-          return (
-            <TableRow 
-              key={tx.id}
-              className={cn(
-                "cursor-pointer hover:bg-muted/50",
-                isPaid && "opacity-60"
-              )}
-              onClick={() => onViewDetails(tx.id)}
-            >
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <Checkbox 
-                  checked={selectedIds.has(tx.id)}
-                  onCheckedChange={() => onToggleSelect(tx.id)}
-                  disabled={isPaid}
-                />
-              </TableCell>
-              <TableCell className="font-mono text-sm">
-                {format(new Date(tx.transaction_date), 'dd/MM', { locale: ptBR })}
-              </TableCell>
-              <TableCell>
-                <span className="whitespace-normal break-words">
-                  {tx.description}
-                </span>
-              </TableCell>
-              <TableCell>
-                {tx.account_names && (
-                  <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
-                    {tx.account_names}
-                  </Badge>
+    <TooltipProvider>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <Checkbox 
+                checked={allSelectableSelected}
+                onCheckedChange={(checked) => handleSelectAllSelectable(!!checked)}
+                disabled={selectableTransactions.length === 0}
+              />
+            </TableHead>
+            <TableHead className="w-24">Data</TableHead>
+            <TableHead className="min-w-[280px]">Descrição</TableHead>
+            <TableHead className="w-40">Categoria</TableHead>
+            <TableHead className="w-24">Status</TableHead>
+            <TableHead className="text-right w-32">Valor</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((tx) => {
+            const isAlreadyConfirmed = isConfirmedInFinancial(tx.is_confirmed, tx.legacy_status);
+            const isPaid = isPaidStatus(tx.legacy_status);
+            
+            // Parse date correctly using local date helper
+            const displayDate = tx.transaction_date 
+              ? format(parseLocalDate(String(tx.transaction_date)), 'dd/MM', { locale: ptBR })
+              : '-';
+            
+            return (
+              <TableRow 
+                key={tx.id}
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50",
+                  isAlreadyConfirmed && "opacity-60"
                 )}
-              </TableCell>
-              <TableCell>
-                {isPaid ? (
-                  <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
-                    Pago
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-amber-600 border-amber-500/30">
-                    Pendente
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right font-semibold text-emerald-500">
-                +{formatCurrency(tx.total_amount)}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                onClick={() => onViewDetails(tx.id)}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {isAlreadyConfirmed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center h-4 w-4">
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Já confirmado/pago - não pode ser selecionado</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Checkbox 
+                      checked={selectedIds.has(tx.id)}
+                      onCheckedChange={() => onToggleSelect(tx.id)}
+                    />
+                  )}
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  {displayDate}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="whitespace-normal break-words">
+                      {tx.description}
+                    </span>
+                    {tx.client_name && (
+                      <span className="text-xs text-muted-foreground">
+                        {tx.client_name}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {tx.account_name && (
+                    <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
+                      {tx.account_name}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {isPaid ? (
+                    <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+                      Pago
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-600 border-amber-500/30">
+                      Pendente
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-semibold text-emerald-500">
+                  +{formatCurrency(tx.amount)}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TooltipProvider>
   );
 }
 
@@ -295,13 +334,15 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     ? format(dateRange.to, 'yyyy-MM-dd')
     : format(new Date(), 'yyyy-MM-dd');
 
-  // Filtrar apenas transações pendentes para a lógica de seleção
-  const pendingTransactions = transactions.filter(tx => !isPaidStatus(tx.legacy_status));
+  // Filtrar apenas transações que podem ser selecionadas
+  const selectableTransactions = transactions.filter(tx => 
+    !isConfirmedInFinancial(tx.is_confirmed, tx.legacy_status)
+  );
 
   const handleToggleSelect = (id: string) => {
-    // Verificar se a transação é pendente antes de permitir seleção
+    // Verificar se a transação pode ser selecionada
     const tx = transactions.find(t => t.id === id);
-    if (tx && isPaidStatus(tx.legacy_status)) return;
+    if (tx && isConfirmedInFinancial(tx.is_confirmed, tx.legacy_status)) return;
     
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -316,8 +357,7 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // Seleciona apenas os que NÃO estão pagos
-      setSelectedIds(new Set(pendingTransactions.map(tx => tx.id)));
+      setSelectedIds(new Set(selectableTransactions.map(tx => tx.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -328,7 +368,12 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     
     try {
       const result = await bulkConfirm.mutateAsync(Array.from(selectedIds));
-      toast.success(`${result.confirmedCount} receita(s) confirmada(s) com sucesso!`);
+      
+      if (result.confirmedCount > 0) {
+        toast.success(`${result.confirmedCount} receita(s) confirmada(s) com sucesso!`);
+      } else {
+        toast.info('Nenhuma receita foi confirmada (podem já estar pagas).');
+      }
       setSelectedIds(new Set());
     } catch (error: any) {
       console.error('Erro ao confirmar receitas:', error);

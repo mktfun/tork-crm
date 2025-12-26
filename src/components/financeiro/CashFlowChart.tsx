@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import {
@@ -15,6 +15,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CashFlowDataPoint } from '@/types/financeiro';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface CashFlowChartProps {
   data: CashFlowDataPoint[];
@@ -38,7 +39,8 @@ function formatPeriod(period: string, granularity: 'day' | 'month'): string {
       const date = new Date(Number(year), Number(month) - 1, 1);
       return format(date, "MMM 'yy", { locale: ptBR });
     } else {
-      const date = parseISO(period);
+      // Usar parseLocalDate para evitar problema de timezone
+      const date = parseLocalDate(period);
       return format(date, 'dd/MM', { locale: ptBR });
     }
   } catch {
