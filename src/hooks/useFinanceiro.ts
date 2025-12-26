@@ -240,3 +240,56 @@ export function useArchiveAccount() {
     }
   });
 }
+
+// ============ HOOKS PARA SAFE DELETE E RECEITAS (FASE 7) ============
+
+/**
+ * Hook para contar lançamentos de uma conta
+ */
+export function useLedgerEntryCount(accountId: string | null) {
+  return useQuery({
+    queryKey: ['ledger-entry-count', accountId],
+    queryFn: () => financialService.countLedgerEntriesByAccount(accountId!),
+    enabled: !!accountId
+  });
+}
+
+/**
+ * Hook para exclusão segura de conta
+ */
+export function useSafeDeleteAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ targetAccountId, migrateToAccountId }: {
+      targetAccountId: string;
+      migrateToAccountId?: string;
+    }) => financialService.deleteAccountSafe(targetAccountId, migrateToAccountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['ledger-entry-count'] });
+    }
+  });
+}
+
+/**
+ * Hook para buscar transações de receita
+ */
+export function useRevenueTransactions(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['revenue-transactions', startDate, endDate],
+    queryFn: () => financialService.getRevenueTransactions({ startDate, endDate }),
+    enabled: !!startDate && !!endDate
+  });
+}
+
+/**
+ * Hook para buscar totais de receita (comparação)
+ */
+export function useRevenueTotals(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['revenue-totals', startDate, endDate],
+    queryFn: () => financialService.getRevenueTotals({ startDate, endDate }),
+    enabled: !!startDate && !!endDate
+  });
+}
