@@ -412,13 +412,13 @@ serve(async (req) => {
             config,
             `/conversations/${conversationId}`
           );
-          const confirmedLabels = updatedConversation.labels || [];
+          const confirmedLabels: string[] = updatedConversation.labels || [];
 
           console.log('🏁 Etiquetas finais após atualização:', confirmedLabels);
 
           // Verificar se a remoção funcionou
-          const stillHasOldLabels = labelsToRemove.filter(old => 
-            confirmedLabels.some(c => normalizeLabel(c) === normalizeLabel(old))
+          const stillHasOldLabels = labelsToRemove.filter((old: string) => 
+            confirmedLabels.some((c: string) => normalizeLabel(c) === normalizeLabel(old))
           );
           
           if (stillHasOldLabels.length > 0) {
