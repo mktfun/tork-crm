@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as financialService from '@/services/financialService';
 import { FinancialAccountType } from '@/types/financeiro';
-import { useEffect } from 'react';
 
 /**
  * Hook para buscar contas financeiras
@@ -19,8 +18,6 @@ export function useFinancialAccounts(type?: FinancialAccountType) {
  * Hook para garantir contas padrão e buscar todas
  */
 export function useFinancialAccountsWithDefaults() {
-  const queryClient = useQueryClient();
-
   // Primeiro, garantir que existam contas padrão
   const ensureDefaults = useQuery({
     queryKey: ['financial-accounts-ensure'],
@@ -67,6 +64,8 @@ export function useRegisterExpense() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     }
   });
 }
@@ -82,6 +81,8 @@ export function useRegisterRevenue() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     }
   });
 }
@@ -112,6 +113,32 @@ export function useVoidTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
     }
+  });
+}
+
+// ============ HOOKS PARA FLUXO DE CAIXA (FASE 3) ============
+
+/**
+ * Hook para buscar dados de fluxo de caixa
+ */
+export function useCashFlowData(startDate: string, endDate: string, granularity: 'day' | 'month' = 'day') {
+  return useQuery({
+    queryKey: ['cash-flow', startDate, endDate, granularity],
+    queryFn: () => financialService.getCashFlowData({ startDate, endDate, granularity }),
+    enabled: !!startDate && !!endDate
+  });
+}
+
+/**
+ * Hook para buscar resumo financeiro (KPIs)
+ */
+export function useFinancialSummary(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['financial-summary', startDate, endDate],
+    queryFn: () => financialService.getFinancialSummary({ startDate, endDate }),
+    enabled: !!startDate && !!endDate
   });
 }

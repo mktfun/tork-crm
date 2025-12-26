@@ -1904,6 +1904,19 @@ export type Database = {
       }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
+      get_cash_flow_data: {
+        Args: {
+          p_end_date: string
+          p_granularity?: string
+          p_start_date: string
+        }
+        Returns: {
+          balance: number
+          expense: number
+          income: number
+          period: string
+        }[]
+      }
       get_client_kpis: {
         Args: { p_search_term?: string; p_status?: string; p_user_id: string }
         Returns: Json
@@ -2018,6 +2031,22 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_financial_summary: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          net_result: number
+          total_expense: number
+          total_income: number
+          transaction_count: number
+        }[]
+      }
+      get_or_create_ledger_sync_accounts: {
+        Args: { p_user_id: string }
+        Returns: {
+          bank_account_id: string
+          revenue_account_id: string
+        }[]
       }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
       get_producao_por_ramo: {

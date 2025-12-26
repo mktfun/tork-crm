@@ -179,3 +179,25 @@ export function isTransactionBalanced(entries: LedgerEntryInput[]): boolean {
 export function calculateEntriesBalance(entries: LedgerEntryInput[]): number {
   return entries.reduce((acc, entry) => acc + entry.amount, 0);
 }
+
+// ============ TIPOS PARA FLUXO DE CAIXA (FASE 3) ============
+
+/**
+ * Ponto de dados do gráfico de fluxo de caixa
+ */
+export interface CashFlowDataPoint {
+  period: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+/**
+ * Resumo financeiro para KPIs
+ */
+export interface FinancialSummary {
+  totalIncome: number;
+  totalExpense: number;
+  netResult: number;
+  transactionCount: number;
+}
