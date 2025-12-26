@@ -370,25 +370,33 @@ export default function Faturamento() {
                               {transaction.description}
                             </span>
                             
-                            <div className="text-xs text-slate-400 space-x-2 mt-1 flex items-center gap-2">
-                              <span>Associado a:</span>
-                              {client && (
+                            <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 max-w-md">
+                              {policy?.policyNumber ? (
+                                <>
+                                  <span>Apólice:</span>
+                                  <Link 
+                                    to={`/policies/${policy.id}`} 
+                                    className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    #{policy.policyNumber}
+                                    <ExternalLink size={10} />
+                                  </Link>
+                                </>
+                              ) : (client || policy?.ramos?.nome || policy?.companies?.name) ? (
+                                <span className="truncate text-zinc-400" title={`${client?.name || 'Cliente não ident.'} • ${policy?.ramos?.nome || 'Div.'} • ${policy?.companies?.name || ''}`}>
+                                  {client?.name || 'Cliente não ident.'} • {policy?.ramos?.nome || 'Div.'} {policy?.companies?.name && `• ${policy.companies.name}`}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-500 italic">Transação avulsa</span>
+                              )}
+                              {client && policy?.policyNumber && (
                                 <Link 
                                   to={`/clients/${client.id}`} 
-                                  className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1"
+                                  className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 ml-1"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {client.name}
-                                  <ExternalLink size={10} />
-                                </Link>
-                              )}
-                              {policy && (
-                                <Link 
-                                  to={`/policies/${policy.id}`} 
-                                  className="text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  (Apólice #{policy.policyNumber})
+                                  ({client.name})
                                   <ExternalLink size={10} />
                                 </Link>
                               )}
