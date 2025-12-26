@@ -108,7 +108,7 @@ export function CommissionExtract({ policy }: CommissionExtractProps) {
             <div className="space-y-2">
               {commissionTransactions.map(transaction => (
                 <Link
-                  to={`/dashboard/faturamento?client=${policy.clientId}`}
+                  to={`/dashboard/financeiro?transactionId=${transaction.id}`}
                   key={transaction.id}
                   className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg hover:bg-slate-800/60 transition-colors"
                 >

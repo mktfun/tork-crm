@@ -17,8 +17,8 @@ export function AtalhosRapidos() {
   };
 
   const handleLancamentoFinanceiro = () => {
-    navigate('/dashboard/faturamento');
-    console.log('Navegando para faturamento');
+    navigate('/dashboard/financeiro');
+    console.log('Navegando para financeiro');
   };
 
   return (

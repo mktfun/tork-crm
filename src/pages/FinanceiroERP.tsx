@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Wallet, 
   TrendingDown, 
@@ -28,6 +29,7 @@ import { ImportTransactionsModal } from '@/components/financeiro/ImportTransacti
 import { ConfiguracoesTab } from '@/components/financeiro/ConfiguracoesTab';
 import { DateRangeFilter } from '@/components/financeiro/DateRangeFilter';
 import { ReceitasTab } from '@/components/financeiro/ReceitasTab';
+import { TransactionDetailsSheet } from '@/components/financeiro/TransactionDetailsSheet';
 import { 
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
@@ -376,12 +378,40 @@ function DreTab() {
 
 export default function FinanceiroERP() {
   usePageTitle('Financeiro');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Estado global de filtro de datas
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
+
+  // Estado para controle da aba e detalhes
+  const [activeTab, setActiveTab] = useState('visao-geral');
+  const [detailsTransactionId, setDetailsTransactionId] = useState<string | null>(null);
+
+  // Deep link: verificar parâmetros da URL ao carregar
+  useEffect(() => {
+    const transactionId = searchParams.get('transactionId');
+    
+    if (transactionId) {
+      // Abrir a gaveta de detalhes automaticamente
+      setDetailsTransactionId(transactionId);
+      // Navegar para a aba de receitas (comissões são receitas)
+      setActiveTab('receitas');
+    }
+  }, [searchParams]);
+
+  // Limpar URL quando fechar a gaveta
+  const handleCloseDetails = () => {
+    setDetailsTransactionId(null);
+    
+    // Remover o parâmetro da URL sem reload
+    if (searchParams.has('transactionId')) {
+      searchParams.delete('transactionId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -406,7 +436,7 @@ export default function FinanceiroERP() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="visao-geral" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-muted/50">
           <TabsTrigger value="visao-geral" className="gap-2">
             <BarChart3 className="w-4 h-4" />
@@ -450,6 +480,13 @@ export default function FinanceiroERP() {
           <ConfiguracoesTab />
         </TabsContent>
       </Tabs>
+
+      {/* Deep Link Details Sheet - independente das abas */}
+      <TransactionDetailsSheet 
+        transactionId={detailsTransactionId}
+        open={!!detailsTransactionId}
+        onClose={handleCloseDetails}
+      />
     </div>
   );
 }

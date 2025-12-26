@@ -99,7 +99,7 @@ export function DashboardKpis({ dateRange }: DashboardKpisProps) {
             undefined
           }
           icon={<DollarSign className="h-5 w-5 text-green-400" />}
-          onClick={() => navigate('/dashboard/faturamento')}
+          onClick={() => navigate('/dashboard/financeiro')}
         />
 
         {/* KPI 4: Apólices Novas do Período/Mês - DADOS CORRIGIDOS */}
