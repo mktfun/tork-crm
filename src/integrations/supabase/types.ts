@@ -1904,6 +1904,10 @@ export type Database = {
         Args: { p_user_id: string; updates: Json }
         Returns: string
       }
+      bulk_create_financial_movements: {
+        Args: { p_transactions: Json }
+        Returns: Json
+      }
       check_upcoming_appointments: { Args: never; Returns: undefined }
       create_financial_movement: {
         Args: {
