@@ -9,7 +9,8 @@ import {
   ArrowRightLeft,
   DollarSign,
   BarChart3,
-  Receipt
+  Receipt,
+  FileSpreadsheet
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { NovaDespesaModal } from '@/components/financeiro/NovaDespesaModal';
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
+import { DreTable } from '@/components/financeiro/DreTable';
 import { 
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
@@ -343,6 +345,22 @@ function LegadoTab() {
   );
 }
 
+// ============ DRE TAB ============
+
+function DreTab() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold">DRE / Relatórios</h2>
+        <p className="text-sm text-muted-foreground">
+          Demonstrativo de Resultado do Exercício - visão consolidada de receitas e despesas
+        </p>
+      </div>
+      <DreTable />
+    </div>
+  );
+}
+
 // ============ MAIN COMPONENT ============
 
 export default function FinanceiroERP() {
@@ -374,6 +392,10 @@ export default function FinanceiroERP() {
             <TrendingDown className="w-4 h-4" />
             Despesas
           </TabsTrigger>
+          <TabsTrigger value="dre" className="gap-2">
+            <FileSpreadsheet className="w-4 h-4" />
+            DRE / Relatórios
+          </TabsTrigger>
           <TabsTrigger value="legado" className="gap-2">
             <TrendingUp className="w-4 h-4" />
             Receitas (Legado)
@@ -386,6 +408,10 @@ export default function FinanceiroERP() {
 
         <TabsContent value="despesas">
           <DespesasTab />
+        </TabsContent>
+
+        <TabsContent value="dre">
+          <DreTab />
         </TabsContent>
 
         <TabsContent value="legado">

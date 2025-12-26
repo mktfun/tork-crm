@@ -1758,6 +1758,20 @@ export type Database = {
           },
         ]
       }
+      financial_dre_view: {
+        Row: {
+          account_type:
+            | Database["public"]["Enums"]["financial_account_type"]
+            | null
+          category: string | null
+          month: number | null
+          period: string | null
+          total_amount: number | null
+          user_id: string | null
+          year: number | null
+        }
+        Relationships: []
+      }
       sinistros_complete: {
         Row: {
           analysis_deadline: string | null
@@ -1983,6 +1997,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_dre_data: {
+        Args: { p_year?: number }
+        Returns: {
+          abr: number
+          account_type: string
+          ago: number
+          category: string
+          dez: number
+          fev: number
+          jan: number
+          jul: number
+          jun: number
+          mai: number
+          mar: number
+          nov: number
+          out: number
+          set: number
+          total: number
+        }[]
+      }
       get_empresas_com_metricas: {
         Args: { p_corretora_id: string }
         Returns: {
@@ -2086,6 +2120,26 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "companies_with_ramos_count"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_user_dre_data: {
+        Args: never
+        Returns: {
+          account_type:
+            | Database["public"]["Enums"]["financial_account_type"]
+            | null
+          category: string | null
+          month: number | null
+          period: string | null
+          total_amount: number | null
+          user_id: string | null
+          year: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "financial_dre_view"
           isOneToOne: false
           isSetofReturn: true
         }

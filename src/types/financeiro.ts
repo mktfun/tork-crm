@@ -201,3 +201,35 @@ export interface FinancialSummary {
   netResult: number;
   transactionCount: number;
 }
+
+// ============ TIPOS PARA DRE (FASE 4) ============
+
+/**
+ * Linha do DRE (Demonstrativo de Resultado do Exercício)
+ */
+export interface DreRow {
+  category: string;
+  account_type: 'revenue' | 'expense';
+  jan: number;
+  fev: number;
+  mar: number;
+  abr: number;
+  mai: number;
+  jun: number;
+  jul: number;
+  ago: number;
+  set: number;
+  out: number;
+  nov: number;
+  dez: number;
+  total: number;
+}
+
+/**
+ * Resumo do DRE
+ */
+export interface DreSummary {
+  totalRevenue: number;
+  totalExpense: number;
+  netResult: number;
+}
