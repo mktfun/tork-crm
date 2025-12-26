@@ -23,7 +23,7 @@ export function MobileFloatingNav() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50">
-      <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-xl">
+      <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/5 rounded-2xl p-2 shadow-xl">
         <div className="flex items-center justify-between">
           {/* Quick Navigation */}
           <div className="flex items-center gap-1">
