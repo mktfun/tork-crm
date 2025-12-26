@@ -6,18 +6,168 @@ import {
   Edit2, 
   Trash2, 
   Loader2, 
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { AccountFormModal } from './AccountFormModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { useFinancialAccountsWithDefaults } from '@/hooks/useFinanceiro';
+import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { FinancialAccount, FinancialAccountType } from '@/types/financeiro';
+import { toast } from '@/hooks/use-toast';
+
+// ============ AUTOMATION SECTION ============
+
+function AutomationSection() {
+  const { data: profile, isLoading } = useProfile();
+  const updateProfileMutation = useUpdateProfile();
+
+  const handleUpdate = (field: string, value: any) => {
+    updateProfileMutation.mutate(
+      { [field]: value },
+      {
+        onSuccess: () => {
+          const fieldNames: Record<string, string> = {
+            settle_commissions_automatically: "Automação de comissões",
+            commission_settlement_days: "Dias para baixa",
+            commission_settlement_strategy: "Estratégia de parcelas",
+            commission_settlement_installments: "Quantidade de parcelas"
+          };
+          toast({
+            title: "Configuração atualizada",
+            description: `${fieldNames[field]} atualizada com sucesso.`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Erro",
+            description: "Não foi possível atualizar a configuração.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            <CardTitle className="text-lg">Automação de Recebimentos</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-4 bg-muted animate-pulse rounded"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-primary" />
+          <CardTitle className="text-lg">Automação de Recebimentos</CardTitle>
+        </div>
+        <CardDescription>
+          Configure a baixa automática de comissões para reduzir trabalho manual.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="automatic-commission" className="font-medium">Baixa Automática Diária</Label>
+          <Switch
+            id="automatic-commission"
+            checked={profile?.settle_commissions_automatically || false}
+            onCheckedChange={(isChecked) => handleUpdate('settle_commissions_automatically', isChecked)}
+            disabled={updateProfileMutation.isPending}
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Quando ativado, o sistema marcará automaticamente como 'Pagas' as comissões cujas datas de recebimento coincidam com o dia atual.
+        </p>
+
+        {profile?.settle_commissions_automatically && (
+          <div className="space-y-4 border-t pt-4">
+            <div>
+              <Label htmlFor="settlement-days">Dar baixa após (dias da emissão)</Label>
+              <Input
+                id="settlement-days"
+                type="number"
+                min="1"
+                max="365"
+                value={profile?.commission_settlement_days || 7}
+                onChange={(e) => handleUpdate('commission_settlement_days', parseInt(e.target.value, 10))}
+                disabled={updateProfileMutation.isPending}
+                className="mt-1 w-24"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                A comissão será marcada como 'Paga' X dias após a data de criação.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="strategy">Estratégia de Parcelas</Label>
+              <Select
+                value={profile?.commission_settlement_strategy || 'all'}
+                onValueChange={(value) => handleUpdate('commission_settlement_strategy', value)}
+                disabled={updateProfileMutation.isPending}
+              >
+                <SelectTrigger id="strategy" className="mt-1">
+                  <SelectValue placeholder="Selecione a estratégia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="first">Primeira parcela apenas</SelectItem>
+                  <SelectItem value="all">Todas as parcelas</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1">
+                Define quais parcelas das comissões serão processadas automaticamente.
+              </p>
+            </div>
+            {profile?.commission_settlement_strategy === 'custom' && (
+              <div>
+                <Label htmlFor="installments-count">Quantidade de parcelas</Label>
+                <Input
+                  id="installments-count"
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={profile?.commission_settlement_installments || 1}
+                  onChange={(e) => handleUpdate('commission_settlement_installments', parseInt(e.target.value, 10))}
+                  disabled={updateProfileMutation.isPending}
+                  className="mt-1 w-24"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Número de parcelas que serão processadas automaticamente.
+                </p>
+              </div>
+            )}
+            <div className="bg-muted/50 p-3 rounded-md">
+              <p className="text-sm text-muted-foreground">
+                <strong>Como funciona:</strong> Todo dia às 3h da manhã, o sistema verifica as comissões 
+                pendentes e as marca como pagas conforme suas configurações.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // ============ ACCOUNT LIST SECTION ============
 
@@ -155,9 +305,12 @@ export function ConfiguracoesTab() {
       <div>
         <h2 className="text-lg font-semibold">Configurações Financeiras</h2>
         <p className="text-sm text-muted-foreground">
-          Gerencie seu plano de contas
+          Gerencie seu plano de contas e automações
         </p>
       </div>
+
+      {/* Automação */}
+      <AutomationSection />
 
       {/* Contas Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
