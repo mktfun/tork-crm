@@ -5,7 +5,6 @@ import {
   FileText,
   Users,
   Calendar,
-  DollarSign,
   Settings,
   ChevronLeft,
   Menu,
@@ -35,7 +34,6 @@ const menuSections = [
     items: [
       { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/dashboard/reports' },
-      { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/dashboard/faturamento' },
       { id: 'financeiro', name: 'Financeiro', icon: Wallet, path: '/dashboard/financeiro' },
     ]
   },

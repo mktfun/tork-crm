@@ -119,7 +119,7 @@ export function useVoidTransaction() {
   });
 }
 
-// ============ HOOKS PARA FLUXO DE CAIXA (FASE 3) ============
+// ============ HOOKS PARA FLUXO DE CAIXA ============
 
 /**
  * Hook para buscar dados de fluxo de caixa
@@ -143,7 +143,7 @@ export function useFinancialSummary(startDate: string, endDate: string) {
   });
 }
 
-// ============ HOOKS PARA DRE (FASE 4) ============
+// ============ HOOKS PARA DRE ============
 
 /**
  * Hook para buscar dados do DRE (Demonstrativo de Resultado)
@@ -155,7 +155,7 @@ export function useDreData(year?: number) {
   });
 }
 
-// ============ HOOKS PARA IMPORTAÇÃO (FASE 5) ============
+// ============ HOOKS PARA IMPORTAÇÃO ============
 
 /**
  * Hook para importação em massa de transações
@@ -177,38 +177,7 @@ export function useBulkImport() {
   });
 }
 
-// ============ HOOKS PARA CONFIGURAÇÕES (FASE 6) ============
-
-/**
- * Hook para contar transações legadas pendentes
- */
-export function usePendingLegacyCount() {
-  return useQuery({
-    queryKey: ['pending-legacy-count'],
-    queryFn: financialService.countPendingLegacyTransactions,
-    staleTime: 1000 * 60 * 5 // 5 minutos
-  });
-}
-
-/**
- * Hook para backfill de transações legadas
- */
-export function useBackfillLegacy() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: financialService.backfillLegacyTransactions,
-    onSuccess: () => {
-      // Invalidar TODOS os caches financeiros
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-legacy-count'] });
-    }
-  });
-}
+// ============ HOOKS PARA CONFIGURAÇÕES ============
 
 /**
  * Hook para atualizar conta financeira
@@ -241,7 +210,7 @@ export function useArchiveAccount() {
   });
 }
 
-// ============ HOOKS PARA SAFE DELETE E RECEITAS (FASE 7) ============
+// ============ HOOKS PARA SAFE DELETE E RECEITAS ============
 
 /**
  * Hook para contar lançamentos de uma conta
@@ -284,7 +253,7 @@ export function useRevenueTransactions(startDate: string, endDate: string) {
 }
 
 /**
- * Hook para buscar totais de receita (comparação)
+ * Hook para buscar totais de receita
  */
 export function useRevenueTotals(startDate: string, endDate: string) {
   return useQuery({
@@ -294,34 +263,7 @@ export function useRevenueTotals(startDate: string, endDate: string) {
   });
 }
 
-// ============ HOOKS PARA CORREÇÃO E BAIXA EM LOTE (FASE 8) ============
-
-/**
- * Hook para contar descrições problemáticas
- */
-export function useProblematicDescriptionsCount() {
-  return useQuery({
-    queryKey: ['problematic-descriptions-count'],
-    queryFn: financialService.countProblematicDescriptions,
-    staleTime: 1000 * 60 * 2 // 2 minutos
-  });
-}
-
-/**
- * Hook para corrigir descrições problemáticas
- */
-export function useFixLedgerDescriptions() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: financialService.fixLedgerDescriptions,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['problematic-descriptions-count'] });
-    }
-  });
-}
+// ============ HOOKS PARA BAIXA EM LOTE ============
 
 /**
  * Hook para baixa em lote de receitas
@@ -347,73 +289,5 @@ export function useTransactionDetails(transactionId: string | null) {
     queryKey: ['transaction-details', transactionId],
     queryFn: () => financialService.getTransactionDetails(transactionId!),
     enabled: !!transactionId
-  });
-}
-
-// ============ HOOKS PARA CORREÇÃO DE DATAS (FASE 10) ============
-
-/**
- * Hook para contar datas erradas do backfill
- */
-export function useWrongDatesCount() {
-  return useQuery({
-    queryKey: ['wrong-dates-count'],
-    queryFn: financialService.countWrongDates,
-    staleTime: 1000 * 60 * 2 // 2 minutos
-  });
-}
-
-/**
- * Hook para corrigir datas do backfill
- */
-export function useFixBackfillDates() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: financialService.fixBackfillDates,
-    onSuccess: () => {
-      // Invalidar todos os caches afetados
-      queryClient.invalidateQueries({ queryKey: ['wrong-dates-count'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
-      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
-    }
-  });
-}
-
-// ============ HOOKS PARA RECONCILIAÇÃO (FASE 12) ============
-
-/**
- * Hook para diagnosticar gaps no Ledger
- */
-export function useLedgerGaps() {
-  return useQuery({
-    queryKey: ['ledger-gaps'],
-    queryFn: financialService.diagnoseLedgerGaps,
-    staleTime: 1000 * 60 * 2 // 2 minutos
-  });
-}
-
-/**
- * Hook para migrar transações faltantes para o Ledger
- */
-export function useMigrateGaps() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: financialService.migrateGapsToLedger,
-    onSuccess: () => {
-      // Invalidar TODOS os caches financeiros para atualização imediata
-      queryClient.invalidateQueries({ queryKey: ['ledger-gaps'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
-      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-legacy-count'] });
-    }
   });
 }
