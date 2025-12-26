@@ -2142,14 +2142,14 @@ export type Database = {
       get_revenue_transactions: {
         Args: { p_end_date: string; p_limit?: number; p_start_date: string }
         Returns: {
-          account_names: string
-          created_at: string
+          account_name: string
+          amount: number
+          client_name: string
           description: string
           id: string
-          is_void: boolean
+          is_confirmed: boolean
           legacy_status: string
-          reference_number: string
-          total_amount: number
+          policy_number: string
           transaction_date: string
         }[]
       }
