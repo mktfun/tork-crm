@@ -11,6 +11,7 @@ import {
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
 
+import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,13 @@ import {
   useRevenueTotals,
   useBulkConfirmReceipts 
 } from '@/hooks/useFinanceiro';
+
+// Helper para verificar se está pago
+function isPaidStatus(status: string | null): boolean {
+  if (!status) return false;
+  const upperStatus = status.toUpperCase();
+  return upperStatus === 'PAGO' || upperStatus === 'REALIZADO';
+}
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -179,7 +187,19 @@ function TransactionsTable({
     );
   }
 
-  const allSelected = transactions.length > 0 && transactions.every(tx => selectedIds.has(tx.id));
+  // Filtrar apenas transações pendentes para seleção
+  const pendingTransactions = transactions.filter(tx => !isPaidStatus(tx.legacy_status));
+  const allPendingSelected = pendingTransactions.length > 0 && 
+    pendingTransactions.every(tx => selectedIds.has(tx.id));
+
+  const handleSelectAllPending = (checked: boolean) => {
+    if (checked) {
+      // Seleciona apenas os que NÃO estão pagos
+      onSelectAll(true);
+    } else {
+      onSelectAll(false);
+    }
+  };
 
   return (
     <Table>
@@ -187,49 +207,70 @@ function TransactionsTable({
         <TableRow>
           <TableHead className="w-10">
             <Checkbox 
-              checked={allSelected}
-              onCheckedChange={(checked) => onSelectAll(!!checked)}
+              checked={allPendingSelected}
+              onCheckedChange={(checked) => handleSelectAllPending(!!checked)}
+              disabled={pendingTransactions.length === 0}
             />
           </TableHead>
           <TableHead className="w-24">Data</TableHead>
-          <TableHead>Descrição</TableHead>
+          <TableHead className="min-w-[280px]">Descrição</TableHead>
           <TableHead className="w-40">Categoria</TableHead>
+          <TableHead className="w-24">Status</TableHead>
           <TableHead className="text-right w-32">Valor</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((tx) => (
-          <TableRow 
-            key={tx.id}
-            className="cursor-pointer hover:bg-muted/50"
-            onClick={() => onViewDetails(tx.id)}
-          >
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <Checkbox 
-                checked={selectedIds.has(tx.id)}
-                onCheckedChange={() => onToggleSelect(tx.id)}
-              />
-            </TableCell>
-            <TableCell className="font-mono text-sm">
-              {format(new Date(tx.transaction_date), 'dd/MM', { locale: ptBR })}
-            </TableCell>
-            <TableCell>
-              <span className="line-clamp-1" title={tx.description}>
-                {tx.description}
-              </span>
-            </TableCell>
-            <TableCell>
-              {tx.account_names && (
-                <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
-                  {tx.account_names}
-                </Badge>
+        {transactions.map((tx) => {
+          const isPaid = isPaidStatus(tx.legacy_status);
+          
+          return (
+            <TableRow 
+              key={tx.id}
+              className={cn(
+                "cursor-pointer hover:bg-muted/50",
+                isPaid && "opacity-60"
               )}
-            </TableCell>
-            <TableCell className="text-right font-semibold text-emerald-500">
-              +{formatCurrency(tx.total_amount)}
-            </TableCell>
-          </TableRow>
-        ))}
+              onClick={() => onViewDetails(tx.id)}
+            >
+              <TableCell onClick={(e) => e.stopPropagation()}>
+                <Checkbox 
+                  checked={selectedIds.has(tx.id)}
+                  onCheckedChange={() => onToggleSelect(tx.id)}
+                  disabled={isPaid}
+                />
+              </TableCell>
+              <TableCell className="font-mono text-sm">
+                {format(new Date(tx.transaction_date), 'dd/MM', { locale: ptBR })}
+              </TableCell>
+              <TableCell>
+                <span className="whitespace-normal break-words">
+                  {tx.description}
+                </span>
+              </TableCell>
+              <TableCell>
+                {tx.account_names && (
+                  <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
+                    {tx.account_names}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {isPaid ? (
+                  <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+                    Pago
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-amber-600 border-amber-500/30">
+                    Pendente
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right font-semibold text-emerald-500">
+                +{formatCurrency(tx.total_amount)}
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -254,7 +295,14 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     ? format(dateRange.to, 'yyyy-MM-dd')
     : format(new Date(), 'yyyy-MM-dd');
 
+  // Filtrar apenas transações pendentes para a lógica de seleção
+  const pendingTransactions = transactions.filter(tx => !isPaidStatus(tx.legacy_status));
+
   const handleToggleSelect = (id: string) => {
+    // Verificar se a transação é pendente antes de permitir seleção
+    const tx = transactions.find(t => t.id === id);
+    if (tx && isPaidStatus(tx.legacy_status)) return;
+    
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -268,7 +316,8 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(transactions.map(tx => tx.id)));
+      // Seleciona apenas os que NÃO estão pagos
+      setSelectedIds(new Set(pendingTransactions.map(tx => tx.id)));
     } else {
       setSelectedIds(new Set());
     }
