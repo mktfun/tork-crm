@@ -382,3 +382,38 @@ export function useFixBackfillDates() {
     }
   });
 }
+
+// ============ HOOKS PARA RECONCILIAÇÃO (FASE 12) ============
+
+/**
+ * Hook para diagnosticar gaps no Ledger
+ */
+export function useLedgerGaps() {
+  return useQuery({
+    queryKey: ['ledger-gaps'],
+    queryFn: financialService.diagnoseLedgerGaps,
+    staleTime: 1000 * 60 * 2 // 2 minutos
+  });
+}
+
+/**
+ * Hook para migrar transações faltantes para o Ledger
+ */
+export function useMigrateGaps() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: financialService.migrateGapsToLedger,
+    onSuccess: () => {
+      // Invalidar TODOS os caches financeiros para atualização imediata
+      queryClient.invalidateQueries({ queryKey: ['ledger-gaps'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-legacy-count'] });
+    }
+  });
+}

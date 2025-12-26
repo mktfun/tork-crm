@@ -713,3 +713,53 @@ export async function getTransactionDetails(transactionId: string): Promise<Tran
     } : null
   };
 }
+
+// ============ RECONCILIAÇÃO DE INTEGRIDADE (FASE 12) ============
+
+export interface LedgerGapsResult {
+  missing_count: number;
+  missing_value: number;
+}
+
+export interface MigrateGapsResult {
+  migrated_count: number;
+  total_value: number;
+}
+
+/**
+ * Diagnóstico: Conta transações órfãs (pagas mas não no Ledger)
+ */
+export async function diagnoseLedgerGaps(): Promise<LedgerGapsResult> {
+  const { data, error } = await supabase.rpc('diagnose_ledger_gaps');
+  
+  if (error) {
+    console.error('Erro ao diagnosticar gaps:', error);
+    throw new Error(error.message);
+  }
+  
+  const result = data as { missing_count: number; missing_value: number } | null;
+  
+  return {
+    missing_count: result?.missing_count ?? 0,
+    missing_value: result?.missing_value ?? 0
+  };
+}
+
+/**
+ * Migração: Move transações órfãs para o Ledger
+ */
+export async function migrateGapsToLedger(): Promise<MigrateGapsResult> {
+  const { data, error } = await supabase.rpc('migrate_missing_transactions');
+  
+  if (error) {
+    console.error('Erro ao migrar transações:', error);
+    throw new Error(error.message);
+  }
+  
+  const result = data as { migrated_count: number; total_value: number } | null;
+  
+  return {
+    migrated_count: result?.migrated_count ?? 0,
+    total_value: result?.total_value ?? 0
+  };
+}

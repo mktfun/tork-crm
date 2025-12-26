@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   ShieldCheck,
   Wrench,
-  CalendarClock
+  CalendarClock,
+  FileWarning
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,7 +32,9 @@ import {
   useProblematicDescriptionsCount,
   useFixLedgerDescriptions,
   useWrongDatesCount,
-  useFixBackfillDates
+  useFixBackfillDates,
+  useLedgerGaps,
+  useMigrateGaps
 } from '@/hooks/useFinanceiro';
 import { FinancialAccount, FinancialAccountType, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 
@@ -435,6 +438,100 @@ function FixDatesCard() {
   );
 }
 
+// ============ RECONCILIATION CARD (FASE 12) ============
+
+function ReconciliationCard() {
+  const { data: gaps, isLoading: gapsLoading, refetch } = useLedgerGaps();
+  const migrateMutation = useMigrateGaps();
+  
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+  
+  const handleMigrate = async () => {
+    try {
+      const result = await migrateMutation.mutateAsync();
+      
+      if (result.migrated_count > 0) {
+        toast.success(
+          `🎉 Reconciliação concluída! ${result.migrated_count} transações (${formatCurrency(result.total_value)}) foram adicionadas ao Ledger.`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.info('Nenhuma transação precisava de reconciliação.');
+      }
+      
+      await refetch();
+    } catch (error: any) {
+      console.error('Erro na reconciliação:', error);
+      toast.error(error.message || 'Erro ao reconciliar transações');
+    }
+  };
+
+  const missingCount = gaps?.missing_count ?? 0;
+  const missingValue = gaps?.missing_value ?? 0;
+
+  return (
+    <Card className="border-dashed border-amber-500/50 bg-amber-500/5">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <FileWarning className="w-5 h-5 text-amber-500" />
+          <CardTitle className="text-lg">Reconciliação de Integridade</CardTitle>
+        </div>
+        <CardDescription>
+          Sincroniza transações pagas do Faturamento que não aparecem no DRE.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {gapsLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Analisando integridade...
+          </div>
+        ) : missingCount > 0 ? (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <p className="text-sm">
+              ⚠️ Existem <span className="font-bold text-amber-500">{missingCount}</span> transações 
+              (<span className="font-bold text-amber-500">{formatCurrency(missingValue)}</span>) 
+              no Faturamento que não aparecem no DRE.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm text-emerald-600">
+              ✓ DRE e Faturamento estão sincronizados!
+            </p>
+          </div>
+        )}
+        
+        <Button 
+          variant="default"
+          className="gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+          onClick={handleMigrate}
+          disabled={migrateMutation.isPending || missingCount === 0}
+        >
+          {migrateMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Sincronizando...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Sincronizar Agora
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ============ MAIN COMPONENT ============
 
 export function ConfiguracoesTab() {
@@ -493,6 +590,9 @@ export function ConfiguracoesTab() {
       </div>
 
       <Separator />
+
+      {/* Reconciliation Card - Destaque */}
+      <ReconciliationCard />
 
       {/* Maintenance Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

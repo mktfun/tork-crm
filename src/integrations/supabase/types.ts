@@ -1940,6 +1940,7 @@ export type Database = {
         Args: { p_migrate_to_account_id?: string; p_target_account_id: string }
         Returns: Json
       }
+      diagnose_ledger_gaps: { Args: never; Returns: Json }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
       fix_backfill_dates: { Args: never; Returns: Json }
@@ -2243,6 +2244,7 @@ export type Database = {
       }
       is_admin: { Args: { user_id?: string }; Returns: boolean }
       link_manual_transactions: { Args: { p_user_id: string }; Returns: string }
+      migrate_missing_transactions: { Args: never; Returns: Json }
       preview_apolices_filtradas: {
         Args: { p_ramo?: string; p_seguradora_id?: string; p_user_id: string }
         Returns: {
