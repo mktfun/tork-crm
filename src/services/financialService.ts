@@ -347,3 +347,82 @@ export async function bulkImportTransactions(
     errors: result.errors || []
   };
 }
+
+// ============ BACKFILL E GESTÃO DE CONTAS (FASE 6) ============
+
+interface BackfillResult {
+  successCount: number;
+  errorCount: number;
+  errors: Array<{ transaction_id: string; error: string }>;
+}
+
+/**
+ * Migra transações legadas para o sistema financeiro
+ */
+export async function backfillLegacyTransactions(): Promise<BackfillResult> {
+  const { data, error } = await supabase.rpc('backfill_legacy_transactions');
+  
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    successCount: result.success_count || 0,
+    errorCount: result.error_count || 0,
+    errors: result.errors || []
+  };
+}
+
+/**
+ * Conta transações legadas pendentes de migração
+ */
+export async function countPendingLegacyTransactions(): Promise<number> {
+  const { data, error } = await supabase.rpc('count_pending_legacy_transactions');
+  
+  if (error) throw error;
+  return data || 0;
+}
+
+/**
+ * Atualiza uma conta financeira
+ */
+export async function updateAccount(accountId: string, updates: {
+  name: string;
+  code?: string;
+  description?: string;
+}): Promise<FinancialAccount> {
+  const { data, error } = await supabase.rpc('update_financial_account', {
+    p_account_id: accountId,
+    p_name: updates.name,
+    p_code: updates.code || null,
+    p_description: updates.description || null
+  });
+
+  if (error) throw error;
+  
+  const acc = data as any;
+  return {
+    id: acc.id,
+    userId: acc.user_id,
+    name: acc.name,
+    code: acc.code,
+    description: acc.description,
+    type: acc.type as FinancialAccountType,
+    parentId: acc.parent_id,
+    isSystem: acc.is_system ?? false,
+    status: acc.status,
+    createdAt: acc.created_at,
+    updatedAt: acc.updated_at,
+  };
+}
+
+/**
+ * Arquiva uma conta financeira (soft delete)
+ */
+export async function archiveAccount(accountId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('archive_financial_account', {
+    p_account_id: accountId
+  });
+
+  if (error) throw error;
+  return data;
+}

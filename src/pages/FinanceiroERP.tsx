@@ -10,7 +10,8 @@ import {
   DollarSign,
   BarChart3,
   Receipt,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Settings
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,6 +24,7 @@ import { NovaDespesaModal } from '@/components/financeiro/NovaDespesaModal';
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
 import { ImportTransactionsModal } from '@/components/financeiro/ImportTransactionsModal';
+import { ConfiguracoesTab } from '@/components/financeiro/ConfiguracoesTab';
 import { 
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
@@ -405,6 +407,10 @@ export default function FinanceiroERP() {
             <TrendingUp className="w-4 h-4" />
             Receitas (Legado)
           </TabsTrigger>
+          <TabsTrigger value="config" className="gap-2">
+            <Settings className="w-4 h-4" />
+            Configurações
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="visao-geral">
@@ -421,6 +427,10 @@ export default function FinanceiroERP() {
 
         <TabsContent value="legado">
           <LegadoTab />
+        </TabsContent>
+
+        <TabsContent value="config">
+          <ConfiguracoesTab />
         </TabsContent>
       </Tabs>
     </div>
