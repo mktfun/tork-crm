@@ -38,7 +38,7 @@ export function ClientFinancialHistory({ transactions, transactionTypes }: Clien
               const transactionType = transactionTypes.find(t => t.id === transaction.typeId);
               return (
                 <Link
-                  to={`/dashboard/faturamento?client=${transaction.clientId}`}
+                  to={`/dashboard/financeiro?transactionId=${transaction.id}`}
                   key={transaction.id}
                   className="block border border-slate-700 rounded-lg p-4 bg-slate-800/50 hover:bg-slate-800/80 transition-colors"
                 >

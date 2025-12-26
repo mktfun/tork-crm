@@ -6,10 +6,10 @@ import { useNavigate } from 'react-router-dom';
 
 const extraScreens = [
   {
-    title: 'Faturamento',
+    title: 'Financeiro',
     icon: CreditCard,
-    path: '/dashboard/faturamento',
-    description: 'Gestão financeira e cobrança'
+    path: '/dashboard/financeiro',
+    description: 'Gestão financeira e receitas'
   },
   {
     title: 'Configurações',
