@@ -233,3 +233,53 @@ export interface DreSummary {
   totalExpense: number;
   netResult: number;
 }
+
+// ============ TIPOS PARA IMPORTAÇÃO (FASE 5) ============
+
+/**
+ * Linha de transação parseada do CSV
+ */
+export interface ImportedTransaction {
+  id: string;
+  description: string;
+  transactionDate: string;
+  amount: number;
+  referenceNumber?: string;
+  categoryAccountId?: string;
+  originalRow: Record<string, any>;
+}
+
+/**
+ * Mapeamento de colunas do CSV
+ */
+export interface ColumnMapping {
+  dateColumn: string;
+  descriptionColumn: string;
+  amountColumn: string;
+  referenceColumn?: string;
+}
+
+/**
+ * Payload para bulk import
+ */
+export interface BulkImportPayload {
+  assetAccountId: string;
+  transactions: Array<{
+    description: string;
+    transactionDate: string;
+    amount: number;
+    categoryAccountId: string;
+    referenceNumber?: string;
+    memo?: string;
+  }>;
+}
+
+/**
+ * Resultado do bulk import
+ */
+export interface BulkImportResult {
+  successCount: number;
+  errorCount: number;
+  totalProcessed: number;
+  errors: Array<{ index: number; message: string; description?: string }>;
+}

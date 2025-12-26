@@ -5,7 +5,9 @@ import {
   LedgerEntryInput,
   CashFlowDataPoint,
   FinancialSummary,
-  DreRow
+  DreRow,
+  BulkImportPayload,
+  BulkImportResult
 } from '@/types/financeiro';
 
 // ============ TIPOS PARA AS RPCs ============
@@ -309,4 +311,39 @@ export async function getDreData(year?: number): Promise<DreRow[]> {
     dez: Number(row.dez) || 0,
     total: Number(row.total) || 0
   }));
+}
+
+// ============ IMPORTAÇÃO EM MASSA (FASE 5) ============
+
+/**
+ * Importa múltiplas transações de forma atômica
+ */
+export async function bulkImportTransactions(
+  payload: BulkImportPayload
+): Promise<BulkImportResult> {
+  const transactions = payload.transactions.map(tx => ({
+    description: tx.description,
+    transaction_date: tx.transactionDate,
+    amount: tx.amount,
+    asset_account_id: payload.assetAccountId,
+    category_account_id: tx.categoryAccountId,
+    reference_number: tx.referenceNumber || null,
+    memo: tx.memo || null
+  }));
+
+  const { data, error } = await supabase.rpc('bulk_create_financial_movements', {
+    p_transactions: transactions
+  });
+
+  if (error) throw error;
+  
+  // O retorno é JSONB, então já é objeto
+  const result = data as any;
+  
+  return {
+    successCount: result.success_count || 0,
+    errorCount: result.error_count || 0,
+    totalProcessed: result.total_processed || 0,
+    errors: result.errors || []
+  };
 }

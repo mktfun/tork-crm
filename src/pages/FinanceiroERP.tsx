@@ -22,6 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { NovaDespesaModal } from '@/components/financeiro/NovaDespesaModal';
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
+import { ImportTransactionsModal } from '@/components/financeiro/ImportTransactionsModal';
 import { 
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
@@ -369,16 +370,20 @@ export default function FinanceiroERP() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary/10 rounded-lg">
-          <Wallet className="w-6 h-6 text-primary" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Wallet className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Financeiro</h1>
+            <p className="text-sm text-muted-foreground">
+              Controle de despesas e receitas com partidas dobradas
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">Financeiro</h1>
-          <p className="text-sm text-muted-foreground">
-            Controle de despesas e receitas com partidas dobradas
-          </p>
-        </div>
+        
+        <ImportTransactionsModal />
       </div>
 
       {/* Tabs */}

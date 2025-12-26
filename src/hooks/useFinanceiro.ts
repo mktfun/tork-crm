@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as financialService from '@/services/financialService';
-import { FinancialAccountType } from '@/types/financeiro';
+import { FinancialAccountType, BulkImportPayload } from '@/types/financeiro';
 
 /**
  * Hook para buscar contas financeiras
@@ -152,5 +152,27 @@ export function useDreData(year?: number) {
   return useQuery({
     queryKey: ['dre-data', year],
     queryFn: () => financialService.getDreData(year)
+  });
+}
+
+// ============ HOOKS PARA IMPORTAÇÃO (FASE 5) ============
+
+/**
+ * Hook para importação em massa de transações
+ */
+export function useBulkImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: BulkImportPayload) => 
+      financialService.bulkImportTransactions(payload),
+    onSuccess: () => {
+      // Invalidar todos os caches relacionados
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
+    }
   });
 }
