@@ -529,3 +529,134 @@ export async function getRevenueTotals(params: {
     legacyTotal: Number(row.legacy_total) || 0
   };
 }
+
+// ============ CORREÇÃO E BAIXA EM LOTE (FASE 8) ============
+
+interface FixDescriptionsResult {
+  fixedCount: number;
+  success: boolean;
+}
+
+/**
+ * Corrige descrições "undefined" ou vazias nas transações financeiras
+ */
+export async function fixLedgerDescriptions(): Promise<FixDescriptionsResult> {
+  const { data, error } = await supabase.rpc('fix_ledger_descriptions');
+  
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    fixedCount: result?.fixed_count ?? 0,
+    success: result?.success ?? false
+  };
+}
+
+/**
+ * Conta transações com descrições problemáticas
+ */
+export async function countProblematicDescriptions(): Promise<number> {
+  const { data, error } = await supabase.rpc('count_problematic_descriptions');
+  
+  if (error) throw error;
+  return data || 0;
+}
+
+interface BulkConfirmResult {
+  confirmedCount: number;
+  success: boolean;
+}
+
+/**
+ * Confirma recebimento em lote de transações selecionadas
+ */
+export async function bulkConfirmReceipts(transactionIds: string[]): Promise<BulkConfirmResult> {
+  const { data, error } = await supabase.rpc('bulk_confirm_receipts', {
+    p_transaction_ids: transactionIds
+  });
+  
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    confirmedCount: result?.confirmed_count ?? 0,
+    success: result?.success ?? false
+  };
+}
+
+interface TransactionDetails {
+  id: string;
+  description: string;
+  transactionDate: string;
+  referenceNumber: string | null;
+  relatedEntityId: string | null;
+  relatedEntityType: string | null;
+  isVoid: boolean;
+  voidReason: string | null;
+  createdAt: string;
+  ledgerEntries: Array<{
+    id: string;
+    amount: number;
+    memo: string | null;
+    accountId: string;
+    accountName: string;
+    accountType: string;
+  }>;
+  legacyData: {
+    clientId: string | null;
+    clientName: string | null;
+    policyId: string | null;
+    policyNumber: string | null;
+    ramo: string | null;
+    company: string | null;
+    originalAmount: number | null;
+    originalStatus: string | null;
+  } | null;
+}
+
+/**
+ * Busca detalhes completos de uma transação
+ */
+export async function getTransactionDetails(transactionId: string): Promise<TransactionDetails> {
+  const { data, error } = await supabase.rpc('get_transaction_details', {
+    p_transaction_id: transactionId
+  });
+  
+  if (error) throw error;
+  
+  const result = data as any;
+  
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  
+  return {
+    id: result.id,
+    description: result.description,
+    transactionDate: result.transaction_date,
+    referenceNumber: result.reference_number,
+    relatedEntityId: result.related_entity_id,
+    relatedEntityType: result.related_entity_type,
+    isVoid: result.is_void,
+    voidReason: result.void_reason,
+    createdAt: result.created_at,
+    ledgerEntries: (result.ledger_entries || []).map((entry: any) => ({
+      id: entry.id,
+      amount: entry.amount,
+      memo: entry.memo,
+      accountId: entry.account_id,
+      accountName: entry.account_name,
+      accountType: entry.account_type
+    })),
+    legacyData: result.legacy_data ? {
+      clientId: result.legacy_data.client_id,
+      clientName: result.legacy_data.client_name,
+      policyId: result.legacy_data.policy_id,
+      policyNumber: result.legacy_data.policy_number,
+      ramo: result.legacy_data.ramo,
+      company: result.legacy_data.company,
+      originalAmount: result.legacy_data.original_amount,
+      originalStatus: result.legacy_data.original_status
+    } : null
+  };
+}

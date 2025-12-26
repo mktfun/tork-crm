@@ -293,3 +293,59 @@ export function useRevenueTotals(startDate: string, endDate: string) {
     enabled: !!startDate && !!endDate
   });
 }
+
+// ============ HOOKS PARA CORREÇÃO E BAIXA EM LOTE (FASE 8) ============
+
+/**
+ * Hook para contar descrições problemáticas
+ */
+export function useProblematicDescriptionsCount() {
+  return useQuery({
+    queryKey: ['problematic-descriptions-count'],
+    queryFn: financialService.countProblematicDescriptions,
+    staleTime: 1000 * 60 * 2 // 2 minutos
+  });
+}
+
+/**
+ * Hook para corrigir descrições problemáticas
+ */
+export function useFixLedgerDescriptions() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: financialService.fixLedgerDescriptions,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['problematic-descriptions-count'] });
+    }
+  });
+}
+
+/**
+ * Hook para baixa em lote de receitas
+ */
+export function useBulkConfirmReceipts() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: financialService.bulkConfirmReceipts,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+    }
+  });
+}
+
+/**
+ * Hook para buscar detalhes de uma transação
+ */
+export function useTransactionDetails(transactionId: string | null) {
+  return useQuery({
+    queryKey: ['transaction-details', transactionId],
+    queryFn: () => financialService.getTransactionDetails(transactionId!),
+    enabled: !!transactionId
+  });
+}
