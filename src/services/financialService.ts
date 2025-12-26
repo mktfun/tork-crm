@@ -2,7 +2,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { 
   FinancialAccount, 
   FinancialAccountType,
-  LedgerEntryInput 
+  LedgerEntryInput,
+  CashFlowDataPoint,
+  FinancialSummary
 } from '@/types/financeiro';
 
 // ============ TIPOS PARA AS RPCs ============
@@ -225,4 +227,54 @@ export async function voidTransaction(transactionId: string, reason: string): Pr
     .eq('id', transactionId);
 
   if (error) throw error;
+}
+
+// ============ FLUXO DE CAIXA (FASE 3) ============
+
+/**
+ * Busca dados de fluxo de caixa para o gráfico
+ */
+export async function getCashFlowData(params: {
+  startDate: string;
+  endDate: string;
+  granularity?: 'day' | 'month';
+}): Promise<CashFlowDataPoint[]> {
+  const { data, error } = await supabase.rpc('get_cash_flow_data', {
+    p_start_date: params.startDate,
+    p_end_date: params.endDate,
+    p_granularity: params.granularity || 'day'
+  });
+
+  if (error) throw error;
+  
+  return (data || []).map((row: any) => ({
+    period: row.period,
+    income: Number(row.income) || 0,
+    expense: Number(row.expense) || 0,
+    balance: Number(row.balance) || 0
+  }));
+}
+
+/**
+ * Busca resumo financeiro para KPIs
+ */
+export async function getFinancialSummary(params: {
+  startDate: string;
+  endDate: string;
+}): Promise<FinancialSummary> {
+  const { data, error } = await supabase.rpc('get_financial_summary', {
+    p_start_date: params.startDate,
+    p_end_date: params.endDate
+  });
+
+  if (error) throw error;
+  
+  // Cast para any para acessar propriedades dinamicamente
+  const row = (data as any)?.[0] || {};
+  return {
+    totalIncome: Number(row.total_income) || 0,
+    totalExpense: Number(row.total_expense) || 0,
+    netResult: Number(row.net_result) || 0,
+    transactionCount: Number(row.transaction_count) || 0
+  };
 }

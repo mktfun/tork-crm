@@ -1,6 +1,16 @@
-import { format } from 'date-fns';
+import { useMemo } from 'react';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Wallet, TrendingDown, TrendingUp, Loader2, ArrowRightLeft } from 'lucide-react';
+import { 
+  Wallet, 
+  TrendingDown, 
+  TrendingUp, 
+  Loader2, 
+  ArrowRightLeft,
+  DollarSign,
+  BarChart3,
+  Receipt
+} from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +19,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import { NovaDespesaModal } from '@/components/financeiro/NovaDespesaModal';
-import { useFinancialAccountsWithDefaults, useRecentTransactions } from '@/hooks/useFinanceiro';
+import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
+import { 
+  useFinancialAccountsWithDefaults, 
+  useRecentTransactions,
+  useCashFlowData,
+  useFinancialSummary
+} from '@/hooks/useFinanceiro';
 import { FinancialAccount, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
@@ -20,27 +36,86 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function AccountBalanceCard({ account, balance }: { account: FinancialAccount; balance: number }) {
-  const isPositive = balance >= 0;
-  
+// ============ KPI CARD ============
+
+interface KpiCardProps {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  variant: 'success' | 'danger' | 'info' | 'default';
+  showSign?: boolean;
+}
+
+function FinancialKpiCard({ title, value, icon: Icon, variant, showSign = false }: KpiCardProps) {
+  const variantStyles = {
+    success: 'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
+    danger: 'from-rose-500/10 to-rose-600/5 border-rose-500/20',
+    info: 'from-blue-500/10 to-blue-600/5 border-blue-500/20',
+    default: 'from-muted/50 to-muted/30 border-border/50'
+  };
+
+  const iconStyles = {
+    success: 'bg-emerald-500/20 text-emerald-500',
+    danger: 'bg-rose-500/20 text-rose-500',
+    info: 'bg-blue-500/20 text-blue-500',
+    default: 'bg-muted text-muted-foreground'
+  };
+
+  const valueStyles = {
+    success: 'text-emerald-500',
+    danger: 'text-rose-500',
+    info: 'text-blue-500',
+    default: 'text-foreground'
+  };
+
+  const displayValue = showSign && value > 0 
+    ? `+${formatCurrency(value)}` 
+    : formatCurrency(value);
+
   return (
-    <Card className="bg-card/50 border-border/50">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{account.name}</p>
-            <p className={`text-lg font-semibold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {formatCurrency(balance)}
+    <Card className={`bg-gradient-to-br ${variantStyles[variant]}`}>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-lg ${iconStyles[variant]}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted-foreground truncate">{title}</p>
+            <p className={`text-xl font-bold ${valueStyles[variant]}`}>
+              {displayValue}
             </p>
           </div>
-          <Badge variant="outline" className="text-xs">
-            {ACCOUNT_TYPE_LABELS[account.type]}
-          </Badge>
         </div>
       </CardContent>
     </Card>
   );
 }
+
+// ============ TRANSACTION COUNT CARD ============
+
+function TransactionCountCard({ count, isLoading }: { count: number; isLoading: boolean }) {
+  return (
+    <Card className="bg-gradient-to-br from-muted/50 to-muted/30 border-border/50">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-muted text-muted-foreground">
+            <Receipt className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Transações</p>
+            {isLoading ? (
+              <Skeleton className="h-7 w-12" />
+            ) : (
+              <p className="text-xl font-bold text-foreground">{count}</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ TRANSACTIONS LIST ============
 
 function TransactionsList() {
   const { data: transactions = [], isLoading } = useRecentTransactions();
@@ -66,9 +141,9 @@ function TransactionsList() {
   }
 
   return (
-    <ScrollArea className="h-[400px]">
+    <ScrollArea className="h-[300px]">
       <div className="space-y-2">
-        {transactions.map((tx) => (
+        {transactions.slice(0, 10).map((tx) => (
           <Card key={tx.id} className="bg-card/30 border-border/30 hover:bg-card/50 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -83,15 +158,10 @@ function TransactionsList() {
                       </>
                     )}
                   </div>
-                  {tx.account_names && (
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {tx.account_names}
-                    </p>
-                  )}
                 </div>
                 <div className="text-right ml-4">
-                  <p className="font-semibold text-rose-500">
-                    {formatCurrency(tx.total_amount)}
+                  <p className={`font-semibold ${tx.total_amount > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {tx.total_amount > 0 ? '+' : ''}{formatCurrency(Math.abs(tx.total_amount))}
                   </p>
                 </div>
               </div>
@@ -103,10 +173,38 @@ function TransactionsList() {
   );
 }
 
-function VisaoGeral() {
-  const { data: accounts = [], isLoading, isEnsuring } = useFinancialAccountsWithDefaults();
+// ============ VISÃO GERAL (COM KPIS E GRÁFICO) ============
 
-  if (isLoading || isEnsuring) {
+function VisaoGeral() {
+  const { isLoading: accountsLoading, isEnsuring } = useFinancialAccountsWithDefaults();
+
+  // Calcular período do mês atual
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    return {
+      startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
+      endDate: format(endOfMonth(now), 'yyyy-MM-dd')
+    };
+  }, []);
+
+  // Período dos últimos 30 dias para o gráfico
+  const chartPeriod = useMemo(() => {
+    const now = new Date();
+    return {
+      startDate: format(subMonths(now, 1), 'yyyy-MM-dd'),
+      endDate: format(now, 'yyyy-MM-dd')
+    };
+  }, []);
+
+  // Hooks de dados
+  const { data: summary, isLoading: summaryLoading } = useFinancialSummary(startDate, endDate);
+  const { data: cashFlowData = [], isLoading: cashFlowLoading } = useCashFlowData(
+    chartPeriod.startDate,
+    chartPeriod.endDate,
+    'day'
+  );
+
+  if (accountsLoading || isEnsuring) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -117,56 +215,43 @@ function VisaoGeral() {
     );
   }
 
-  const assetAccounts = accounts.filter(a => a.type === 'asset');
-  const expenseAccounts = accounts.filter(a => a.type === 'expense');
-  const revenueAccounts = accounts.filter(a => a.type === 'revenue');
+  const netResultVariant = (summary?.netResult ?? 0) >= 0 ? 'success' : 'danger';
 
   return (
     <div className="space-y-6">
-      {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500/20 rounded-lg">
-                <Wallet className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Contas Bancárias</p>
-                <p className="text-2xl font-bold">{assetAccounts.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-rose-500/10 to-rose-600/5 border-rose-500/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-rose-500/20 rounded-lg">
-                <TrendingDown className="w-6 h-6 text-rose-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Categorias Despesa</p>
-                <p className="text-2xl font-bold">{expenseAccounts.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Categorias Receita</p>
-                <p className="text-2xl font-bold">{revenueAccounts.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <FinancialKpiCard
+          title="Receita do Mês"
+          value={summary?.totalIncome ?? 0}
+          icon={TrendingUp}
+          variant="success"
+        />
+        <FinancialKpiCard
+          title="Despesas do Mês"
+          value={summary?.totalExpense ?? 0}
+          icon={TrendingDown}
+          variant="danger"
+        />
+        <FinancialKpiCard
+          title="Resultado Líquido"
+          value={summary?.netResult ?? 0}
+          icon={DollarSign}
+          variant={netResultVariant}
+          showSign
+        />
+        <TransactionCountCard 
+          count={summary?.transactionCount ?? 0} 
+          isLoading={summaryLoading}
+        />
       </div>
+
+      {/* Gráfico de Fluxo de Caixa */}
+      <CashFlowChart
+        data={cashFlowData}
+        isLoading={cashFlowLoading}
+        granularity="day"
+      />
 
       {/* Últimos movimentos */}
       <Card>
@@ -184,6 +269,8 @@ function VisaoGeral() {
     </div>
   );
 }
+
+// ============ DESPESAS TAB ============
 
 function DespesasTab() {
   const { data: transactions = [], isLoading } = useRecentTransactions('expense');
@@ -241,18 +328,22 @@ function DespesasTab() {
   );
 }
 
+// ============ LEGADO TAB ============
+
 function LegadoTab() {
   return (
     <div className="text-center py-12">
       <TrendingUp className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />
       <h3 className="text-lg font-medium mb-2">Módulo Legado</h3>
       <p className="text-muted-foreground max-w-md mx-auto">
-        As comissões e receitas do sistema antigo de faturamento serão integradas aqui em breve.
-        Por enquanto, continue usando a página de Faturamento para gerenciar comissões.
+        As comissões marcadas como "Pago" na tela de Faturamento são sincronizadas automaticamente 
+        para este módulo. Elas aparecerão no gráfico de Fluxo de Caixa da Visão Geral.
       </p>
     </div>
   );
 }
+
+// ============ MAIN COMPONENT ============
 
 export default function FinanceiroERP() {
   usePageTitle('Financeiro');
@@ -275,9 +366,18 @@ export default function FinanceiroERP() {
       {/* Tabs */}
       <Tabs defaultValue="visao-geral" className="space-y-6">
         <TabsList className="bg-muted/50">
-          <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="despesas">Despesas</TabsTrigger>
-          <TabsTrigger value="legado">Receitas (Legado)</TabsTrigger>
+          <TabsTrigger value="visao-geral" className="gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Visão Geral
+          </TabsTrigger>
+          <TabsTrigger value="despesas" className="gap-2">
+            <TrendingDown className="w-4 h-4" />
+            Despesas
+          </TabsTrigger>
+          <TabsTrigger value="legado" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Receitas (Legado)
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="visao-geral">
