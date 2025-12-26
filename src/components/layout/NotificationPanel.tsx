@@ -38,7 +38,7 @@ export function NotificationPanel() {
         <Button
           variant="ghost"
           size="icon"
-          className="text-white/70 hover:text-white hover:bg-white/10 relative"
+          className="text-white/70 hover:text-white hover:bg-zinc-800 relative focus-visible:ring-0"
         >
           <Bell className="h-4 w-4" />
           {/* Badge de notificação */}
@@ -49,7 +49,7 @@ export function NotificationPanel() {
       </PopoverTrigger>
       <PopoverContent 
         align="end" 
-        className="w-80 bg-slate-900/95 backdrop-blur-lg border-white/20 text-white"
+        className="w-80 bg-zinc-900/95 backdrop-blur-lg border-zinc-700 text-white"
       >
         <div className="space-y-3">
           <div className="flex items-center justify-between">

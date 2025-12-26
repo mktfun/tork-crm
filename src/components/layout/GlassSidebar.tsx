@@ -128,6 +128,7 @@ export function GlassSidebar() {
           className={cn(
             "p-2 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors ml-auto",
             "text-zinc-400 hover:text-white",
+            "focus:outline-none focus:ring-0 focus-visible:ring-0",
             isCollapsed && "mx-auto ml-0"
           )}
         >
@@ -140,7 +141,7 @@ export function GlassSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 overflow-y-auto">
+      <nav className="flex-1 p-2 overflow-y-auto">
         {isCollapsed ? (
           // Collapsed mode - show only icons
           <div className="space-y-1">
@@ -153,10 +154,10 @@ export function GlassSidebar() {
                   key={item.id}
                   onClick={() => handleNavigation(item.path)}
                   className={cn(
-                    "w-full flex items-center justify-center p-3 rounded-md transition-all duration-200 relative",
-                    "text-zinc-400 hover:text-white hover:bg-zinc-800",
-                    "focus:outline-none focus:ring-2 focus:ring-zinc-700",
-                    isActive && "bg-zinc-800 text-white"
+                    "w-full flex items-center justify-center px-3 py-2.5 rounded-lg mx-1 transition-all duration-200 relative",
+                    "text-zinc-400 hover:text-white hover:bg-zinc-800/60",
+                    "focus:outline-none focus:ring-0 focus-visible:ring-0",
+                    isActive && "bg-zinc-800/80 text-white"
                   )}
                   title={item.name}
                 >
@@ -167,7 +168,7 @@ export function GlassSidebar() {
                     )}
                   </div>
                   {isActive && (
-                    <div className="absolute left-0 w-0.5 h-6 bg-primary rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
                   )}
                 </button>
               );
@@ -196,7 +197,7 @@ export function GlassSidebar() {
                   {section.title}
                 </AccordionTrigger>
                 <AccordionContent className="pb-0 pt-1">
-                  <div className="space-y-1">
+                  <div className="space-y-1 px-1">
                     {section.items.map((item) => {
                       const isActive = isPathActive(item.path);
                       const Icon = item.icon;
@@ -206,12 +207,15 @@ export function GlassSidebar() {
                           key={item.id}
                           onClick={() => handleNavigation(item.path)}
                           className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-md transition-all duration-200 relative",
-                            "text-zinc-400 hover:text-white hover:bg-zinc-800",
-                            "focus:outline-none focus:ring-2 focus:ring-zinc-700",
-                            isActive && "bg-zinc-800 text-white font-medium border-l-2 border-primary"
+                            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative",
+                            "text-zinc-400 hover:text-white hover:bg-zinc-800/60",
+                            "focus:outline-none focus:ring-0 focus-visible:ring-0",
+                            isActive && "bg-zinc-800/80 text-white font-medium"
                           )}
                         >
+                          {isActive && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+                          )}
                           <div className="relative">
                             <Icon className="w-5 h-5 flex-shrink-0" />
                             {item.id === 'novidades' && unreadCount > 0 && (

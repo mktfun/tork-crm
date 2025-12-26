@@ -14,7 +14,7 @@ export function Header({ onSearchClick }: HeaderProps) {
   const isMobile = useIsMobile();
 
   return (
-    <header className="h-16 bg-zinc-900/80 backdrop-blur-lg border-b border-white/5">
+    <header className="h-16 bg-zinc-950/95 backdrop-blur-lg border-b border-zinc-800">
       <div className="flex items-center justify-between h-full px-4 md:px-6">
         {/* Menu Button - apenas no mobile */}
         {isMobile && (
@@ -29,7 +29,7 @@ export function Header({ onSearchClick }: HeaderProps) {
             variant="ghost"
             size="sm"
             onClick={onSearchClick}
-            className="text-white/70 hover:text-white hover:bg-white/10 gap-2"
+            className="text-white/70 hover:text-white hover:bg-zinc-800 gap-2 focus-visible:ring-0"
           >
             <Search className="h-4 w-4" />
             {!isMobile && <span>Buscar...</span>}

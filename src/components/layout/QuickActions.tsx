@@ -48,7 +48,7 @@ export function QuickActions() {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-56 bg-slate-900/95 backdrop-blur-lg border-white/20 text-white z-50"
+        className="w-56 bg-zinc-900/95 backdrop-blur-lg border-zinc-700 text-white z-50"
       >
         <DropdownMenuLabel className="text-white/80">
           Ações Rápidas
