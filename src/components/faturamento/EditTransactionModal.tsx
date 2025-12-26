@@ -80,9 +80,9 @@ export function EditTransactionModal({
       setAmount(String(transaction.amount || ''));
       setDate(transaction.date || '');
       setTypeId(transaction.type_id || '');
-      setClientId(transaction.client_id || '');
-      setRamoId(transaction.ramo_id || '');
-      setCompanyId(transaction.company_id || '');
+      setClientId(transaction.client_id || '__none__');
+      setRamoId(transaction.ramo_id || '__none__');
+      setCompanyId(transaction.company_id || '__none__');
       setStatus(transaction.status || 'PENDENTE');
     }
   }, [transaction]);
@@ -94,9 +94,9 @@ export function EditTransactionModal({
       setAmount('');
       setDate('');
       setTypeId('');
-      setClientId('');
-      setRamoId('');
-      setCompanyId('');
+      setClientId('__none__');
+      setRamoId('__none__');
+      setCompanyId('__none__');
       setStatus('');
     }
   }, [isOpen]);
@@ -109,8 +109,8 @@ export function EditTransactionModal({
 
       const updates: any = {
         status: status,
-        ramo_id: ramoId || null,
-        company_id: companyId || null,
+        ramo_id: ramoId === '__none__' ? null : ramoId || null,
+        company_id: companyId === '__none__' ? null : companyId || null,
       };
 
       // Se for transação manual, permitir editar mais campos
@@ -119,7 +119,7 @@ export function EditTransactionModal({
         updates.amount = parseFloat(amount) || 0;
         updates.date = date;
         updates.type_id = typeId;
-        updates.client_id = clientId || null;
+        updates.client_id = clientId === '__none__' ? null : clientId || null;
         
         // Atualizar nature baseado no tipo selecionado
         const selectedType = transactionTypes.find(t => t.id === typeId);
@@ -310,7 +310,7 @@ export function EditTransactionModal({
                         <SelectValue placeholder="Selecione um cliente" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[200px]">
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="__none__">Nenhum</SelectItem>
                         {clients.map(client => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.name}
@@ -355,7 +355,7 @@ export function EditTransactionModal({
                       <SelectValue placeholder="Selecione um ramo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
                       {ramos.map(ramo => (
                         <SelectItem key={ramo.id} value={ramo.id}>
                           {ramo.nome}
@@ -375,7 +375,7 @@ export function EditTransactionModal({
                       <SelectValue placeholder="Selecione uma seguradora" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="__none__">Nenhuma</SelectItem>
                       {companies.map(company => (
                         <SelectItem key={company.id} value={company.id}>
                           {company.name}
