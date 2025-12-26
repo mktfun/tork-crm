@@ -176,3 +176,67 @@ export function useBulkImport() {
     }
   });
 }
+
+// ============ HOOKS PARA CONFIGURAÇÕES (FASE 6) ============
+
+/**
+ * Hook para contar transações legadas pendentes
+ */
+export function usePendingLegacyCount() {
+  return useQuery({
+    queryKey: ['pending-legacy-count'],
+    queryFn: financialService.countPendingLegacyTransactions,
+    staleTime: 1000 * 60 * 5 // 5 minutos
+  });
+}
+
+/**
+ * Hook para backfill de transações legadas
+ */
+export function useBackfillLegacy() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: financialService.backfillLegacyTransactions,
+    onSuccess: () => {
+      // Invalidar TODOS os caches financeiros
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['dre-data'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-legacy-count'] });
+    }
+  });
+}
+
+/**
+ * Hook para atualizar conta financeira
+ */
+export function useUpdateAccount() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ accountId, updates }: { 
+      accountId: string; 
+      updates: { name: string; code?: string; description?: string } 
+    }) => financialService.updateAccount(accountId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+    }
+  });
+}
+
+/**
+ * Hook para arquivar conta financeira
+ */
+export function useArchiveAccount() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: financialService.archiveAccount,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+    }
+  });
+}

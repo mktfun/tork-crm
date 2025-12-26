@@ -1900,6 +1900,11 @@ export type Database = {
           trigger_name: string
         }[]
       }
+      archive_financial_account: {
+        Args: { p_account_id: string }
+        Returns: boolean
+      }
+      backfill_legacy_transactions: { Args: never; Returns: Json }
       batch_update_transactions: {
         Args: { p_user_id: string; updates: Json }
         Returns: string
@@ -1909,6 +1914,7 @@ export type Database = {
         Returns: Json
       }
       check_upcoming_appointments: { Args: never; Returns: undefined }
+      count_pending_legacy_transactions: { Args: never; Returns: number }
       create_financial_movement: {
         Args: {
           p_description: string
@@ -2226,6 +2232,33 @@ export type Database = {
       settle_due_commissions_v2: { Args: never; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_financial_account: {
+        Args: {
+          p_account_id: string
+          p_code?: string
+          p_description?: string
+          p_name: string
+        }
+        Returns: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          parent_id: string | null
+          status: Database["public"]["Enums"]["financial_account_status"]
+          type: Database["public"]["Enums"]["financial_account_type"]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "financial_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       validate_financial_transaction: {
         Args: { p_transaction_id: string }
         Returns: boolean

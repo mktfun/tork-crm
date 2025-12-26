@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Loader2, Calendar } from 'lucide-react';
+import { format, isFuture, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
 import {
@@ -25,6 +25,7 @@ import {
 
 import { useFinancialAccounts, useRegisterExpense } from '@/hooks/useFinanceiro';
 import { FinancialAccount } from '@/types/financeiro';
+import { Badge } from '@/components/ui/badge';
 
 interface FormData {
   description: string;
@@ -53,6 +54,17 @@ export function NovaDespesaModal() {
       referenceNumber: ''
     }
   });
+
+  // Detectar se a data selecionada é futura
+  const transactionDate = watch('transactionDate');
+  const isDateFuture = useMemo(() => {
+    if (!transactionDate) return false;
+    try {
+      return isFuture(parseISO(transactionDate));
+    } catch {
+      return false;
+    }
+  }, [transactionDate]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -126,12 +138,25 @@ export function NovaDespesaModal() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="transactionDate">Data *</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="transactionDate">Data *</Label>
+                {isDateFuture && (
+                  <Badge variant="outline" className="gap-1 text-amber-600 border-amber-500/30 bg-amber-500/10">
+                    <Calendar className="w-3 h-3" />
+                    Previsão
+                  </Badge>
+                )}
+              </div>
               <Input
                 id="transactionDate"
                 type="date"
                 {...register('transactionDate', { required: 'Data obrigatória' })}
               />
+              {isDateFuture && (
+                <p className="text-xs text-muted-foreground">
+                  Despesas futuras aparecem como previsão no Fluxo de Caixa
+                </p>
+              )}
               {errors.transactionDate && (
                 <p className="text-sm text-destructive">{errors.transactionDate.message}</p>
               )}
