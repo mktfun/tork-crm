@@ -68,10 +68,10 @@ export function HistoricoPagamentos({ transaction, isOpen, onClose }: HistoricoP
           <GlassCard className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <DollarSign size={20} className="text-blue-400" />
+                <DollarSign size={20} className="text-sky-400" />
                 <span className="text-white font-medium">Valor Total da Transação:</span>
               </div>
-              <Badge variant="outline" className="text-blue-400 border-blue-500 text-lg px-3 py-1">
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-400 border-sky-500/20 text-lg px-3 py-1">
                 {transaction.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </Badge>
             </div>
@@ -81,10 +81,10 @@ export function HistoricoPagamentos({ transaction, isOpen, onClose }: HistoricoP
           <GlassCard className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingUp size={20} className="text-green-400" />
+                <TrendingUp size={20} className="text-emerald-400" />
                 <span className="text-white font-medium">Total Pago:</span>
               </div>
-              <Badge variant="outline" className="text-green-400 border-green-500 text-lg px-3 py-1">
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-lg px-3 py-1">
                 {totalPago.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </Badge>
             </div>
@@ -97,15 +97,15 @@ export function HistoricoPagamentos({ transaction, isOpen, onClose }: HistoricoP
           <GlassCard className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingDown size={20} className={saldoDevedor > 0 ? "text-red-400" : "text-green-400"} />
+                <TrendingDown size={20} className={saldoDevedor > 0 ? "text-rose-400" : "text-emerald-400"} />
                 <span className="text-white font-medium">Saldo Devedor:</span>
               </div>
               <Badge 
                 variant="outline" 
                 className={`text-lg px-3 py-1 ${
                   saldoDevedor > 0 
-                    ? "text-red-400 border-red-500" 
-                    : "text-green-400 border-green-500"
+                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20" 
+                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                 }`}
               >
                 {saldoDevedor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -137,7 +137,7 @@ export function HistoricoPagamentos({ transaction, isOpen, onClose }: HistoricoP
                             {new Date(payment.paymentDate).toLocaleDateString('pt-BR')}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-green-400 border-green-500">
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
                           {payment.amountPaid.toLocaleString('pt-BR', { 
                             style: 'currency', 
                             currency: 'BRL' 
