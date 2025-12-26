@@ -60,13 +60,6 @@ export default {
 				warning: 'hsl(var(--warning))',
 				info: 'hsl(var(--info))',
 				critical: 'hsl(var(--critical))',
-				// Glass System Colors
-				glass: {
-					bg: 'rgba(255, 255, 255, 0.1)',
-					'bg-dark': 'rgba(0, 0, 0, 0.2)',
-					border: 'rgba(255, 255, 255, 0.2)',
-					'border-dark': 'rgba(255, 255, 255, 0.1)',
-				},
 				// Chart Colors for Professional BI Look
 				chart: {
 					'1': 'hsl(var(--chart-1))',
@@ -101,19 +94,10 @@ export default {
 						height: '0'
 					}
 				},
-				'glass-glow': {
-					'0%, 100%': {
-						boxShadow: '0 0 20px rgba(255, 255, 255, 0.1)'
-					},
-					'50%': {
-						boxShadow: '0 0 30px rgba(255, 255, 255, 0.2)'
-					}
-				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out',
-				'glass-glow': 'glass-glow 3s ease-in-out infinite'
+				'accordion-up': 'accordion-up 0.2s ease-out'
 			}
 		}
 	},

@@ -106,12 +106,12 @@ export function GlassSidebar() {
     <div 
       className={cn(
         "h-full transition-all duration-300 ease-out flex-shrink-0 relative",
-        "bg-zinc-900 border-r border-white/5",
+        "bg-zinc-950 border-r border-zinc-800",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header com Logo */}
-      <div className="p-4 border-b border-white/5 flex items-center gap-3">
+      <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
         <img 
           src="/tork_symbol_favicon.png" 
           alt="Tork CRM" 
@@ -126,7 +126,7 @@ export function GlassSidebar() {
         <button
           onClick={toggleSidebar}
           className={cn(
-            "p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors ml-auto",
+            "p-2 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors ml-auto",
             "text-zinc-400 hover:text-white",
             isCollapsed && "mx-auto ml-0"
           )}
@@ -154,9 +154,9 @@ export function GlassSidebar() {
                   onClick={() => handleNavigation(item.path)}
                   className={cn(
                     "w-full flex items-center justify-center p-3 rounded-md transition-all duration-200 relative",
-                    "text-zinc-400 hover:text-white hover:bg-white/5",
-                    "focus:outline-none focus:ring-2 focus:ring-white/20",
-                    isActive && "bg-white/10 text-white"
+                    "text-zinc-400 hover:text-white hover:bg-zinc-800",
+                    "focus:outline-none focus:ring-2 focus:ring-zinc-700",
+                    isActive && "bg-zinc-800 text-white"
                   )}
                   title={item.name}
                 >
@@ -189,7 +189,7 @@ export function GlassSidebar() {
                 <AccordionTrigger 
                   className={cn(
                     "px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider",
-                    "hover:text-zinc-300 hover:no-underline rounded-md hover:bg-white/5",
+                    "hover:text-zinc-300 hover:no-underline rounded-md hover:bg-zinc-800/50",
                     "[&[data-state=open]>svg]:rotate-180"
                   )}
                 >
@@ -207,9 +207,9 @@ export function GlassSidebar() {
                           onClick={() => handleNavigation(item.path)}
                           className={cn(
                             "w-full flex items-center gap-3 p-3 rounded-md transition-all duration-200 relative",
-                            "text-zinc-400 hover:text-white hover:bg-white/5",
-                            "focus:outline-none focus:ring-2 focus:ring-white/20",
-                            isActive && "bg-white/10 text-white font-medium border-l-2 border-primary"
+                            "text-zinc-400 hover:text-white hover:bg-zinc-800",
+                            "focus:outline-none focus:ring-2 focus:ring-zinc-700",
+                            isActive && "bg-zinc-800 text-white font-medium border-l-2 border-primary"
                           )}
                         >
                           <div className="relative">
