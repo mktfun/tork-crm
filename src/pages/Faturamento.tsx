@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDate } from '@/utils/dateUtils';
+import { getTransactionDisplayTitle } from '@/utils/transactionUtils';
 import { AppCard } from '@/components/ui/app-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -366,8 +367,8 @@ export default function Faturamento() {
                       >
                         <TableCell className="font-medium text-slate-200">
                           <div className="flex flex-col">
-                            <span className="font-bold group-hover:text-white transition-colors">
-                              {transaction.description}
+                            <span className="font-bold group-hover:text-white transition-colors truncate max-w-md block">
+                              {getTransactionDisplayTitle(transaction, policies, clients)}
                             </span>
                             
                             <div className="text-xs text-slate-400 space-x-2 mt-1 flex items-center gap-2">
