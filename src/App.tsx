@@ -15,6 +15,7 @@ import Clients from "./pages/Clients";
 import ClientDetails from "./pages/ClientDetails";
 import Appointments from "./pages/Appointments";
 import Faturamento from "./pages/Faturamento";
+import FinanceiroERP from "./pages/FinanceiroERP";
 import Tasks from "./pages/Tasks";
 import Renovacoes from "./pages/Renovacoes";
 import Sinistros from "./pages/Sinistros";
@@ -93,6 +94,7 @@ function App() {
                   <Route path="clients/:id" element={<ClientDetails />} />
                   <Route path="appointments" element={<Appointments />} />
                   <Route path="faturamento" element={<Faturamento />} />
+                  <Route path="financeiro" element={<FinanceiroERP />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="renovacoes" element={<Renovacoes />} />
                   <Route path="sinistros" element={<Sinistros />} />

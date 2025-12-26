@@ -15,7 +15,8 @@ import {
   ShieldAlert,
   LucideIcon,
   Megaphone,
-  Kanban
+  Kanban,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChangelogs } from '@/hooks/useChangelogs';
@@ -35,6 +36,7 @@ const menuSections = [
       { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'reports', name: 'Relatórios', icon: BarChart3, path: '/dashboard/reports' },
       { id: 'billing', name: 'Faturamento', icon: DollarSign, path: '/dashboard/faturamento' },
+      { id: 'financeiro', name: 'Financeiro', icon: Wallet, path: '/dashboard/financeiro' },
     ]
   },
   {
