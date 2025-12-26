@@ -114,7 +114,7 @@ export function GlassSidebar() {
       <div className="p-4 border-b border-white/10 flex items-center justify-between">
         {!isCollapsed && (
           <h1 className="text-lg font-semibold text-white">
-            SGC Pro
+            Tork CRM
           </h1>
         )}
         

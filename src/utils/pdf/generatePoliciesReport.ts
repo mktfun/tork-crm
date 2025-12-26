@@ -125,7 +125,7 @@ export async function generatePoliciesReport(
   let yPos = drawPDFHeader(doc, {
     title: options.title,
     subtitle: 'Relatório Operacional',
-    brokerName: 'SGC Pro'
+    brokerName: 'Tork CRM'
   });
 
   yPos += 6;

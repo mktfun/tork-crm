@@ -115,7 +115,7 @@ export default function AuthConfirm() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <FileText className="h-8 w-8 text-blue-400" />
-            <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+            <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
           </div>
           <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto" />
           <p className="text-white/80 text-sm">Confirmando email...</p>
@@ -132,7 +132,7 @@ export default function AuthConfirm() {
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <FileText className="h-8 w-8 text-blue-400" />
-                <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+                <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
               </div>
               <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
               <CardTitle className="text-white">Erro na Confirmação</CardTitle>
@@ -162,7 +162,7 @@ export default function AuthConfirm() {
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <FileText className="h-8 w-8 text-blue-400" />
-                <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+                <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
               </div>
               <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
               <CardTitle className="text-white">Email Confirmado!</CardTitle>
@@ -184,7 +184,7 @@ export default function AuthConfirm() {
             <CardHeader className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <FileText className="h-8 w-8 text-blue-400" />
-                <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+                <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
               </div>
               <CardTitle className="text-white">Redefinir Senha</CardTitle>
               <CardDescription className="text-white/60">

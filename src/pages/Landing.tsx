@@ -25,7 +25,7 @@ function Landing() {
     return (
         <div className="min-h-screen bg-[#030303]">
             <HeroGeometric
-                badge="SGC Sistema Gestor de Corretor"
+                badge="Tork CRM · Gestão Inteligente"
                 title1="Nunca Mais Perca"
                 title2="Uma Renovação"
                 description="Sistema completo de gestão para corretoras de seguros. Gerencie clientes, apólices, renovações e comissões em uma única plataforma inteligente."

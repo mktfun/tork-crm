@@ -96,7 +96,7 @@ export default function Auth() {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <FileText className="h-8 w-8 text-blue-400" />
-            <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+            <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
           </div>
           <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto" />
           <p className="text-white/80 text-sm">Carregando...</p>
@@ -121,7 +121,7 @@ export default function Auth() {
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
               <FileText className="h-8 w-8 text-blue-400" />
-              <h1 className="text-2xl font-bold text-white">SGC Pro</h1>
+              <h1 className="text-2xl font-bold text-white">Tork CRM</h1>
             </div>
             <CardTitle className="text-white">
               {showResetForm ? 'Recuperar Senha' : 'Bem-vindo'}
@@ -129,7 +129,7 @@ export default function Auth() {
             <CardDescription className="text-white/60">
               {showResetForm 
                 ? 'Digite seu email para recuperar sua senha'
-                : 'Sistema de Gestão de Corretor'
+                : 'Gestão Inteligente de Seguros'
               }
             </CardDescription>
           </CardHeader>

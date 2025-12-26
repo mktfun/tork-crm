@@ -183,7 +183,7 @@ export function PolicyPDFTemplate({ policy, client }: PolicyPDFTemplateProps) {
       
       {/* ===== RODAPÉ ===== */}
       <div className="absolute bottom-12 left-12 right-12 pt-6 border-t-2 border-slate-700 text-center text-sm text-slate-500">
-        <p>Documento gerado pelo SGC Raiz • {new Date().toLocaleString('pt-BR')} • Apólice: {policy.policyNumber}</p>
+        <p>Documento gerado pelo Tork CRM • {new Date().toLocaleString('pt-BR')} • Apólice: {policy.policyNumber}</p>
       </div>
     </div>
   );

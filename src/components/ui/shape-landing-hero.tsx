@@ -458,7 +458,7 @@ function BenefitsSection() {
                 >
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 tracking-tight">
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-white/90 to-slate-300">
-                            Por que escolher o SGC?
+                            Por que escolher o Tork CRM?
                         </span>
                     </h2>
                     <p className="text-lg text-white/60 max-w-2xl mx-auto">
@@ -560,7 +560,7 @@ function FinalCTASection() {
                     viewport={{ once: true }}
                 >
                     <p className="text-lg md:text-xl text-white/60 mb-12 max-w-2xl mx-auto leading-relaxed">
-                        Junte-se a centenas de corretores que já transformaram sua gestão com o SGC.
+                        Junte-se a centenas de corretores que já transformaram sua gestão com o Tork CRM.
                         Comece gratuitamente hoje mesmo.
                     </p>
                 </motion.div>
