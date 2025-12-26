@@ -9,7 +9,8 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Wrench
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,7 +26,9 @@ import {
   useFinancialAccountsWithDefaults, 
   usePendingLegacyCount,
   useBackfillLegacy,
-  useLedgerEntryCount
+  useLedgerEntryCount,
+  useProblematicDescriptionsCount,
+  useFixLedgerDescriptions
 } from '@/hooks/useFinanceiro';
 import { FinancialAccount, FinancialAccountType, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 
@@ -165,11 +168,10 @@ function BackfillCard() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <RefreshCw className="w-5 h-5 text-muted-foreground" />
-          <CardTitle className="text-lg">Manutenção de Dados</CardTitle>
+          <CardTitle className="text-lg">Sincronizar Histórico</CardTitle>
         </div>
         <CardDescription>
           Sincronize transações do sistema antigo (Faturamento) para o módulo Financeiro.
-          Isso vai popular o DRE com seu histórico de comissões.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -183,7 +185,7 @@ function BackfillCard() {
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <p className="text-sm">
               <span className="font-semibold text-amber-500">{pendingCount}</span>{' '}
-              transações pagas ainda não foram migradas para o Financeiro.
+              transações pagas ainda não foram migradas.
             </p>
           </div>
         ) : (
@@ -209,14 +211,88 @@ function BackfillCard() {
           ) : (
             <>
               <RefreshCw className="w-4 h-4" />
-              Sincronizar Histórico Financeiro
+              Sincronizar Histórico
             </>
           )}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ FIX DESCRIPTIONS CARD ============
+
+function FixDescriptionsCard() {
+  const { data: problemCount = 0, isLoading: countLoading } = useProblematicDescriptionsCount();
+  const fixMutation = useFixLedgerDescriptions();
+  
+  const handleFix = async () => {
+    try {
+      const result = await fixMutation.mutateAsync();
+      
+      if (result.fixedCount > 0) {
+        toast.success(`${result.fixedCount} descrições foram corrigidas!`);
+      } else {
+        toast.info('Nenhuma descrição precisava de correção.');
+      }
+    } catch (error: any) {
+      console.error('Erro ao corrigir descrições:', error);
+      toast.error(error.message || 'Erro ao corrigir descrições');
+    }
+  };
+
+  return (
+    <Card className="border-dashed">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Wrench className="w-5 h-5 text-muted-foreground" />
+          <CardTitle className="text-lg">Correção de Dados</CardTitle>
+        </div>
+        <CardDescription>
+          Corrige descrições "undefined" ou vazias nas transações financeiras.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {countLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Verificando...
+          </div>
+        ) : problemCount > 0 ? (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <p className="text-sm">
+              <span className="font-semibold text-amber-500">{problemCount}</span>{' '}
+              descrições precisam ser corrigidas.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm text-emerald-600">
+              Todas as descrições estão corretas!
+            </p>
+          </div>
+        )}
         
-        <p className="text-xs text-muted-foreground">
-          Esta operação é segura e não duplica dados. Pode ser executada múltiplas vezes.
-        </p>
+        <Button 
+          variant="outline" 
+          className="gap-2"
+          onClick={handleFix}
+          disabled={fixMutation.isPending || problemCount === 0}
+        >
+          {fixMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Corrigindo...
+            </>
+          ) : (
+            <>
+              <Wrench className="w-4 h-4" />
+              Corrigir Descrições
+            </>
+          )}
+        </Button>
       </CardContent>
     </Card>
   );
@@ -281,8 +357,11 @@ export function ConfiguracoesTab() {
 
       <Separator />
 
-      {/* Backfill Card */}
-      <BackfillCard />
+      {/* Maintenance Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <BackfillCard />
+        <FixDescriptionsCard />
+      </div>
 
       {/* Edit Modal */}
       {editingAccount && (

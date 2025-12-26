@@ -1909,6 +1909,10 @@ export type Database = {
         Args: { p_user_id: string; updates: Json }
         Returns: string
       }
+      bulk_confirm_receipts: {
+        Args: { p_transaction_ids: string[] }
+        Returns: Json
+      }
       bulk_create_financial_movements: {
         Args: { p_transactions: Json }
         Returns: Json
@@ -1919,6 +1923,7 @@ export type Database = {
         Returns: number
       }
       count_pending_legacy_transactions: { Args: never; Returns: number }
+      count_problematic_descriptions: { Args: never; Returns: number }
       create_financial_movement: {
         Args: {
           p_description: string
@@ -1936,6 +1941,7 @@ export type Database = {
       }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
+      fix_ledger_descriptions: { Args: never; Returns: Json }
       get_cash_flow_data: {
         Args: {
           p_end_date: string
@@ -2145,6 +2151,10 @@ export type Database = {
         }[]
       }
       get_schema_info: { Args: never; Returns: Json }
+      get_transaction_details: {
+        Args: { p_transaction_id: string }
+        Returns: Json
+      }
       get_user_companies_with_ramos: {
         Args: never
         Returns: {
