@@ -48,7 +48,7 @@ export function UserNav() {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="w-56 bg-slate-900/95 backdrop-blur-lg border-white/20 text-white"
+        className="w-56 bg-zinc-900/95 backdrop-blur-lg border-zinc-700 text-white"
       >
         <DropdownMenuLabel className="text-white/80">
           <div className="flex flex-col space-y-1">
