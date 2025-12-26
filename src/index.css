@@ -188,197 +188,69 @@ DEPENDÊNCIAS CRÍTICAS:
 
 /* 🔒🔒🔒 FIM DA SEÇÃO PROTEGIDA 🔒🔒🔒 */
 
-/* PREMIUM GLASS SIDEBAR SYSTEM - TORK CRM ZINC THEME */
+/* ENTERPRISE SIDEBAR SYSTEM - TORK CRM FLAT DARK THEME */
 .glass-sidebar-premium {
-  background: linear-gradient(
-    145deg,
-    rgba(9, 9, 11, 0.95) 0%,      /* zinc-950 */
-    rgba(24, 24, 27, 0.90) 50%,   /* zinc-900 */
-    rgba(15, 15, 18, 0.92) 100%
-  );
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
-  border-right: 1px solid transparent;
-  border-image: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.03) 50%,
-    rgba(255, 255, 255, 0.15) 100%
-  ) 1;
-  box-shadow: 
-    4px 0 32px rgba(0, 0, 0, 0.35),
-    inset -1px 0 0 rgba(255, 255, 255, 0.05),
-    0 0 0 1px rgba(255, 255, 255, 0.02);
-  position: relative;
-  overflow: hidden;
+  background: #09090b; /* zinc-950 solid */
+  border-right: 1px solid #27272a; /* zinc-800 */
 }
 
-.glass-sidebar-premium::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    transparent 30%,
-    transparent 70%,
-    rgba(255, 255, 255, 0.01) 100%
-  );
-  pointer-events: none;
-}
-
-/* PREMIUM MENU ITEMS */
+/* ENTERPRISE MENU ITEMS - Clean and Simple */
 .glass-menu-item {
   position: relative;
-  overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 12px;
-  backdrop-filter: blur(8px);
-}
-
-.glass-menu-item::before {
-  content: '';
-  position: absolute;
-  top: var(--y, 50%);
-  left: var(--x, 50%);
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.02) 40%,
-    rgba(255, 255, 255, 0) 70%
-  );
-  opacity: 0;
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-
-.glass-menu-item:hover::before {
-  opacity: 1;
+  transition: all 0.2s ease;
+  border-radius: 6px;
 }
 
 .glass-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
-  box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .glass-menu-item.active {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.15) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.12) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-  transform: translateX(3px);
+  background: #27272a; /* zinc-800 solid */
 }
 
 .glass-menu-item.active::after {
   content: '';
   position: absolute;
-  left: -1px;
-  top: 20%;
-  bottom: 20%;
-  width: 3px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(100, 200, 255, 0.8),
-    rgba(100, 200, 255, 1),
-    rgba(100, 200, 255, 0.8),
-    transparent
-  );
-  border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 12px rgba(100, 200, 255, 0.5);
-}
-
-/* HEADER PREMIUM */
-.glass-sidebar-header {
-  position: relative;
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.02) 100%
-  );
-}
-
-.glass-sidebar-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
   left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.3),
-    transparent
-  );
+  top: 25%;
+  bottom: 25%;
+  width: 3px;
+  background: #3b82f6; /* primary blue */
+  border-radius: 0 2px 2px 0;
 }
 
-/* FOOTER PREMIUM */
+/* SIDEBAR HEADER */
+.glass-sidebar-header {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid #27272a;
+}
+
+/* SIDEBAR FOOTER */
 .glass-sidebar-footer {
-  position: relative;
   margin: 1rem;
   padding: 1rem;
-  border-radius: 16px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.08) 0%,
-    rgba(255, 255, 255, 0.03) 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(12px);
-  box-shadow: 
-    0 4px 20px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: #18181b; /* zinc-900 */
+  border: 1px solid #27272a;
 }
 
-/* TOGGLE BUTTON PREMIUM */
+/* TOGGLE BUTTON */
 .glass-toggle-btn {
-  position: relative;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  border-radius: 6px;
   padding: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
 .glass-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: #3f3f46;
 }
 
-/* ICON ANIMATIONS */
+/* ICON STYLES */
 .glass-icon {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-menu-item:hover .glass-icon {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
-}
-
-.glass-menu-item.active .glass-icon {
-  transform: scale(1.05);
-  filter: drop-shadow(0 0 12px rgba(100, 200, 255, 0.5));
+  transition: color 0.2s ease;
 }
 
 /* COLLAPSE ANIMATIONS */
@@ -390,7 +262,7 @@ DEPENDÊNCIAS CRÍTICAS:
 .sidebar-collapse-enter-active {
   transform: translateX(0);
   opacity: 1;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
 }
 
 .sidebar-collapse-exit {
@@ -401,47 +273,18 @@ DEPENDÊNCIAS CRÍTICAS:
 .sidebar-collapse-exit-active {
   transform: translateX(-100%);
   opacity: 0;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
 }
 
-/* STAGGER ANIMATIONS FOR MENU ITEMS */
-.glass-menu-item {
-  animation: slideInLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.glass-menu-item:nth-child(1) { animation-delay: 0.1s; }
-.glass-menu-item:nth-child(2) { animation-delay: 0.15s; }
-.glass-menu-item:nth-child(3) { animation-delay: 0.2s; }
-.glass-menu-item:nth-child(4) { animation-delay: 0.25s; }
-.glass-menu-item:nth-child(5) { animation-delay: 0.3s; }
-.glass-menu-item:nth-child(6) { animation-delay: 0.35s; }
-.glass-menu-item:nth-child(7) { animation-delay: 0.4s; }
-.glass-menu-item:nth-child(8) { animation-delay: 0.45s; }
-.glass-menu-item:nth-child(9) { animation-delay: 0.5s; }
-
-@keyframes slideInLeft {
-  0% {
-    transform: translateX(-30px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* GLASS MORPHISM ENHANCED EFFECTS */
+/* GLASS BACKGROUND UTILITIES */
 .glass-bg {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #18181b;
+  border: 1px solid #27272a;
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: #18181b;
+  border: 1px solid #27272a;
 }
 
 
