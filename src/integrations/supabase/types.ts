@@ -2155,10 +2155,12 @@ export type Database = {
         }[]
       }
       get_schema_info: { Args: never; Returns: Json }
-      get_transaction_details: {
-        Args: { p_transaction_id: string }
-        Returns: Json
-      }
+      get_transaction_details:
+        | { Args: { p_transaction_id: string }; Returns: Json }
+        | {
+            Args: { p_legacy_id?: string; p_transaction_id?: string }
+            Returns: Json
+          }
       get_user_companies_with_ramos: {
         Args: never
         Returns: {

@@ -592,10 +592,16 @@ interface TransactionDetails {
 
 /**
  * Busca detalhes completos de uma transação
+ * @param transactionId - ID da transação no financial_transactions
+ * @param legacyId - ID da transação legada na tabela transactions (opcional)
  */
-export async function getTransactionDetails(transactionId: string): Promise<TransactionDetails> {
+export async function getTransactionDetails(
+  transactionId?: string | null,
+  legacyId?: string | null
+): Promise<TransactionDetails> {
   const { data, error } = await supabase.rpc('get_transaction_details', {
-    p_transaction_id: transactionId
+    p_transaction_id: transactionId || null,
+    p_legacy_id: legacyId || null
   });
   
   if (error) throw error;
