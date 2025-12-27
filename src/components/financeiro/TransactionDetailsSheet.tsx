@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Calendar, 
@@ -53,6 +53,20 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'BRL'
   }).format(value);
+}
+
+// Helper seguro para formatar datas - evita "Invalid time value"
+function safeFormatDate(dateValue: string | null | undefined, formatStr: string, fallback: string = '---'): string {
+  if (!dateValue) return fallback;
+  
+  try {
+    // Parse como ISO string (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
+    const parsed = parseISO(dateValue);
+    if (!isValid(parsed)) return fallback;
+    return format(parsed, formatStr, { locale: ptBR });
+  } catch {
+    return fallback;
+  }
 }
 
 interface TransactionDetailsSheetProps {
@@ -193,7 +207,7 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                       Data
                     </div>
                     <p className="font-medium">
-                      {format(new Date(transaction.transactionDate), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                      {safeFormatDate(transaction.transactionDate, "dd 'de' MMMM, yyyy")}
                     </p>
                   </div>
 
@@ -316,7 +330,7 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                 {/* Metadados Técnicos */}
                 <Separator />
                 <div className="space-y-2 text-xs text-muted-foreground">
-                  <p><strong>Criado em:</strong> {format(new Date(transaction.createdAt), 'dd/MM/yyyy HH:mm')}</p>
+                  <p><strong>Criado em:</strong> {safeFormatDate(transaction.createdAt, 'dd/MM/yyyy HH:mm')}</p>
                   <p><strong>Origem:</strong> {transaction.relatedEntityType || 'manual'}</p>
                   <p className="font-mono break-all"><strong>ID:</strong> {transaction.id}</p>
                   {transaction.isVoid && transaction.voidReason && (
