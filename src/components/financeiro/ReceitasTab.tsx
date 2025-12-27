@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   ArrowRightLeft,
-  Check
+  Check,
+  Lock,
+  Info
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -23,6 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { NovaReceitaModal } from './NovaReceitaModal';
 import { TransactionDetailsSheet } from './TransactionDetailsSheet';
@@ -84,7 +92,8 @@ function TransactionsTable({
     );
   }
 
-  // Filtrar transações que podem ser selecionadas (não confirmadas)
+  // Filtrar transações que podem ser selecionadas (não confirmadas E não sincronizadas)
+  // Transações sincronizadas (legacy_status não nulo) não podem ser selecionadas manualmente
   const selectableTransactions = transactions.filter(tx => !tx.is_confirmed);
   const allSelectableSelected = selectableTransactions.length > 0 && 
     selectableTransactions.every(tx => selectedIds.has(tx.id));
@@ -94,89 +103,117 @@ function TransactionsTable({
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10">
-            <Checkbox 
-              checked={allSelectableSelected}
-              onCheckedChange={(checked) => handleSelectAllSelectable(!!checked)}
-              disabled={selectableTransactions.length === 0}
-            />
-          </TableHead>
-          <TableHead className="w-24">Data</TableHead>
-          <TableHead className="min-w-[280px]">Descrição</TableHead>
-          <TableHead className="w-40">Categoria</TableHead>
-          <TableHead className="w-24">Status</TableHead>
-          <TableHead className="text-right w-32">Valor</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {transactions.map((tx) => {
-          const isConfirmed = tx.is_confirmed;
-          
-          // Parse date correctly using local date helper
-          const displayDate = tx.transaction_date 
-            ? format(parseLocalDate(String(tx.transaction_date)), 'dd/MM', { locale: ptBR })
-            : '-';
-          
-          return (
-            <TableRow 
-              key={tx.id}
-              className={cn(
-                "cursor-pointer hover:bg-muted/50",
-                isConfirmed && "opacity-60"
-              )}
-              onClick={() => onViewDetails(tx.id)}
-            >
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <Checkbox 
-                  checked={selectedIds.has(tx.id)}
-                  onCheckedChange={() => onToggleSelect(tx.id)}
-                  disabled={isConfirmed}
-                />
-              </TableCell>
-              <TableCell className="font-mono text-sm">
-                {displayDate}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-0.5">
-                  <span className="whitespace-normal break-words">
-                    {tx.description}
-                  </span>
-                  {tx.client_name && (
-                    <span className="text-xs text-muted-foreground">
-                      {tx.client_name}
-                    </span>
+    <TooltipProvider>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10">
+              <Checkbox 
+                checked={allSelectableSelected}
+                onCheckedChange={(checked) => handleSelectAllSelectable(!!checked)}
+                disabled={selectableTransactions.length === 0}
+              />
+            </TableHead>
+            <TableHead className="w-24">Data</TableHead>
+            <TableHead className="min-w-[280px]">Descrição</TableHead>
+            <TableHead className="w-40">Categoria</TableHead>
+            <TableHead className="w-24">Status</TableHead>
+            <TableHead className="text-right w-32">Valor</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((tx) => {
+            const isConfirmed = tx.is_confirmed;
+            // Transação sincronizada do legado (vinda de apólice)
+            const isSynchronized = tx.legacy_status !== null;
+            
+            // Parse date correctly using local date helper
+            const displayDate = tx.transaction_date 
+              ? format(parseLocalDate(String(tx.transaction_date)), 'dd/MM', { locale: ptBR })
+              : '-';
+            
+            return (
+              <TableRow 
+                key={tx.id}
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50",
+                  isConfirmed && "opacity-60"
+                )}
+                onClick={() => onViewDetails(tx.id)}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {isSynchronized && !isConfirmed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center w-4 h-4">
+                          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="font-medium">Transação Sincronizada</p>
+                        <p className="text-xs text-muted-foreground">
+                          Alterações devem ser feitas na Apólice
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Checkbox 
+                      checked={selectedIds.has(tx.id)}
+                      onCheckedChange={() => onToggleSelect(tx.id)}
+                      disabled={isConfirmed}
+                    />
                   )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {tx.account_name && (
-                  <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
-                    {tx.account_name}
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                {isConfirmed ? (
-                  <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
-                    Confirmado
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-amber-600 border-amber-500/30">
-                    Pendente
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right font-semibold text-emerald-500">
-                +{formatCurrency(tx.amount)}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  {displayDate}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="whitespace-normal break-words">
+                        {tx.description}
+                      </span>
+                      {isSynchronized && (
+                        <Badge variant="outline" className="text-xs gap-1 flex-shrink-0">
+                          <Lock className="w-2.5 h-2.5" />
+                          Sync
+                        </Badge>
+                      )}
+                    </div>
+                    {tx.client_name && (
+                      <span className="text-xs text-muted-foreground">
+                        {tx.client_name}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {tx.account_name && (
+                    <Badge variant="secondary" className="text-xs truncate max-w-[120px]">
+                      {tx.account_name}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {isConfirmed ? (
+                    <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+                      Confirmado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-600 border-amber-500/30">
+                      Pendente
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right font-semibold text-emerald-500">
+                  +{formatCurrency(tx.amount)}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </TooltipProvider>
   );
 }
 
@@ -199,12 +236,13 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     ? format(dateRange.to, 'yyyy-MM-dd')
     : format(new Date(), 'yyyy-MM-dd');
 
-  // Filtrar apenas transações que podem ser selecionadas
-  const selectableTransactions = transactions.filter(tx => !tx.is_confirmed);
+  // Filtrar apenas transações que podem ser selecionadas (não confirmadas e não sincronizadas)
+  const selectableTransactions = transactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
 
   const handleToggleSelect = (id: string) => {
     const tx = transactions.find(t => t.id === id);
-    if (tx?.is_confirmed) return;
+    // Não permite selecionar se confirmada ou sincronizada
+    if (tx?.is_confirmed || tx?.legacy_status !== null) return;
     
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -243,6 +281,9 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     }
   };
 
+  // Contar transações sincronizadas para info
+  const syncedCount = transactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
+
   return (
     <div className="space-y-6">
       {/* Header com Ações */}
@@ -257,6 +298,17 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
           <NovaReceitaModal />
         </div>
       </div>
+
+      {/* Info sobre transações sincronizadas */}
+      {syncedCount > 0 && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm">
+          <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-muted-foreground">
+            {syncedCount} transação(ões) sincronizada(s) com apólices. 
+            Para alterá-las, edite diretamente na apólice correspondente.
+          </span>
+        </div>
+      )}
 
       {/* Transactions Table */}
       <Card>

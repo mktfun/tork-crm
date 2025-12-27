@@ -206,24 +206,53 @@ export async function getRecentTransactions(params?: {
   return data || [];
 }
 
-/**
- * Anula uma transação (soft delete)
- */
-export async function voidTransaction(transactionId: string, reason: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
+// ============ INTERFACE PARA RESULTADO DE ESTORNO ============
 
-  const { error } = await supabase
-    .from('financial_transactions')
-    .update({
-      is_void: true,
-      void_reason: reason,
-      voided_at: new Date().toISOString(),
-      voided_by: user.id
-    })
-    .eq('id', transactionId);
+export interface ReverseTransactionResult {
+  success: boolean;
+  reversalId?: string;
+  originalId?: string;
+  reversedAmount?: number;
+  error?: string;
+  message?: string;
+}
+
+/**
+ * Estorna uma transação usando a RPC void_financial_transaction.
+ * Cria lançamentos inversos no ledger e marca a transação original como void.
+ */
+export async function reverseTransaction(
+  transactionId: string, 
+  reason: string
+): Promise<ReverseTransactionResult> {
+  const { data, error } = await supabase.rpc('void_financial_transaction', {
+    p_transaction_id: transactionId,
+    p_reason: reason
+  });
 
   if (error) throw error;
+  
+  const result = data as any;
+  return {
+    success: result?.success ?? false,
+    reversalId: result?.reversal_id,
+    originalId: result?.original_id,
+    reversedAmount: result?.reversed_amount,
+    error: result?.error,
+    message: result?.message
+  };
+}
+
+/**
+ * @deprecated Use reverseTransaction instead - mantido para compatibilidade
+ * Anula uma transação (soft delete) - Esta função não funciona mais devido aos triggers de imutabilidade
+ */
+export async function voidTransaction(transactionId: string, reason: string): Promise<void> {
+  // Redirecionar para a nova função de estorno
+  const result = await reverseTransaction(transactionId, reason);
+  if (!result.success) {
+    throw new Error(result.error || 'Falha ao estornar transação');
+  }
 }
 
 // ============ FLUXO DE CAIXA ============

@@ -102,7 +102,7 @@ export function useCreateAccount() {
 }
 
 /**
- * Hook para anular transação
+ * Hook para anular transação (deprecated - use useReverseTransaction)
  */
 export function useVoidTransaction() {
   const queryClient = useQueryClient();
@@ -115,6 +115,27 @@ export function useVoidTransaction() {
       queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
       queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+    }
+  });
+}
+
+/**
+ * Hook para estornar transação (cria lançamentos inversos no ledger)
+ */
+export function useReverseTransaction() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ transactionId, reason }: { transactionId: string; reason: string }) =>
+      financialService.reverseTransaction(transactionId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-details'] });
     }
   });
 }
