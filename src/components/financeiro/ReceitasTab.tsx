@@ -349,6 +349,7 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
       {/* Details Sheet */}
       <TransactionDetailsSheet 
         transactionId={detailsId}
+        isLegacyId={false}
         open={!!detailsId}
         onClose={() => setDetailsId(null)}
       />
