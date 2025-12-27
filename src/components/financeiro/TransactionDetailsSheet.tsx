@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   RotateCcw,
   Lock,
-  Info
+  Info,
+  FileWarning
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -39,6 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
@@ -141,8 +143,49 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
           </SheetHeader>
 
           {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="space-y-6 p-4">
+              {/* Skeleton do valor em destaque */}
+              <div className="flex flex-col items-center gap-3 p-6 rounded-lg bg-muted/30">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-4 w-48" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-20" />
+                </div>
+              </div>
+              
+              <Skeleton className="h-px w-full" />
+              
+              {/* Skeleton dos metadados */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-5 w-28" />
+                </div>
+              </div>
+              
+              <Skeleton className="h-px w-full" />
+              
+              {/* Skeleton dos links */}
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 w-28" />
+                  <Skeleton className="h-9 w-32" />
+                </div>
+              </div>
+              
+              <Skeleton className="h-px w-full" />
+              
+              {/* Skeleton dos movimentos */}
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+              </div>
             </div>
           )}
 
@@ -222,8 +265,8 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                   </div>
                 </div>
 
-                {/* Links Rápidos (se houver dados legados) */}
-                {transaction.legacyData && (
+                {/* Links Rápidos - Dados legados OU relatedEntityType */}
+                {(transaction.legacyData || (transaction.relatedEntityType === 'policy' && transaction.relatedEntityId)) && (
                   <>
                     <Separator />
                     <div className="space-y-3">
@@ -232,7 +275,8 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                         Links Rápidos
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {transaction.legacyData.clientId && (
+                        {/* Link via legacyData */}
+                        {transaction.legacyData?.clientId && (
                           <Button asChild variant="outline" size="sm" className="gap-2">
                             <Link to={`/dashboard/clients/${transaction.legacyData.clientId}`}>
                               <User className="w-4 h-4" />
@@ -240,7 +284,7 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                             </Link>
                           </Button>
                         )}
-                        {transaction.legacyData.policyId && (
+                        {transaction.legacyData?.policyId && (
                           <Button asChild variant="outline" size="sm" className="gap-2">
                             <Link to={`/dashboard/policies/${transaction.legacyData.policyId}`}>
                               <FileCheck className="w-4 h-4" />
@@ -250,23 +294,37 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                             </Link>
                           </Button>
                         )}
+                        
+                        {/* Link direto via relatedEntityType (quando não há legacyData) */}
+                        {!transaction.legacyData?.policyId && 
+                         transaction.relatedEntityType === 'policy' && 
+                         transaction.relatedEntityId && (
+                          <Button asChild variant="outline" size="sm" className="gap-2">
+                            <Link to={`/dashboard/policies/${transaction.relatedEntityId}`}>
+                              <FileWarning className="w-4 h-4" />
+                              Ver Apólice Relacionada
+                            </Link>
+                          </Button>
+                        )}
                       </div>
 
                       {/* Dados Adicionais do Legado */}
-                      <div className="grid grid-cols-2 gap-3 text-sm p-3 rounded-lg bg-muted/30">
-                        {transaction.legacyData.ramo && (
-                          <div>
-                            <p className="text-muted-foreground">Ramo</p>
-                            <p className="font-medium">{transaction.legacyData.ramo}</p>
-                          </div>
-                        )}
-                        {transaction.legacyData.company && (
-                          <div>
-                            <p className="text-muted-foreground">Seguradora</p>
-                            <p className="font-medium">{transaction.legacyData.company}</p>
-                          </div>
-                        )}
-                      </div>
+                      {transaction.legacyData && (transaction.legacyData.ramo || transaction.legacyData.company) && (
+                        <div className="grid grid-cols-2 gap-3 text-sm p-3 rounded-lg bg-muted/30">
+                          {transaction.legacyData.ramo && (
+                            <div>
+                              <p className="text-muted-foreground">Ramo</p>
+                              <p className="font-medium">{transaction.legacyData.ramo}</p>
+                            </div>
+                          )}
+                          {transaction.legacyData.company && (
+                            <div>
+                              <p className="text-muted-foreground">Seguradora</p>
+                              <p className="font-medium">{transaction.legacyData.company}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
