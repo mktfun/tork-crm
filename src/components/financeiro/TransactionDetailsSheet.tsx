@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
@@ -119,6 +120,9 @@ export function TransactionDetailsSheet({ transactionId, open, onClose }: Transa
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader className="flex flex-row items-center justify-between pb-4">
             <SheetTitle>Detalhes da Transação</SheetTitle>
+            <SheetDescription className="sr-only">
+              Visualize os detalhes contábeis desta transação
+            </SheetDescription>
           </SheetHeader>
 
           {isLoading && (

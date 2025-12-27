@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Transaction, Policy, Client } from '@/types';
+import { useState, useMemo } from 'react';
+import { Policy } from '@/types';
 import { useTransactions, useClients } from '@/hooks/useAppData';
 import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
@@ -14,18 +14,17 @@ interface CommissionExtractProps {
 
 export function CommissionExtract({ policy }: CommissionExtractProps) {
   const [showExtract, setShowExtract] = useState(false);
-  const [commissionTransactions, setCommissionTransactions] = useState<Transaction[]>([]);
   const { transactions } = useTransactions();
   const { clients } = useClients();
 
-  // Buscar transações de comissão relacionadas à apólice
-  useEffect(() => {
-    const policyCommissions = transactions.filter(t => 
+  // Usar useMemo ao invés de useEffect para evitar loop infinito
+  const commissionTransactions = useMemo(() => 
+    transactions.filter(t => 
       t.policyId === policy.id && 
       t.nature === 'RECEITA'
-    );
-    setCommissionTransactions(policyCommissions);
-  }, [transactions, policy.id]);
+    ), 
+    [transactions, policy.id]
+  );
 
   const client = clients.find(c => c.id === policy.clientId);
   const totalCommission = policy.premiumValue * (policy.commissionRate / 100);
