@@ -220,7 +220,7 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                       <div className="flex flex-wrap gap-2">
                         {transaction.legacyData.clientId && (
                           <Button asChild variant="outline" size="sm" className="gap-2">
-                            <Link to={`/dashboard/clientes/${transaction.legacyData.clientId}`}>
+                            <Link to={`/dashboard/clients/${transaction.legacyData.clientId}`}>
                               <User className="w-4 h-4" />
                               {transaction.legacyData.clientName || 'Ver Cliente'}
                             </Link>
@@ -228,7 +228,7 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                         )}
                         {transaction.legacyData.policyId && (
                           <Button asChild variant="outline" size="sm" className="gap-2">
-                            <Link to={`/dashboard/apolices/${transaction.legacyData.policyId}`}>
+                            <Link to={`/dashboard/policies/${transaction.legacyData.policyId}`}>
                               <FileCheck className="w-4 h-4" />
                               {transaction.legacyData.policyNumber 
                                 ? `Apólice #${transaction.legacyData.policyNumber.slice(0, 10)}`
