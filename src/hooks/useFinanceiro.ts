@@ -304,11 +304,16 @@ export function useBulkConfirmReceipts() {
 
 /**
  * Hook para buscar detalhes de uma transação
+ * @param transactionId - ID da transação (pode ser ID moderno ou legado)
+ * @param isLegacyId - Se true, busca pelo ID legado (tabela transactions)
  */
-export function useTransactionDetails(transactionId: string | null) {
+export function useTransactionDetails(transactionId: string | null, isLegacyId = false) {
   return useQuery({
-    queryKey: ['transaction-details', transactionId],
-    queryFn: () => financialService.getTransactionDetails(transactionId!),
+    queryKey: ['transaction-details', transactionId, isLegacyId],
+    queryFn: () => financialService.getTransactionDetails(
+      isLegacyId ? null : transactionId,
+      isLegacyId ? transactionId : null
+    ),
     enabled: !!transactionId
   });
 }

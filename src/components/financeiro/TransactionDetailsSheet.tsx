@@ -57,12 +57,13 @@ function formatCurrency(value: number): string {
 
 interface TransactionDetailsSheetProps {
   transactionId: string | null;
+  isLegacyId?: boolean;
   open: boolean;
   onClose: () => void;
 }
 
-export function TransactionDetailsSheet({ transactionId, open, onClose }: TransactionDetailsSheetProps) {
-  const { data: transaction, isLoading, error } = useTransactionDetails(transactionId);
+export function TransactionDetailsSheet({ transactionId, isLegacyId = false, open, onClose }: TransactionDetailsSheetProps) {
+  const { data: transaction, isLoading, error } = useTransactionDetails(transactionId, isLegacyId);
   const reverseTransaction = useReverseTransaction();
   
   const [showReverseDialog, setShowReverseDialog] = useState(false);

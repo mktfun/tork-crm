@@ -389,14 +389,17 @@ export default function FinanceiroERP() {
   // Estado para controle da aba e detalhes
   const [activeTab, setActiveTab] = useState('visao-geral');
   const [detailsTransactionId, setDetailsTransactionId] = useState<string | null>(null);
+  const [isLegacyLookup, setIsLegacyLookup] = useState(false);
 
   // Deep link: verificar parâmetros da URL ao carregar
   useEffect(() => {
     const transactionId = searchParams.get('transactionId');
+    const legacyId = searchParams.get('legacyId');
     
-    if (transactionId) {
+    if (transactionId || legacyId) {
       // Abrir a gaveta de detalhes automaticamente
-      setDetailsTransactionId(transactionId);
+      setDetailsTransactionId(transactionId || legacyId);
+      setIsLegacyLookup(!!legacyId && !transactionId);
       // Navegar para a aba de receitas (comissões são receitas)
       setActiveTab('receitas');
     }
@@ -405,10 +408,12 @@ export default function FinanceiroERP() {
   // Limpar URL quando fechar a gaveta
   const handleCloseDetails = () => {
     setDetailsTransactionId(null);
+    setIsLegacyLookup(false);
     
-    // Remover o parâmetro da URL sem reload
-    if (searchParams.has('transactionId')) {
+    // Remover os parâmetros da URL sem reload
+    if (searchParams.has('transactionId') || searchParams.has('legacyId')) {
       searchParams.delete('transactionId');
+      searchParams.delete('legacyId');
       setSearchParams(searchParams, { replace: true });
     }
   };
@@ -484,6 +489,7 @@ export default function FinanceiroERP() {
       {/* Deep Link Details Sheet - independente das abas */}
       <TransactionDetailsSheet 
         transactionId={detailsTransactionId}
+        isLegacyId={isLegacyLookup}
         open={!!detailsTransactionId}
         onClose={handleCloseDetails}
       />
