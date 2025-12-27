@@ -2310,6 +2310,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      void_financial_transaction: {
+        Args: { p_reason?: string; p_transaction_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       financial_account_status: "active" | "archived"
