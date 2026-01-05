@@ -92,10 +92,14 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [reverseReason, setReverseReason] = useState('');
 
-  // Calcular valor total (soma dos valores positivos)
-  const totalAmount = transaction?.ledgerEntries
+  // Debug: Ver dados recebidos
+  console.log('🔍 DADOS RECEBIDOS NA GAVETA:', transaction);
+
+  // Calcular valor total (soma dos valores positivos) - com fallback para array vazio
+  const entries = transaction?.ledgerEntries ?? [];
+  const totalAmount = entries
     .filter(e => e.amount > 0)
-    .reduce((sum, e) => sum + e.amount, 0) ?? 0;
+    .reduce((sum, e) => sum + e.amount, 0);
 
   // Verificar se é transação sincronizada (não pode ser editada manualmente)
   const isSynchronized = transaction?.relatedEntityType === 'legacy_transaction' || 
