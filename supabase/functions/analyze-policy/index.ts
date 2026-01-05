@@ -73,7 +73,7 @@ serve(async (req) => {
     console.log('Processing policy document, mimeType:', mimeType);
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,7 +172,14 @@ serve(async (req) => {
 
     let extractedData;
     try {
-      extractedData = JSON.parse(extractedText);
+      // Limpa blocos de código markdown que o Gemini 2.0 pode adicionar
+      let cleanedText = extractedText.trim();
+      if (cleanedText.startsWith('```json')) {
+        cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      extractedData = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('Failed to parse Gemini JSON:', extractedText);
       return new Response(JSON.stringify({ 

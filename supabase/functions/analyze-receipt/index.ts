@@ -58,7 +58,7 @@ serve(async (req) => {
     console.log(`📄 Analisando documento: ${mimeType} (${Math.round(fileBase64.length / 1024)}KB)`);
 
     // Chamar Gemini API
-    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -108,7 +108,14 @@ serve(async (req) => {
       throw new Error('Gemini não retornou dados');
     }
 
-    const extractedData = JSON.parse(extractedText);
+    // Limpa blocos de código markdown que o Gemini 2.0 pode adicionar
+    let cleanedText = extractedText.trim();
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    const extractedData = JSON.parse(cleanedText);
     console.log('✅ Dados extraídos:', extractedData);
 
     return new Response(
