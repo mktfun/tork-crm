@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle, Download, Upload } from 'lucide-react';
+import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle, Download, Upload, Sparkles } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { formatDate, parseLocalDate } from '@/utils/dateUtils';
 import { PolicyFilters } from '@/hooks/useFilteredPolicies';
@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { AggerImportModal } from '@/components/import/AggerImportModal';
 import { ExportPoliciesModal } from '@/components/policies/ExportPoliciesModal';
+import { ImportPoliciesModal } from '@/components/policies/ImportPoliciesModal';
 
 export default function Policies() {
   const { clients } = useClients();
@@ -33,6 +34,7 @@ export default function Policies() {
   const navigate = useNavigate();
   const [isNewPolicyModalOpen, setIsNewPolicyModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAIImportModalOpen, setIsAIImportModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // Estado de paginação e filtros
@@ -206,6 +208,14 @@ export default function Policies() {
             {isExporting ? 'Exportando...' : 'CSV'}
           </Button>
           <ExportPoliciesModal filters={filters} disabled={isLoading} />
+          <Button
+            onClick={() => setIsAIImportModalOpen(true)}
+            variant="outline"
+            className="bg-purple-700 hover:bg-purple-600 text-white border-purple-600"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Importar via IA
+          </Button>
           <Button
             onClick={() => setIsImportModalOpen(true)}
             variant="outline"
@@ -501,6 +511,12 @@ export default function Policies() {
       <AggerImportModal
         open={isImportModalOpen}
         onOpenChange={setIsImportModalOpen}
+      />
+
+      {/* Modal Importação via IA */}
+      <ImportPoliciesModal
+        open={isAIImportModalOpen}
+        onOpenChange={setIsAIImportModalOpen}
       />
 
     </div>
