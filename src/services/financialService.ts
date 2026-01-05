@@ -603,8 +603,50 @@ export async function getTransactionDetails(
     p_transaction_id: transactionId || null,
     p_legacy_id: legacyId || null
   });
-  
-  if (error) throw error;
+
+  // Fallback: Se a RPC falhar ou não existir, tenta buscar direto das tabelas
+  if (error) {
+    console.warn("RPC get_transaction_details falhou, tentando fallback...", error);
+    
+    const id = transactionId || legacyId;
+    if (!id) throw new Error("ID da transação não fornecido");
+    
+    const { data: tx, error: txError } = await supabase
+      .from('financial_transactions')
+      .select(`
+        *,
+        financial_ledger (
+          id, amount, memo, account_id,
+          financial_accounts ( name, type )
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (txError) throw txError;
+    
+    // Formata para o mesmo padrão da RPC
+    return {
+      id: tx.id,
+      description: tx.description || '',
+      transactionDate: tx.transaction_date,
+      referenceNumber: tx.reference_number,
+      relatedEntityId: tx.related_entity_id,
+      relatedEntityType: tx.related_entity_type,
+      isVoid: tx.is_void ?? false,
+      voidReason: tx.void_reason,
+      createdAt: tx.created_at,
+      ledgerEntries: (tx.financial_ledger || []).map((l: any) => ({
+        id: l.id,
+        amount: l.amount,
+        memo: l.memo,
+        accountId: l.account_id,
+        accountName: l.financial_accounts?.name || 'Conta Desconhecida',
+        accountType: l.financial_accounts?.type || 'unknown'
+      })),
+      legacyData: null
+    };
+  }
   
   const result = data as any;
   

@@ -57,14 +57,21 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+import { parseDateOnly } from '@/lib/utils';
+
 // Helper seguro para formatar datas - evita "Invalid time value"
 function safeFormatDate(dateValue: string | null | undefined, formatStr: string, fallback: string = '---'): string {
   if (!dateValue) return fallback;
   
   try {
-    // Parse como ISO string (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)
-    const parsed = parseISO(dateValue);
-    if (!isValid(parsed)) return fallback;
+    // Usa parseDateOnly para evitar o bug do dia anterior
+    const parsed = parseDateOnly(dateValue);
+    if (!parsed || isNaN(parsed.getTime())) {
+      // Fallback para parseISO se parseDateOnly falhar
+      const isoP = parseISO(dateValue);
+      if (!isValid(isoP)) return fallback;
+      return format(isoP, formatStr, { locale: ptBR });
+    }
     return format(parsed, formatStr, { locale: ptBR });
   } catch {
     return fallback;
