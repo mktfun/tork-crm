@@ -303,6 +303,7 @@ interface DespesasTabProps {
 }
 
 function DespesasTab({ dateRange }: DespesasTabProps) {
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const { data: transactions = [], isLoading } = useRecentTransactions('expense');
 
   return (
@@ -332,7 +333,11 @@ function DespesasTab({ dateRange }: DespesasTabProps) {
             <ScrollArea className="h-[500px]">
               <div className="space-y-2">
                 {transactions.map((tx) => (
-                  <Card key={tx.id} className="bg-card/30 border-border/30">
+                  <Card 
+                    key={tx.id} 
+                    className="bg-card/30 border-border/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => setDetailsId(tx.id)}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -354,6 +359,13 @@ function DespesasTab({ dateRange }: DespesasTabProps) {
           )}
         </CardContent>
       </Card>
+
+      <TransactionDetailsSheet 
+        transactionId={detailsId}
+        isLegacyId={false}
+        open={!!detailsId}
+        onClose={() => setDetailsId(null)}
+      />
     </div>
   );
 }
