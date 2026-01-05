@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
@@ -56,6 +57,14 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   const [batchProducerId, setBatchProducerId] = useState<string>('');
   const [batchCommissionRate, setBatchCommissionRate] = useState<string>('');
   
+  // Document type toggle
+  const [documentType, setDocumentType] = useState<'policy' | 'card'>('policy');
+  
+  // Processing constants
+  const DELAY_BETWEEN_FILES = 5000; // 5 seconds between files
+  const BACKOFF_ON_429 = 15000; // 15 seconds on rate limit
+  const MAX_RETRIES = 2; // Retry up to 2 times on 429
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetModal = useCallback(() => {
@@ -67,6 +76,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
     setBatchProducerId('');
     setBatchCommissionRate('');
     setProcessingStatus(new Map());
+    setDocumentType('policy');
   }, []);
 
   const handleClose = () => {
@@ -143,6 +153,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           body: JSON.stringify({
             fileBase64: base64,
             mimeType: file.type,
+            documentType: documentType, // Pass document type to Edge Function
           }),
         }
       );
@@ -271,46 +282,64 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       
       const file = files[i];
       let didBackoff = false;
+      let retries = 0;
+      let success = false;
       
-      try {
-        const item = await processSingleFile(file, i);
-        
-        if (item) {
-          if (item.processError) {
-            // Check if it's a rate limit error
-            if (item.processError.includes('429')) {
-              setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
-              toast.warning(`Rate limit atingido em ${file.name}. Aguardando 5s...`);
-              processedItems.push(item);
-              // BACKOFF: Wait 5 seconds on rate limit
-              await new Promise(resolve => setTimeout(resolve, 5000));
-              didBackoff = true;
+      while (!success && retries <= MAX_RETRIES) {
+        try {
+          const item = await processSingleFile(file, i);
+          
+          if (item) {
+            if (item.processError) {
+              // Check if it's a rate limit error
+              if (item.processError.includes('429')) {
+                retries++;
+                if (retries <= MAX_RETRIES) {
+                  setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
+                  toast.warning(`Rate limit em ${file.name}. Aguardando ${BACKOFF_ON_429 / 1000}s (tentativa ${retries}/${MAX_RETRIES})...`);
+                  await new Promise(resolve => setTimeout(resolve, BACKOFF_ON_429));
+                  didBackoff = true;
+                  continue; // Retry
+                }
+                // Max retries exceeded
+                processedItems.push(item);
+                success = true;
+              } else {
+                setProcessingStatus(prev => new Map(prev).set(i, 'error'));
+                processedItems.push(item);
+                success = true;
+              }
             } else {
-              setProcessingStatus(prev => new Map(prev).set(i, 'error'));
+              setProcessingStatus(prev => new Map(prev).set(i, 'success'));
               processedItems.push(item);
+              success = true;
             }
           } else {
-            setProcessingStatus(prev => new Map(prev).set(i, 'success'));
-            processedItems.push(item);
+            success = true; // No item returned, move on
           }
-        }
-        
-        // DELAY: Wait 2 seconds between files (skip if we already did backoff)
-        if (i < files.length - 1 && !didBackoff) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-        
-      } catch (error: any) {
-        console.error('Error processing file:', file.name, error);
-        
-        if (error.message?.includes('429')) {
-          setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
-          toast.warning(`Rate limit atingido. Aguardando 5s antes do próximo...`);
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          didBackoff = true;
-        } else {
+          
+        } catch (error: any) {
+          console.error('Error processing file:', file.name, error);
+          
+          if (error.message?.includes('429')) {
+            retries++;
+            if (retries <= MAX_RETRIES) {
+              setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
+              toast.warning(`Rate limit. Aguardando ${BACKOFF_ON_429 / 1000}s (tentativa ${retries}/${MAX_RETRIES})...`);
+              await new Promise(resolve => setTimeout(resolve, BACKOFF_ON_429));
+              didBackoff = true;
+              continue; // Retry
+            }
+          }
+          
           setProcessingStatus(prev => new Map(prev).set(i, 'error'));
+          success = true; // Move on after error
         }
+      }
+      
+      // DELAY: Wait 5 seconds between files (skip if we already did backoff)
+      if (i < files.length - 1 && !didBackoff) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_FILES));
       }
     }
 
@@ -538,6 +567,31 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
         {/* Step: Upload */}
         {step === 'upload' && (
           <div className="space-y-4 flex-1 overflow-auto">
+            {/* Document Type Toggle */}
+            <div className="flex items-center justify-center gap-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+              <Label className="text-slate-300">Tipo de Documento:</Label>
+              <div className="flex gap-2">
+                <Button 
+                  variant={documentType === 'policy' ? 'default' : 'outline'}
+                  onClick={() => setDocumentType('policy')}
+                  size="sm"
+                  className={documentType === 'policy' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Apólice
+                </Button>
+                <Button 
+                  variant={documentType === 'card' ? 'default' : 'outline'}
+                  onClick={() => setDocumentType('card')}
+                  size="sm"
+                  className={documentType === 'card' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Carteirinha
+                </Button>
+              </div>
+            </div>
+
             <div
               className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors cursor-pointer"
               onDrop={handleDrop}
@@ -553,7 +607,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 onChange={handleFileSelect}
               />
               <Upload className="w-12 h-12 mx-auto text-slate-400 mb-4" />
-              <p className="text-white font-medium">Arraste PDFs de apólices aqui</p>
+              <p className="text-white font-medium">
+                {documentType === 'policy' ? 'Arraste PDFs de apólices aqui' : 'Arraste imagens de carteirinhas aqui'}
+              </p>
               <p className="text-slate-400 text-sm">ou clique para selecionar arquivos</p>
             </div>
 
