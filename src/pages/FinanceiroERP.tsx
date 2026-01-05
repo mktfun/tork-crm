@@ -26,6 +26,7 @@ import { NovaDespesaModal } from '@/components/financeiro/NovaDespesaModal';
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
 import { ImportTransactionsModal } from '@/components/financeiro/ImportTransactionsModal';
+import { ImportReceiptsModal } from '@/components/financeiro/ImportReceiptsModal';
 import { ConfiguracoesTab } from '@/components/financeiro/ConfiguracoesTab';
 import { DateRangeFilter } from '@/components/financeiro/DateRangeFilter';
 import { ReceitasTab } from '@/components/financeiro/ReceitasTab';
@@ -448,6 +449,7 @@ export default function FinanceiroERP() {
         
         <div className="flex items-center gap-2">
           <DateRangeFilter value={dateRange} onChange={setDateRange} />
+          <ImportReceiptsModal />
           <ImportTransactionsModal />
         </div>
       </div>

@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Loader2, Calendar } from 'lucide-react';
+import { Plus, Loader2, Calendar, Paperclip, X, Upload } from 'lucide-react';
 import { format, isFuture, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { supabase } from '@/integrations/supabase/client';
 import { useFinancialAccounts, useRegisterExpense } from '@/hooks/useFinanceiro';
 import { FinancialAccount } from '@/types/financeiro';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +37,17 @@ interface FormData {
   referenceNumber: string;
 }
 
+// Gerar ID único
+function generateId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export function NovaDespesaModal() {
   const [open, setOpen] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: expenseAccounts = [], isLoading: loadingExpense } = useFinancialAccounts('expense');
   const { data: assetAccounts = [], isLoading: loadingAsset } = useFinancialAccounts('asset');
@@ -54,6 +64,33 @@ export function NovaDespesaModal() {
       referenceNumber: ''
     }
   });
+
+  // Handler para seleção de arquivo
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast.error('Selecione uma imagem ou PDF');
+      return;
+    }
+
+    setAttachmentFile(file);
+    
+    // Preview para imagens
+    if (file.type.startsWith('image/')) {
+      setAttachmentPreview(URL.createObjectURL(file));
+    } else {
+      setAttachmentPreview(null);
+    }
+  };
+
+  // Remover arquivo
+  const removeAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Detectar se a data selecionada é futura
   const transactionDate = watch('transactionDate');
@@ -75,17 +112,51 @@ export function NovaDespesaModal() {
         return;
       }
 
+      let attachmentUrl: string | undefined;
+
+      // Upload do comprovante se houver
+      if (attachmentFile) {
+        setIsUploading(true);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('Usuário não autenticado');
+
+          const ext = attachmentFile.name.split('.').pop() || 'jpg';
+          const fileName = `${user.id}/${generateId()}.${ext}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('comprovantes')
+            .upload(fileName, attachmentFile, { contentType: attachmentFile.type });
+
+          if (uploadError) throw uploadError;
+
+          const { data: urlData } = supabase.storage
+            .from('comprovantes')
+            .getPublicUrl(fileName);
+
+          attachmentUrl = urlData.publicUrl;
+        } catch (uploadErr) {
+          console.error('Erro no upload:', uploadErr);
+          toast.error('Erro ao anexar comprovante');
+          // Continua sem o anexo
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       await registerExpense.mutateAsync({
         description: data.description,
         amount,
         transactionDate: data.transactionDate,
         expenseAccountId: data.expenseAccountId,
         assetAccountId: data.assetAccountId,
-        referenceNumber: data.referenceNumber || undefined
+        referenceNumber: data.referenceNumber || undefined,
+        memo: attachmentUrl, // Salvamos a URL no memo por enquanto
       });
 
       toast.success('Despesa registrada com sucesso!');
       reset();
+      removeAttachment();
       setOpen(false);
     } catch (error: any) {
       console.error('Erro ao registrar despesa:', error);
@@ -221,6 +292,62 @@ export function NovaDespesaModal() {
             />
           </div>
 
+          {/* Anexar Comprovante */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Paperclip className="w-4 h-4" />
+              Anexar Comprovante (opcional)
+            </Label>
+            
+            {!attachmentFile ? (
+              <div
+                className="border-2 border-dashed border-border/50 rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Clique para selecionar imagem ou PDF
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-border/30">
+                {attachmentPreview ? (
+                  <img 
+                    src={attachmentPreview} 
+                    alt="Preview" 
+                    className="w-12 h-12 rounded object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                    <Paperclip className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{attachmentFile.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(attachmentFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={removeAttachment}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Botões */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
@@ -232,12 +359,12 @@ export function NovaDespesaModal() {
             </Button>
             <Button
               type="submit"
-              disabled={registerExpense.isPending}
+              disabled={registerExpense.isPending || isUploading}
             >
-              {registerExpense.isPending ? (
+              {(registerExpense.isPending || isUploading) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
+                  {isUploading ? 'Anexando...' : 'Salvando...'}
                 </>
               ) : (
                 'Salvar Despesa'

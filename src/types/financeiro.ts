@@ -283,3 +283,43 @@ export interface BulkImportResult {
   totalProcessed: number;
   errors: Array<{ index: number; message: string; description?: string }>;
 }
+
+// ============ TIPOS PARA OCR E COMPROVANTES (FASE 18) ============
+
+/**
+ * Dados extraídos do comprovante via OCR
+ */
+export interface ExtractedReceiptData {
+  date: string | null;
+  amount: number | null;
+  merchant_name: string | null;
+  category_guess: string | null;
+}
+
+/**
+ * Resultado da análise de comprovante via Edge Function
+ */
+export interface AnalyzeReceiptResult {
+  success: boolean;
+  data?: ExtractedReceiptData;
+  error?: string;
+}
+
+/**
+ * Item para revisão na importação de recibos
+ */
+export interface ReceiptImportItem {
+  id: string;
+  file: File;
+  fileUrl?: string;
+  thumbnailUrl?: string;
+  extractedData: ExtractedReceiptData | null;
+  isLoading: boolean;
+  error?: string;
+  // Dados editáveis pelo usuário
+  description: string;
+  amount: number;
+  transactionDate: string;
+  categoryAccountId: string;
+  selected: boolean;
+}
