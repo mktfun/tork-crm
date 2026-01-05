@@ -1,0 +1,295 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Globe, Copy, Check, Loader2, Save } from 'lucide-react';
+import { toast } from 'sonner';
+import { SettingsPanel } from '@/components/settings/SettingsPanel';
+
+interface PortalConfig {
+  portal_enabled: boolean;
+  portal_show_policies: boolean;
+  portal_show_cards: boolean;
+  portal_allow_profile_edit: boolean;
+}
+
+export default function PortalSettings() {
+  const { user } = useAuth();
+  const [brokerageId, setBrokerageId] = useState<number | null>(null);
+  const [settings, setSettings] = useState<PortalConfig>({
+    portal_enabled: false,
+    portal_show_policies: true,
+    portal_show_cards: true,
+    portal_allow_profile_edit: true,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const portalLink = `${window.location.origin}/portal`;
+
+  useEffect(() => {
+    const fetchBrokerage = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('brokerages')
+          .select('id, portal_enabled, portal_show_policies, portal_show_cards, portal_allow_profile_edit')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching brokerage:', error);
+          return;
+        }
+
+        if (data) {
+          setBrokerageId(data.id);
+          setSettings({
+            portal_enabled: data.portal_enabled ?? false,
+            portal_show_policies: data.portal_show_policies ?? true,
+            portal_show_cards: data.portal_show_cards ?? true,
+            portal_allow_profile_edit: data.portal_allow_profile_edit ?? true,
+          });
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBrokerage();
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!brokerageId) {
+      toast.error('Nenhuma corretora cadastrada. Cadastre uma corretora primeiro.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('brokerages')
+        .update({
+          portal_enabled: settings.portal_enabled,
+          portal_show_policies: settings.portal_show_policies,
+          portal_show_cards: settings.portal_show_cards,
+          portal_allow_profile_edit: settings.portal_allow_profile_edit,
+        })
+        .eq('id', brokerageId);
+
+      if (error) {
+        console.error('Error saving settings:', error);
+        toast.error('Erro ao salvar configurações');
+        return;
+      }
+
+      toast.success('Configurações salvas com sucesso!');
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(portalLink);
+      setCopied(true);
+      toast.success('Link copiado!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Erro ao copiar link');
+    }
+  };
+
+  const updateSetting = (key: keyof PortalConfig, value: boolean) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  if (isLoading) {
+    return (
+      <SettingsPanel
+        title="Portal do Cliente"
+        description="Configure o acesso dos seus clientes ao portal"
+        icon={Globe}
+      >
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        </div>
+      </SettingsPanel>
+    );
+  }
+
+  if (!brokerageId) {
+    return (
+      <SettingsPanel
+        title="Portal do Cliente"
+        description="Configure o acesso dos seus clientes ao portal"
+        icon={Globe}
+      >
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="p-6 text-center">
+            <p className="text-slate-400">
+              Você precisa cadastrar uma corretora antes de configurar o Portal do Cliente.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => window.location.href = '/dashboard/settings/brokerages'}
+            >
+              Ir para Corretoras
+            </Button>
+          </CardContent>
+        </Card>
+      </SettingsPanel>
+    );
+  }
+
+  return (
+    <SettingsPanel
+      title="Portal do Cliente"
+      description="Configure o acesso dos seus clientes ao portal"
+      icon={Globe}
+    >
+      <div className="space-y-6">
+        {/* Link de Acesso */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-lg text-white">Link de Acesso</CardTitle>
+            <CardDescription className="text-slate-400">
+              Envie este link para seus clientes acessarem o portal
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={portalLink}
+                readOnly
+                className="bg-slate-900/50 border-slate-600 text-white font-mono text-sm"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={copyLink}
+                className="shrink-0 border-slate-600 hover:bg-slate-700"
+              >
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-400" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Dica: Envie este link via WhatsApp junto com a senha padrão (123456) para primeiro acesso.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Master Switch */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-lg text-white">Ativação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-white font-medium">Ativar Portal do Cliente</Label>
+                <p className="text-sm text-slate-400">
+                  Permite que clientes acessem suas apólices e carteirinhas
+                </p>
+              </div>
+              <Switch
+                checked={settings.portal_enabled}
+                onCheckedChange={(v) => updateSetting('portal_enabled', v)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Módulos */}
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-lg text-white">Módulos Visíveis</CardTitle>
+            <CardDescription className="text-slate-400">
+              Escolha quais funcionalidades estarão disponíveis no portal
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-white font-medium">Exibir Apólices</Label>
+                <p className="text-sm text-slate-400">
+                  Mostra a lista de seguros ativos do cliente
+                </p>
+              </div>
+              <Switch
+                checked={settings.portal_show_policies}
+                onCheckedChange={(v) => updateSetting('portal_show_policies', v)}
+                disabled={!settings.portal_enabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-white font-medium">Exibir Carteirinhas</Label>
+                <p className="text-sm text-slate-400">
+                  Mostra carteirinhas digitais de saúde/odonto
+                </p>
+              </div>
+              <Switch
+                checked={settings.portal_show_cards}
+                onCheckedChange={(v) => updateSetting('portal_show_cards', v)}
+                disabled={!settings.portal_enabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-white font-medium">Permitir Edição de Perfil</Label>
+                <p className="text-sm text-slate-400">
+                  Cliente pode atualizar telefone, email e endereço
+                </p>
+              </div>
+              <Switch
+                checked={settings.portal_allow_profile_edit}
+                onCheckedChange={(v) => updateSetting('portal_allow_profile_edit', v)}
+                disabled={!settings.portal_enabled}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Salvar Configurações
+            </>
+          )}
+        </Button>
+      </div>
+    </SettingsPanel>
+  );
+}

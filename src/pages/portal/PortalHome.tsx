@@ -17,11 +17,22 @@ interface Policy {
   insurance_company: string | null;
 }
 
+interface PortalConfig {
+  show_policies: boolean;
+  show_cards: boolean;
+  allow_profile_edit: boolean;
+}
+
 export default function PortalHome() {
   const navigate = useNavigate();
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [clientName, setClientName] = useState('');
+  const [portalConfig, setPortalConfig] = useState<PortalConfig>({
+    show_policies: true,
+    show_cards: true,
+    allow_profile_edit: true,
+  });
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
@@ -29,6 +40,7 @@ export default function PortalHome() {
       const client = JSON.parse(clientData);
       setClientName(client.name || '');
       fetchPolicies(client.id);
+      fetchPortalConfig(client.user_id);
     }
   }, []);
 
@@ -54,6 +66,27 @@ export default function PortalHome() {
     }
   };
 
+  const fetchPortalConfig = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('brokerages')
+        .select('portal_show_policies, portal_show_cards, portal_allow_profile_edit')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setPortalConfig({
+          show_policies: data.portal_show_policies ?? true,
+          show_cards: data.portal_show_cards ?? true,
+          allow_profile_edit: data.portal_allow_profile_edit ?? true,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching portal config:', err);
+    }
+  };
+
   const getExpirationBadge = (expirationDate: string) => {
     const days = differenceInDays(new Date(expirationDate), new Date());
     
@@ -65,6 +98,9 @@ export default function PortalHome() {
       return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Vigente</Badge>;
     }
   };
+
+  // Check if any quick action is available
+  const hasQuickActions = portalConfig.show_policies || portalConfig.show_cards;
 
   return (
     <div className="space-y-4">
@@ -83,25 +119,31 @@ export default function PortalHome() {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button 
-          variant="outline" 
-          className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
-          onClick={() => navigate('/portal/policies')}
-        >
-          <FileText className="w-6 h-6 text-purple-400" />
-          <span className="text-sm text-white">Meus Seguros</span>
-        </Button>
-        <Button 
-          variant="outline" 
-          className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
-          onClick={() => navigate('/portal/cards')}
-        >
-          <CreditCard className="w-6 h-6 text-blue-400" />
-          <span className="text-sm text-white">Carteirinhas</span>
-        </Button>
-      </div>
+      {/* Quick Actions - Conditional */}
+      {hasQuickActions && (
+        <div className="grid grid-cols-2 gap-3">
+          {portalConfig.show_policies && (
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+              onClick={() => navigate('/portal/policies')}
+            >
+              <FileText className="w-6 h-6 text-purple-400" />
+              <span className="text-sm text-white">Meus Seguros</span>
+            </Button>
+          )}
+          {portalConfig.show_cards && (
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+              onClick={() => navigate('/portal/cards')}
+            >
+              <CreditCard className="w-6 h-6 text-blue-400" />
+              <span className="text-sm text-white">Carteirinhas</span>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Active Policies */}
       <Card className="bg-slate-800/50 border-slate-700">

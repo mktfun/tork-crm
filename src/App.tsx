@@ -35,6 +35,7 @@ import RamoSettings from "./pages/settings/RamoSettings";
 import Novidades from "./pages/Novidades";
 import CRM from "./pages/CRM";
 import ChatTorkSettings from "./pages/settings/ChatTorkSettings";
+import PortalSettings from "./pages/settings/PortalSettings";
 
 // Portal do Cliente
 import PortalLogin from "./pages/portal/PortalLogin";
@@ -121,6 +122,7 @@ function App() {
                     <Route path="ramos" element={<RamoSettings />} />
                     <Route path="transactions" element={<TransactionSettings />} />
                     <Route path="chat-tork" element={<ChatTorkSettings />} />
+                    <Route path="portal" element={<PortalSettings />} />
                   </Route>
                 </Route>
 
