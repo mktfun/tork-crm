@@ -39,6 +39,7 @@ import ChatTorkSettings from "./pages/settings/ChatTorkSettings";
 // Portal do Cliente
 import PortalLogin from "./pages/portal/PortalLogin";
 import PortalChangePassword from "./pages/portal/PortalChangePassword";
+import PortalOnboarding from "./pages/portal/PortalOnboarding";
 import PortalHome from "./pages/portal/PortalHome";
 import PortalPolicies from "./pages/portal/PortalPolicies";
 import PortalCards from "./pages/portal/PortalCards";
@@ -125,7 +126,9 @@ function App() {
 
                 {/* Portal do Cliente - Rotas públicas (sem ProtectedRoute) */}
                 <Route path="/portal" element={<PortalLogin />} />
+                <Route path="/portal/login" element={<PortalLogin />} />
                 <Route path="/portal/change-password" element={<PortalChangePassword />} />
+                <Route path="/portal/onboarding" element={<PortalOnboarding />} />
                 <Route element={<PortalLayout />}>
                   <Route path="/portal/home" element={<PortalHome />} />
                   <Route path="/portal/policies" element={<PortalPolicies />} />

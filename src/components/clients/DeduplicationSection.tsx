@@ -14,12 +14,16 @@ import {
   Shield,
   BarChart3,
   FileText,
-  Calendar
+  Calendar,
+  Merge,
+  Loader2
 } from 'lucide-react';
 import { Client } from '@/types';
 import { useClientDuplication } from '@/hooks/useClientDuplication';
 import { ClientDeduplicationModal } from './ClientDeduplicationModal';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DeduplicationSectionProps {
   clients: Client[];
@@ -29,6 +33,8 @@ interface DeduplicationSectionProps {
 export function DeduplicationSection({ clients, onDeduplicationComplete }: DeduplicationSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
+  const { user } = useAuth();
   
   const { duplicateAlert } = useClientDuplication(clients);
   const totalClients = clients.length;
@@ -39,6 +45,49 @@ export function DeduplicationSection({ clients, onDeduplicationComplete }: Dedup
 
   // Se não há duplicatas, não mostra nada
   if (duplicateCount === 0) return null;
+
+  // Função para executar merge automático via RPC
+  const handleMergeAll = async () => {
+    if (!user?.id) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
+    setIsMerging(true);
+    try {
+      const { data, error } = await supabase.rpc('merge_duplicate_clients', {
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        merged_by_cpf: number;
+        merged_by_name: number;
+        merged_clients: number;
+        transferred_apolices: number;
+        transferred_sinistros: number;
+        transferred_appointments: number;
+        transferred_transactions: number;
+        transferred_deals: number;
+      };
+
+      if (result.merged_clients === 0) {
+        toast.info('Nenhuma duplicata encontrada para mesclar automaticamente.');
+      } else {
+        toast.success(
+          `Fusão concluída! ${result.merged_clients} clientes mesclados (${result.merged_by_cpf} por CPF, ${result.merged_by_name} por nome). ` +
+          `${result.transferred_apolices} apólices transferidas.`
+        );
+        onDeduplicationComplete();
+      }
+    } catch (err: any) {
+      console.error('Erro ao mesclar duplicatas:', err);
+      toast.error('Erro ao mesclar duplicatas: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsMerging(false);
+    }
+  };
 
   // Gerar relatório CSV
   const generateCSVReport = async () => {
@@ -262,6 +311,20 @@ export function DeduplicationSection({ clients, onDeduplicationComplete }: Dedup
               clients={clients}
               onDeduplicationComplete={onDeduplicationComplete}
             />
+            
+            <Button
+              onClick={handleMergeAll}
+              disabled={isMerging}
+              variant="default"
+              className="gap-2 bg-orange-600 hover:bg-orange-700"
+            >
+              {isMerging ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Merge size={16} />
+              )}
+              {isMerging ? 'Mesclando...' : 'Fundir Todas Duplicatas'}
+            </Button>
             
             <Button
               onClick={generateCSVReport}

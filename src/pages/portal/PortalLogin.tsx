@@ -9,33 +9,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function PortalLogin() {
-  const [cpf, setCpf] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Mask CPF as user types
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.length <= 11) {
-      return digits
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-        .replace(/(-\d{2})\d+?$/, '$1');
-    }
-    return value;
-  };
-
-  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCpf(formatCpf(e.target.value));
-    setError('');
+  // Detect if input is CPF (numeric) or Name (text)
+  const isNumericInput = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    // If more than 50% digits and at least 6 chars, treat as CPF
+    return digitsOnly.length >= 6 && digitsOnly.length / value.replace(/\s/g, '').length > 0.5;
   };
 
   const handleLogin = async () => {
-    if (!cpf || !password) {
-      setError('Preencha o CPF e a senha');
+    if (!identifier || !password) {
+      setError('Preencha todos os campos');
       return;
     }
 
@@ -43,15 +32,31 @@ export default function PortalLogin() {
     setError('');
 
     try {
-      // Normalize CPF (remove formatting)
-      const normalizedCpf = cpf.replace(/\D/g, '');
+      let clients;
+      let fetchError;
 
-      // Search for client by CPF
-      const { data: clients, error: fetchError } = await supabase
-        .from('clientes')
-        .select('id, name, cpf_cnpj, portal_password, portal_first_access, user_id')
-        .ilike('cpf_cnpj', `%${normalizedCpf}%`)
-        .limit(1);
+      if (isNumericInput(identifier)) {
+        // Search by CPF
+        const normalizedCpf = identifier.replace(/\D/g, '');
+        const result = await supabase
+          .from('clientes')
+          .select('id, name, cpf_cnpj, portal_password, portal_first_access, user_id, email, phone')
+          .ilike('cpf_cnpj', `%${normalizedCpf}%`)
+          .limit(5);
+        
+        clients = result.data;
+        fetchError = result.error;
+      } else {
+        // Search by Name
+        const result = await supabase
+          .from('clientes')
+          .select('id, name, cpf_cnpj, portal_password, portal_first_access, user_id, email, phone')
+          .ilike('name', `%${identifier.trim()}%`)
+          .limit(5);
+        
+        clients = result.data;
+        fetchError = result.error;
+      }
 
       if (fetchError) {
         console.error('Error fetching client:', fetchError);
@@ -60,7 +65,13 @@ export default function PortalLogin() {
       }
 
       if (!clients || clients.length === 0) {
-        setError('CPF não encontrado');
+        setError('Cliente não encontrado');
+        return;
+      }
+
+      // If multiple clients found by name, show error
+      if (clients.length > 1 && !isNumericInput(identifier)) {
+        setError('Nome duplicado encontrado. Por favor, entre em contato com a corretora ou tente com seu CPF/E-mail.');
         return;
       }
 
@@ -68,15 +79,14 @@ export default function PortalLogin() {
 
       // Check if it's first access (default password: 123456)
       if (client.portal_first_access && password === '123456') {
-        // Save temporary session and redirect to change password
+        // Save temporary session and redirect to onboarding
         sessionStorage.setItem('portal_client', JSON.stringify(client));
-        toast.success('Primeiro acesso! Por favor, crie uma nova senha.');
-        navigate('/portal/change-password');
+        toast.success('Primeiro acesso! Complete seu cadastro.');
+        navigate('/portal/onboarding');
         return;
       }
 
-      // Verify password (simple comparison for MVP)
-      // In production, use bcrypt or similar
+      // Verify password
       if (client.portal_password !== password) {
         setError('Senha incorreta');
         return;
@@ -115,15 +125,14 @@ export default function PortalLogin() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="cpf" className="text-slate-300">CPF</Label>
+            <Label htmlFor="identifier" className="text-slate-300">CPF ou Nome Completo</Label>
             <Input
-              id="cpf"
+              id="identifier"
               type="text"
-              placeholder="000.000.000-00"
-              value={cpf}
-              onChange={handleCpfChange}
+              placeholder="Digite seu CPF ou nome completo"
+              value={identifier}
+              onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
               onKeyPress={handleKeyPress}
-              maxLength={14}
               className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
             />
           </div>
