@@ -152,6 +152,11 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
         throw new Error('429: Rate limit exceeded');
       }
 
+      // Check for bad request (corrupted/password-protected PDF)
+      if (response.status === 400) {
+        throw new Error('400: Erro ao ler arquivo. Verifique se é um PDF válido e não tem senha.');
+      }
+
       const result: AnalyzePolicyResult = await response.json();
 
       if (!result.success || !result.data) {
@@ -265,6 +270,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       setProcessingStatus(prev => new Map(prev).set(i, 'processing'));
       
       const file = files[i];
+      let didBackoff = false;
       
       try {
         const item = await processSingleFile(file, i);
@@ -274,10 +280,11 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             // Check if it's a rate limit error
             if (item.processError.includes('429')) {
               setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
-              toast.warning(`Rate limit atingido em ${file.name}. Aguardando 10s...`);
+              toast.warning(`Rate limit atingido em ${file.name}. Aguardando 5s...`);
               processedItems.push(item);
-              // BACKOFF: Wait 10 seconds on rate limit
-              await new Promise(resolve => setTimeout(resolve, 10000));
+              // BACKOFF: Wait 5 seconds on rate limit
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              didBackoff = true;
             } else {
               setProcessingStatus(prev => new Map(prev).set(i, 'error'));
               processedItems.push(item);
@@ -288,8 +295,8 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           }
         }
         
-        // DELAY: Wait 2 seconds between each file to avoid rate limiting
-        if (i < files.length - 1) {
+        // DELAY: Wait 2 seconds between files (skip if we already did backoff)
+        if (i < files.length - 1 && !didBackoff) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
@@ -298,8 +305,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
         
         if (error.message?.includes('429')) {
           setProcessingStatus(prev => new Map(prev).set(i, 'rate_limited'));
-          toast.warning(`Rate limit atingido. Aguardando 10s antes do próximo...`);
-          await new Promise(resolve => setTimeout(resolve, 10000));
+          toast.warning(`Rate limit atingido. Aguardando 5s antes do próximo...`);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          didBackoff = true;
         } else {
           setProcessingStatus(prev => new Map(prev).set(i, 'error'));
         }
@@ -712,9 +720,16 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                         {/* Cliente */}
                         <TableCell>
                           {item.processError ? (
-                            <div className="text-sm text-red-400">
+                            <div 
+                              className="text-sm text-red-400"
+                              title="PDF inválido, com senha, corrompido ou ilegível para OCR."
+                            >
                               <div className="font-medium">{item.fileName}</div>
-                              <div className="text-xs mt-1">{item.processError}</div>
+                              <div className="text-xs mt-1">
+                                {item.processError.includes('400') 
+                                  ? 'Erro ao ler arquivo. Verifique se é um PDF válido e não tem senha.'
+                                  : item.processError}
+                              </div>
                             </div>
                           ) : (
                             <div className="space-y-1">
