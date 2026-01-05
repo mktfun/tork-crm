@@ -648,39 +648,48 @@ export async function getTransactionDetails(
     };
   }
   
-  const result = data as any;
+  const raw = data as any;
   
-  if (result?.error) {
-    throw new Error(result.error);
+  if (raw?.error) {
+    throw new Error(raw.error);
   }
   
+  // Smart Mapper: aceita tanto camelCase (novo) quanto snake_case (legado)
+  const rawMovements = raw.ledgerEntries || raw.ledger_entries || [];
+  const rawLegacy = raw.legacyData || raw.legacy_data;
+  
   return {
-    id: result.id,
-    description: result.description,
-    transactionDate: result.transaction_date,
-    referenceNumber: result.reference_number,
-    relatedEntityId: result.related_entity_id,
-    relatedEntityType: result.related_entity_type,
-    isVoid: result.is_void,
-    voidReason: result.void_reason,
-    createdAt: result.created_at,
-    ledgerEntries: (result.ledger_entries || []).map((entry: any) => ({
+    id: raw.id,
+    description: raw.description,
+    // Tenta camelCase primeiro (novo padrão), depois snake_case (legado)
+    transactionDate: raw.transactionDate || raw.transaction_date,
+    referenceNumber: raw.referenceNumber || raw.reference_number,
+    relatedEntityId: raw.relatedEntityId || raw.related_entity_id,
+    relatedEntityType: raw.relatedEntityType || raw.related_entity_type,
+    isVoid: raw.isVoid ?? raw.is_void ?? false,
+    voidReason: raw.voidReason || raw.void_reason,
+    createdAt: raw.createdAt || raw.created_at,
+    
+    // Mapeamento profundo do Ledger (aceita ambos os formatos)
+    ledgerEntries: rawMovements.map((entry: any) => ({
       id: entry.id,
       amount: entry.amount,
       memo: entry.memo,
-      accountId: entry.account_id,
-      accountName: entry.account_name,
-      accountType: entry.account_type
+      accountId: entry.accountId || entry.account_id,
+      accountName: entry.accountName || entry.account_name || 'Conta Desconhecida',
+      accountType: entry.accountType || entry.account_type || 'unknown'
     })),
-    legacyData: result.legacy_data ? {
-      clientId: result.legacy_data.client_id,
-      clientName: result.legacy_data.client_name,
-      policyId: result.legacy_data.policy_id,
-      policyNumber: result.legacy_data.policy_number,
-      ramo: result.legacy_data.ramo,
-      company: result.legacy_data.company,
-      originalAmount: result.legacy_data.original_amount,
-      originalStatus: result.legacy_data.original_status
+    
+    // Legacy data (aceita ambos os formatos)
+    legacyData: rawLegacy ? {
+      clientId: rawLegacy.clientId || rawLegacy.client_id,
+      clientName: rawLegacy.clientName || rawLegacy.client_name,
+      policyId: rawLegacy.policyId || rawLegacy.policy_id,
+      policyNumber: rawLegacy.policyNumber || rawLegacy.policy_number,
+      ramo: rawLegacy.ramo,
+      company: rawLegacy.company,
+      originalAmount: rawLegacy.originalAmount || rawLegacy.original_amount || rawLegacy.amount,
+      originalStatus: rawLegacy.originalStatus || rawLegacy.original_status || rawLegacy.status
     } : null
   };
 }
