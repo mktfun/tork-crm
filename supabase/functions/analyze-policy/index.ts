@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `Você é um extrator de dados especialista em apólices de seguro brasileiras.
+// Prompt para apólices
+const POLICY_PROMPT = `Você é um extrator de dados especialista em apólices de seguro brasileiras.
 Analise este documento PDF/imagem de apólice e extraia as seguintes informações com MÁXIMA PRECISÃO:
 
 **CLIENTE (Segurado/Proponente):**
@@ -39,6 +40,30 @@ REGRAS IMPORTANTES:
 
 Retorne APENAS um objeto JSON válido, sem texto adicional.`;
 
+// Prompt para carteirinhas
+const CARD_PROMPT = `Você é um extrator de dados especialista em carteirinhas de seguro brasileiras.
+Analise esta imagem de carteirinha de seguro e extraia as seguintes informações:
+
+**DADOS DA CARTEIRINHA:**
+- nome_segurado (string) - Nome completo do titular/segurado
+- numero_carteirinha (string | null) - Número da carteirinha ou apólice
+- seguradora (string) - Nome da seguradora
+- tipo_seguro (string) - Tipo do seguro (Auto, Saúde, Vida, Residencial, etc.)
+- vigencia_inicio (string | null) - Data início da vigência no formato YYYY-MM-DD
+- vigencia_fim (string | null) - Data fim da vigência no formato YYYY-MM-DD
+- telefone_assistencia (string | null) - Telefone de assistência 24h
+- placa (string | null) - Placa do veículo (se for seguro auto)
+- chassi (string | null) - Número do chassi (se houver)
+- cpf_cnpj (string | null) - CPF ou CNPJ do segurado
+
+REGRAS:
+1. Se não encontrar um campo, retorne null
+2. Datas DEVEM estar no formato YYYY-MM-DD
+3. Telefones: mantenha a formatação original
+4. Para tipo_seguro, normalize para: "Auto", "Residencial", "Vida", "Empresarial", "Saúde", "Viagem", ou "Outros"
+
+Retorne APENAS um objeto JSON válido, sem texto adicional.`;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -58,7 +83,7 @@ serve(async (req) => {
       });
     }
 
-    const { fileBase64, mimeType } = await req.json();
+    const { fileBase64, mimeType, documentType = 'policy' } = await req.json();
 
     if (!fileBase64 || !mimeType) {
       return new Response(JSON.stringify({ 
@@ -70,7 +95,74 @@ serve(async (req) => {
       });
     }
 
-    console.log('Processing policy document, mimeType:', mimeType);
+    // Selecionar prompt baseado no tipo de documento
+    const selectedPrompt = documentType === 'card' ? CARD_PROMPT : POLICY_PROMPT;
+    console.log('Processing document, type:', documentType, 'mimeType:', mimeType);
+
+    // Schema para carteirinha
+    const cardSchema = {
+      type: 'object',
+      properties: {
+        nome_segurado: { type: 'string' },
+        numero_carteirinha: { type: 'string', nullable: true },
+        seguradora: { type: 'string' },
+        tipo_seguro: { type: 'string' },
+        vigencia_inicio: { type: 'string', nullable: true },
+        vigencia_fim: { type: 'string', nullable: true },
+        telefone_assistencia: { type: 'string', nullable: true },
+        placa: { type: 'string', nullable: true },
+        chassi: { type: 'string', nullable: true },
+        cpf_cnpj: { type: 'string', nullable: true },
+      },
+      required: ['nome_segurado', 'seguradora', 'tipo_seguro'],
+    };
+
+    // Schema para apólice
+    const policySchema = {
+      type: 'object',
+      properties: {
+        cliente: {
+          type: 'object',
+          properties: {
+            nome_completo: { type: 'string' },
+            cpf_cnpj: { type: 'string', nullable: true },
+            email: { type: 'string', nullable: true },
+            telefone: { type: 'string', nullable: true },
+            endereco_completo: { type: 'string', nullable: true },
+          },
+          required: ['nome_completo'],
+        },
+        apolice: {
+          type: 'object',
+          properties: {
+            numero_apolice: { type: 'string' },
+            nome_seguradora: { type: 'string' },
+            data_inicio: { type: 'string' },
+            data_fim: { type: 'string' },
+            ramo_seguro: { type: 'string' },
+          },
+          required: ['numero_apolice', 'nome_seguradora', 'data_inicio', 'data_fim', 'ramo_seguro'],
+        },
+        objeto_segurado: {
+          type: 'object',
+          properties: {
+            descricao_bem: { type: 'string' },
+          },
+          required: ['descricao_bem'],
+        },
+        valores: {
+          type: 'object',
+          properties: {
+            premio_liquido: { type: 'number' },
+            premio_total: { type: 'number' },
+          },
+          required: ['premio_liquido', 'premio_total'],
+        },
+      },
+      required: ['cliente', 'apolice', 'objeto_segurado', 'valores'],
+    };
+
+    const selectedSchema = documentType === 'card' ? cardSchema : policySchema;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
@@ -81,7 +173,7 @@ serve(async (req) => {
           contents: [
             {
               parts: [
-                { text: SYSTEM_PROMPT },
+                { text: selectedPrompt },
                 {
                   inline_data: {
                     mime_type: mimeType,
@@ -94,49 +186,7 @@ serve(async (req) => {
           generationConfig: {
             temperature: 0.1,
             responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'object',
-              properties: {
-                cliente: {
-                  type: 'object',
-                  properties: {
-                    nome_completo: { type: 'string' },
-                    cpf_cnpj: { type: 'string', nullable: true },
-                    email: { type: 'string', nullable: true },
-                    telefone: { type: 'string', nullable: true },
-                    endereco_completo: { type: 'string', nullable: true },
-                  },
-                  required: ['nome_completo'],
-                },
-                apolice: {
-                  type: 'object',
-                  properties: {
-                    numero_apolice: { type: 'string' },
-                    nome_seguradora: { type: 'string' },
-                    data_inicio: { type: 'string' },
-                    data_fim: { type: 'string' },
-                    ramo_seguro: { type: 'string' },
-                  },
-                  required: ['numero_apolice', 'nome_seguradora', 'data_inicio', 'data_fim', 'ramo_seguro'],
-                },
-                objeto_segurado: {
-                  type: 'object',
-                  properties: {
-                    descricao_bem: { type: 'string' },
-                  },
-                  required: ['descricao_bem'],
-                },
-                valores: {
-                  type: 'object',
-                  properties: {
-                    premio_liquido: { type: 'number' },
-                    premio_total: { type: 'number' },
-                  },
-                  required: ['premio_liquido', 'premio_total'],
-                },
-              },
-              required: ['cliente', 'apolice', 'objeto_segurado', 'valores'],
-            },
+            responseSchema: selectedSchema,
           },
         }),
       }
@@ -149,7 +199,7 @@ serve(async (req) => {
         success: false, 
         error: `Gemini API error: ${response.status}` 
       }), {
-        status: 500,
+        status: response.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -191,11 +241,12 @@ serve(async (req) => {
       });
     }
 
-    console.log('Successfully extracted policy data:', JSON.stringify(extractedData, null, 2));
+    console.log('Successfully extracted data:', JSON.stringify(extractedData, null, 2));
 
     return new Response(JSON.stringify({ 
       success: true, 
-      data: extractedData 
+      data: extractedData,
+      documentType: documentType,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

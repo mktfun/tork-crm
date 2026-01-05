@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AIAssistantPopover } from "@/components/ai/AIAssistantPopover";
 import { RootLayout } from "./layouts/RootLayout";
 import { SettingsLayout } from "./layouts/SettingsLayout";
+import { PortalLayout } from "./layouts/PortalLayout";
 import Dashboard from "./pages/Dashboard";
 import Policies from "./pages/Policies";
 import PolicyDetails from "./pages/PolicyDetails";
@@ -34,6 +35,14 @@ import RamoSettings from "./pages/settings/RamoSettings";
 import Novidades from "./pages/Novidades";
 import CRM from "./pages/CRM";
 import ChatTorkSettings from "./pages/settings/ChatTorkSettings";
+
+// Portal do Cliente
+import PortalLogin from "./pages/portal/PortalLogin";
+import PortalChangePassword from "./pages/portal/PortalChangePassword";
+import PortalHome from "./pages/portal/PortalHome";
+import PortalPolicies from "./pages/portal/PortalPolicies";
+import PortalCards from "./pages/portal/PortalCards";
+import PortalProfile from "./pages/portal/PortalProfile";
 
 // Helper to redirect legacy detail routes to dashboard namespace
 function ParamRedirect({ toBase }: { toBase: string }) {
@@ -112,6 +121,16 @@ function App() {
                     <Route path="transactions" element={<TransactionSettings />} />
                     <Route path="chat-tork" element={<ChatTorkSettings />} />
                   </Route>
+                </Route>
+
+                {/* Portal do Cliente - Rotas públicas (sem ProtectedRoute) */}
+                <Route path="/portal" element={<PortalLogin />} />
+                <Route path="/portal/change-password" element={<PortalChangePassword />} />
+                <Route element={<PortalLayout />}>
+                  <Route path="/portal/home" element={<PortalHome />} />
+                  <Route path="/portal/policies" element={<PortalPolicies />} />
+                  <Route path="/portal/cards" element={<PortalCards />} />
+                  <Route path="/portal/profile" element={<PortalProfile />} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />

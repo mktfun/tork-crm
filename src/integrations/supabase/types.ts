@@ -282,6 +282,10 @@ export type Database = {
           id: number
           logo_url: string | null
           name: string
+          portal_allow_profile_edit: boolean | null
+          portal_enabled: boolean | null
+          portal_show_cards: boolean | null
+          portal_show_policies: boolean | null
           susep_code: string | null
           updated_at: string
           user_id: string
@@ -293,6 +297,10 @@ export type Database = {
           id?: never
           logo_url?: string | null
           name: string
+          portal_allow_profile_edit?: boolean | null
+          portal_enabled?: boolean | null
+          portal_show_cards?: boolean | null
+          portal_show_policies?: boolean | null
           susep_code?: string | null
           updated_at?: string
           user_id: string
@@ -304,6 +312,10 @@ export type Database = {
           id?: never
           logo_url?: string | null
           name?: string
+          portal_allow_profile_edit?: boolean | null
+          portal_enabled?: boolean | null
+          portal_show_cards?: boolean | null
+          portal_show_policies?: boolean | null
           susep_code?: string | null
           updated_at?: string
           user_id?: string
@@ -365,6 +377,8 @@ export type Database = {
           number: string | null
           observations: string | null
           phone: string
+          portal_first_access: boolean | null
+          portal_password: string | null
           profession: string | null
           state: string | null
           status: string
@@ -389,6 +403,8 @@ export type Database = {
           number?: string | null
           observations?: string | null
           phone: string
+          portal_first_access?: boolean | null
+          portal_password?: string | null
           profession?: string | null
           state?: string | null
           status?: string
@@ -413,6 +429,8 @@ export type Database = {
           number?: string | null
           observations?: string | null
           phone?: string
+          portal_first_access?: boolean | null
+          portal_password?: string | null
           profession?: string | null
           state?: string | null
           status?: string
@@ -1990,6 +2008,8 @@ export type Database = {
           number: string | null
           observations: string | null
           phone: string
+          portal_first_access: boolean | null
+          portal_password: string | null
           profession: string | null
           state: string | null
           status: string
@@ -2249,6 +2269,7 @@ export type Database = {
       }
       is_admin: { Args: { user_id?: string }; Returns: boolean }
       link_manual_transactions: { Args: { p_user_id: string }; Returns: string }
+      merge_duplicate_clients: { Args: { p_user_id: string }; Returns: Json }
       migrate_missing_transactions: { Args: never; Returns: Json }
       preview_apolices_filtradas: {
         Args: { p_ramo?: string; p_seguradora_id?: string; p_user_id: string }
