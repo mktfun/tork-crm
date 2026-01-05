@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Home, FileText, CreditCard, User, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PortalClient {
   id: string;
@@ -12,17 +13,51 @@ interface PortalClient {
   user_id: string;
 }
 
+interface PortalConfig {
+  show_policies: boolean;
+  show_cards: boolean;
+  allow_profile_edit: boolean;
+}
+
 export function PortalLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [client, setClient] = useState<PortalClient | null>(null);
+  const [portalConfig, setPortalConfig] = useState<PortalConfig>({
+    show_policies: true,
+    show_cards: true,
+    allow_profile_edit: true,
+  });
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
     if (clientData) {
-      setClient(JSON.parse(clientData));
+      const parsedClient = JSON.parse(clientData);
+      setClient(parsedClient);
+      fetchPortalConfig(parsedClient.user_id);
     }
   }, []);
+
+  const fetchPortalConfig = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('brokerages')
+        .select('portal_show_policies, portal_show_cards, portal_allow_profile_edit')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setPortalConfig({
+          show_policies: data.portal_show_policies ?? true,
+          show_cards: data.portal_show_cards ?? true,
+          allow_profile_edit: data.portal_allow_profile_edit ?? true,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching portal config:', err);
+    }
+  };
 
   if (!client) {
     return <Navigate to="/portal" replace />;
@@ -78,31 +113,35 @@ export function PortalLayout() {
             <span className="text-xs">Início</span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
-              isActive('/portal/policies') 
-                ? 'text-purple-400' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-            onClick={() => navigate('/portal/policies')}
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-xs">Seguros</span>
-          </Button>
+          {portalConfig.show_policies && (
+            <Button 
+              variant="ghost" 
+              className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
+                isActive('/portal/policies') 
+                  ? 'text-purple-400' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              onClick={() => navigate('/portal/policies')}
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-xs">Seguros</span>
+            </Button>
+          )}
           
-          <Button 
-            variant="ghost" 
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
-              isActive('/portal/cards') 
-                ? 'text-purple-400' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-            onClick={() => navigate('/portal/cards')}
-          >
-            <CreditCard className="w-5 h-5" />
-            <span className="text-xs">Carteirinhas</span>
-          </Button>
+          {portalConfig.show_cards && (
+            <Button 
+              variant="ghost" 
+              className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
+                isActive('/portal/cards') 
+                  ? 'text-purple-400' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              onClick={() => navigate('/portal/cards')}
+            >
+              <CreditCard className="w-5 h-5" />
+              <span className="text-xs">Carteirinhas</span>
+            </Button>
+          )}
           
           <Button 
             variant="ghost" 

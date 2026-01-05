@@ -1,6 +1,6 @@
 
 import { NavLink } from 'react-router-dom';
-import { User, Building, Users, Shield, CreditCard, Tag, MessageCircle } from 'lucide-react';
+import { User, Building, Users, Shield, CreditCard, Tag, MessageCircle, Globe } from 'lucide-react';
 import { AppCard } from '@/components/ui/app-card';
 
 const navItems = [
@@ -45,6 +45,12 @@ const navItems = [
     path: '/dashboard/settings/chat-tork',
     icon: MessageCircle,
     description: 'Integração CRM'
+  },
+  {
+    name: 'Portal do Cliente',
+    path: '/dashboard/settings/portal',
+    icon: Globe,
+    description: 'Acesso dos segurados'
   }
 ];
 

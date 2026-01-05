@@ -31,31 +31,40 @@ export default function PortalLogin() {
     setIsLoading(true);
     setError('');
 
+    const rawInput = identifier.trim();
+    const cleanInput = rawInput.replace(/\D/g, ''); // Numbers only
+
+    console.log('🔐 Tentando login:', { rawInput, cleanInput, isNumeric: cleanInput.length >= 6 });
+
     try {
       let clients;
       let fetchError;
 
-      if (isNumericInput(identifier)) {
-        // Search by CPF
-        const normalizedCpf = identifier.replace(/\D/g, '');
+      if (cleanInput.length >= 6) {
+        // CPF Search: Try both with/without punctuation
+        // Use OR to match: exact clean, or contains clean digits
         const result = await supabase
           .from('clientes')
           .select('id, name, cpf_cnpj, portal_password, portal_first_access, user_id, email, phone')
-          .ilike('cpf_cnpj', `%${normalizedCpf}%`)
+          .or(`cpf_cnpj.eq.${cleanInput},cpf_cnpj.ilike.%${cleanInput}%`)
           .limit(5);
         
         clients = result.data;
         fetchError = result.error;
+        
+        console.log('🔍 Busca por CPF:', { cleanInput, results: clients?.length });
       } else {
-        // Search by Name
+        // Name Search: Case-insensitive partial match
         const result = await supabase
           .from('clientes')
           .select('id, name, cpf_cnpj, portal_password, portal_first_access, user_id, email, phone')
-          .ilike('name', `%${identifier.trim()}%`)
+          .ilike('name', `%${rawInput}%`)
           .limit(5);
         
         clients = result.data;
         fetchError = result.error;
+        
+        console.log('🔍 Busca por Nome:', { rawInput, results: clients?.length });
       }
 
       if (fetchError) {
@@ -70,19 +79,21 @@ export default function PortalLogin() {
       }
 
       // If multiple clients found by name, show error
-      if (clients.length > 1 && !isNumericInput(identifier)) {
-        setError('Nome duplicado encontrado. Por favor, entre em contato com a corretora ou tente com seu CPF/E-mail.');
+      if (clients.length > 1 && cleanInput.length < 6) {
+        setError('Nome duplicado encontrado. Por favor, entre em contato com a corretora ou tente com seu CPF.');
         return;
       }
 
       const client = clients[0];
+      console.log('✅ Cliente encontrado:', client.name);
 
       // Check if it's first access (default password: 123456)
       if (client.portal_first_access && password === '123456') {
-        // Save temporary session and redirect to onboarding
         sessionStorage.setItem('portal_client', JSON.stringify(client));
         toast.success('Primeiro acesso! Complete seu cadastro.');
-        navigate('/portal/onboarding');
+        setTimeout(() => {
+          navigate('/portal/onboarding', { replace: true });
+        }, 100);
         return;
       }
 
@@ -93,9 +104,14 @@ export default function PortalLogin() {
       }
 
       // Login successful
+      console.log('✅ Login bem-sucedido para:', client.name);
       sessionStorage.setItem('portal_client', JSON.stringify(client));
       toast.success(`Bem-vindo, ${client.name?.split(' ')[0]}!`);
-      navigate('/portal/home');
+      
+      // Force navigation with timeout for robustness
+      setTimeout(() => {
+        navigate('/portal/home', { replace: true });
+      }, 100);
       
     } catch (err) {
       console.error('Login error:', err);
