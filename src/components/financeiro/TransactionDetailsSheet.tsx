@@ -13,7 +13,9 @@ import {
   RotateCcw,
   Lock,
   Info,
-  FileWarning
+  FileWarning,
+  Paperclip,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -369,6 +371,35 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                     ))}
                   </div>
                 </div>
+
+                {/* Comprovantes Anexados */}
+                {transaction.attachments && transaction.attachments.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Paperclip className="w-4 h-4" />
+                        Comprovantes ({transaction.attachments.length})
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {transaction.attachments.map((url, idx) => (
+                          <Button 
+                            key={idx} 
+                            asChild 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                          >
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <ImageIcon className="w-4 h-4" />
+                              Ver Comprovante {idx + 1}
+                            </a>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Botão de Estorno */}
                 <Separator />

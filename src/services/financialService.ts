@@ -570,6 +570,7 @@ interface TransactionDetails {
   isVoid: boolean;
   voidReason: string | null;
   createdAt: string;
+  attachments: string[];
   ledgerEntries: Array<{
     id: string;
     amount: number;
@@ -636,6 +637,7 @@ export async function getTransactionDetails(
       isVoid: tx.is_void ?? false,
       voidReason: tx.void_reason,
       createdAt: tx.created_at,
+      attachments: tx.attachments || [],
       ledgerEntries: (tx.financial_ledger || []).map((l: any) => ({
         id: l.id,
         amount: l.amount,
@@ -669,6 +671,7 @@ export async function getTransactionDetails(
     isVoid: raw.isVoid ?? raw.is_void ?? false,
     voidReason: raw.voidReason || raw.void_reason,
     createdAt: raw.createdAt || raw.created_at,
+    attachments: raw.attachments || [],
     
     // Mapeamento profundo do Ledger (aceita ambos os formatos)
     ledgerEntries: rawMovements.map((entry: any) => ({

@@ -885,6 +885,7 @@ export type Database = {
       }
       financial_transactions: {
         Row: {
+          attachments: string[] | null
           created_at: string
           created_by: string
           description: string
@@ -900,6 +901,7 @@ export type Database = {
           voided_by: string | null
         }
         Insert: {
+          attachments?: string[] | null
           created_at?: string
           created_by: string
           description: string
@@ -915,6 +917,7 @@ export type Database = {
           voided_by?: string | null
         }
         Update: {
+          attachments?: string[] | null
           created_at?: string
           created_by?: string
           description?: string
