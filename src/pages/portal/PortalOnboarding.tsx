@@ -29,6 +29,7 @@ export default function PortalOnboarding() {
   const [isLoading, setIsLoading] = useState(false);
   const [client, setClient] = useState<ClientData | null>(null);
   const [currentPassword, setCurrentPassword] = useState('123456');
+  const [slug, setSlug] = useState('');
   
   // Form data
   const [cpf, setCpf] = useState('');
@@ -43,10 +44,14 @@ export default function PortalOnboarding() {
 
   useEffect(() => {
     const storedClient = sessionStorage.getItem('portal_client');
-    if (!storedClient) {
-      navigate('/portal/login');
+    const storedSlug = sessionStorage.getItem('portal_brokerage_slug');
+    
+    if (!storedClient || !storedSlug) {
+      navigate('/');
       return;
     }
+    
+    setSlug(storedSlug);
     const clientData = JSON.parse(storedClient);
     setClient(clientData);
     
@@ -208,7 +213,7 @@ export default function PortalOnboarding() {
       sessionStorage.setItem('portal_client', JSON.stringify(updatedClient));
 
       toast.success('Cadastro atualizado com sucesso!');
-      navigate('/portal/home');
+      navigate(`/${slug}/portal/home`);
       
     } catch (err) {
       console.error('Onboarding error:', err);
@@ -225,11 +230,11 @@ export default function PortalOnboarding() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4">
-      <Card className="w-full max-w-lg bg-zinc-900/40 border-white/5 backdrop-blur-xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4">
+      <Card className="w-full max-w-lg bg-[#0A0A0A] border-white/5 backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-yellow-600/20">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-[#D4AF37]/20">
+            <Shield className="w-8 h-8 text-black" />
           </div>
           <CardTitle className="text-2xl text-white font-light tracking-wide">Atualize seus dados</CardTitle>
           <CardDescription className="text-zinc-500">
@@ -242,13 +247,13 @@ export default function PortalOnboarding() {
               <div key={s.number} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
                   step >= s.number 
-                    ? 'bg-gradient-to-br from-yellow-600 to-yellow-700 text-white shadow-lg shadow-yellow-600/20' 
+                    ? 'bg-gradient-to-br from-[#D4AF37] to-[#C5A028] text-black shadow-lg shadow-[#D4AF37]/20' 
                     : 'bg-zinc-800 text-zinc-500 border border-white/10'
                 }`}>
                   {step > s.number ? <Check className="w-4 h-4" /> : s.number}
                 </div>
                 {s.number < 3 && (
-                  <div className={`w-8 h-0.5 mx-1 ${step > s.number ? 'bg-yellow-600' : 'bg-zinc-800'}`} />
+                  <div className={`w-8 h-0.5 mx-1 ${step > s.number ? 'bg-[#D4AF37]' : 'bg-zinc-800'}`} />
                 )}
               </div>
             ))}
@@ -268,7 +273,7 @@ export default function PortalOnboarding() {
                   value={cpf}
                   onChange={(e) => { setCpf(formatCpf(e.target.value)); setError(''); }}
                   maxLength={14}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
               <div className="space-y-2">
@@ -278,7 +283,7 @@ export default function PortalOnboarding() {
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
             </div>
@@ -296,7 +301,7 @@ export default function PortalOnboarding() {
                   value={phone}
                   onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(''); }}
                   maxLength={15}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
               <div className="space-y-2">
@@ -307,7 +312,7 @@ export default function PortalOnboarding() {
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
             </div>
@@ -324,7 +329,7 @@ export default function PortalOnboarding() {
                   placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
               <div className="space-y-2">
@@ -335,7 +340,7 @@ export default function PortalOnboarding() {
                   placeholder="Repita a senha"
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
                 />
               </div>
             </div>
@@ -372,7 +377,7 @@ export default function PortalOnboarding() {
               <Button 
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white hover:from-yellow-500 hover:to-yellow-600 h-12"
+                className="flex-1 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black hover:from-[#E5C048] hover:to-[#D4AF37] h-12 font-medium"
               >
                 {isLoading ? (
                   <>

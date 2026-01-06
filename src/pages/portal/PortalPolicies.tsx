@@ -87,7 +87,7 @@ export default function PortalPolicies() {
     if (days < 0) {
       return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
-      return <Badge className="bg-yellow-600/10 text-yellow-500 border-yellow-600/20">Vence em {days}d</Badge>;
+      return <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20">Vence em {days}d</Badge>;
     } else {
       return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Ativa</Badge>;
     }
@@ -109,7 +109,7 @@ export default function PortalPolicies() {
       <h2 className="text-xl font-light text-white tracking-wide">Meus Seguros</h2>
 
       {policies.length === 0 ? (
-        <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+        <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
             <p className="text-zinc-500">Nenhum seguro encontrado.</p>
@@ -118,10 +118,10 @@ export default function PortalPolicies() {
       ) : (
         <div className="space-y-3">
           {policies.map((policy) => (
-            <Card key={policy.id} className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+            <Card key={policy.id} className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-yellow-600/10 rounded-lg flex items-center justify-center text-yellow-600 flex-shrink-0 border border-yellow-600/20">
+                  <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-lg flex items-center justify-center text-[#D4AF37] flex-shrink-0 border border-[#D4AF37]/20">
                     {getTypeIcon(policy.type)}
                   </div>
                   <div className="flex-1 min-w-0">

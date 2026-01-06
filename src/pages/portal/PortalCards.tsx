@@ -86,7 +86,7 @@ export default function PortalCards() {
       <h2 className="text-xl font-light text-white tracking-wide">Minhas Carteirinhas</h2>
 
       {policies.length === 0 ? (
-        <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+        <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
           <CardContent className="p-8 text-center">
             <CreditCard className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
             <p className="text-zinc-500">Nenhuma carteirinha disponível.</p>
@@ -104,20 +104,20 @@ export default function PortalCards() {
             >
               {/* Card Background Pattern */}
               <div className="absolute inset-0 opacity-20">
-                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-yellow-600/30" />
-                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-yellow-600/20" />
+                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-[#D4AF37]/30" />
+                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-[#D4AF37]/20" />
               </div>
 
               {/* Card Content */}
               <div className="relative z-10">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <Shield className="w-6 h-6 text-yellow-600" />
+                    <Shield className="w-6 h-6 text-[#D4AF37]" />
                     <span className="font-light text-white/90 text-sm">
                       {policy.type || 'Seguro'}
                     </span>
                   </div>
-                  <CreditCard className="w-8 h-8 text-yellow-600/40" />
+                  <CreditCard className="w-8 h-8 text-[#D4AF37]/40" />
                 </div>
 
                 <div className="mb-4">
@@ -174,7 +174,7 @@ export default function PortalCards() {
         </div>
       )}
 
-      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/5">
