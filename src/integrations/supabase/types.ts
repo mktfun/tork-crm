@@ -2314,13 +2314,13 @@ export type Database = {
       promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
       register_policy_commission: {
         Args: {
-          p_client_name?: string
-          p_commission_amount?: number
+          p_client_name: string
+          p_commission_amount: number
           p_policy_id: string
-          p_policy_number?: string
-          p_ramo_name?: string
+          p_policy_number: string
+          p_ramo_name: string
           p_status?: string
-          p_transaction_date?: string
+          p_transaction_date: string
         }
         Returns: {
           reference_number: string
