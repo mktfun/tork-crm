@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   ArrowRightLeft,
   Check,
   Lock,
-  Info
+  Info,
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
@@ -17,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Table,
   TableBody,
@@ -52,6 +55,42 @@ interface ReceitasTabProps {
   dateRange: DateRange | undefined;
 }
 
+// ============ KPI CARD INTERNO ============
+
+interface KpiProps {
+  title: string;
+  value: number;
+  variant: 'success' | 'warning';
+  icon: React.ElementType;
+}
+
+function KpiCard({ title, value, variant, icon: Icon }: KpiProps) {
+  const styles = {
+    success: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600',
+    warning: 'bg-amber-500/10 border-amber-500/20 text-amber-600'
+  };
+  const iconStyles = {
+    success: 'bg-emerald-500/20 text-emerald-500',
+    warning: 'bg-amber-500/20 text-amber-500'
+  };
+
+  return (
+    <Card className={cn('border', styles[variant])}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={cn('p-2 rounded-lg', iconStyles[variant])}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">{title}</p>
+            <p className="text-lg font-bold">{formatCurrency(value)}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ============ TRANSACTIONS TABLE ============
 
 interface TransactionsTableProps {
@@ -61,6 +100,7 @@ interface TransactionsTableProps {
   onToggleSelect: (id: string) => void;
   onSelectAll: (checked: boolean) => void;
   onViewDetails: (id: string) => void;
+  viewMode: 'efetivado' | 'a_receber';
 }
 
 function TransactionsTable({ 
@@ -69,9 +109,21 @@ function TransactionsTable({
   selectedIds, 
   onToggleSelect, 
   onSelectAll,
-  onViewDetails 
+  onViewDetails,
+  viewMode
 }: TransactionsTableProps) {
-  const { data: transactions = [], isLoading } = useRevenueTransactions(startDate, endDate);
+  const { data: allTransactions = [], isLoading } = useRevenueTransactions(startDate, endDate);
+
+  // Filtrar por viewMode
+  const transactions = useMemo(() => {
+    return allTransactions.filter(tx => {
+      if (viewMode === 'efetivado') {
+        return tx.is_confirmed;
+      } else {
+        return !tx.is_confirmed;
+      }
+    });
+  }, [allTransactions, viewMode]);
 
   if (isLoading) {
     return (
@@ -87,33 +139,34 @@ function TransactionsTable({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Nenhuma receita encontrada no período.</p>
+        <p>
+          {viewMode === 'efetivado' 
+            ? 'Nenhuma receita confirmada no período.'
+            : 'Nenhuma receita pendente no período.'}
+        </p>
       </div>
     );
   }
 
   // Filtrar transações que podem ser selecionadas (não confirmadas E não sincronizadas)
-  // Transações sincronizadas (legacy_status não nulo) não podem ser selecionadas manualmente
-  const selectableTransactions = transactions.filter(tx => !tx.is_confirmed);
+  const selectableTransactions = transactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
   const allSelectableSelected = selectableTransactions.length > 0 && 
     selectableTransactions.every(tx => selectedIds.has(tx.id));
-
-  const handleSelectAllSelectable = (checked: boolean) => {
-    onSelectAll(checked);
-  };
 
   return (
     <TooltipProvider>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10">
-              <Checkbox 
-                checked={allSelectableSelected}
-                onCheckedChange={(checked) => handleSelectAllSelectable(!!checked)}
-                disabled={selectableTransactions.length === 0}
-              />
-            </TableHead>
+            {viewMode === 'a_receber' && (
+              <TableHead className="w-10">
+                <Checkbox 
+                  checked={allSelectableSelected}
+                  onCheckedChange={(checked) => onSelectAll(!!checked)}
+                  disabled={selectableTransactions.length === 0}
+                />
+              </TableHead>
+            )}
             <TableHead className="w-24">Data</TableHead>
             <TableHead className="min-w-[280px]">Descrição</TableHead>
             <TableHead className="w-40">Categoria</TableHead>
@@ -124,10 +177,8 @@ function TransactionsTable({
         <TableBody>
           {transactions.map((tx) => {
             const isConfirmed = tx.is_confirmed;
-            // Transação sincronizada do legado (vinda de apólice)
             const isSynchronized = tx.legacy_status !== null;
             
-            // Parse date correctly using local date helper
             const displayDate = tx.transaction_date 
               ? format(parseLocalDate(String(tx.transaction_date)), 'dd/MM', { locale: ptBR })
               : '-';
@@ -141,29 +192,31 @@ function TransactionsTable({
                 )}
                 onClick={() => onViewDetails(tx.id)}
               >
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  {isSynchronized && !isConfirmed ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center justify-center w-4 h-4">
-                          <Lock className="w-3.5 h-3.5 text-muted-foreground" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p className="font-medium">Transação Sincronizada</p>
-                        <p className="text-xs text-muted-foreground">
-                          Alterações devem ser feitas na Apólice
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <Checkbox 
-                      checked={selectedIds.has(tx.id)}
-                      onCheckedChange={() => onToggleSelect(tx.id)}
-                      disabled={isConfirmed}
-                    />
-                  )}
-                </TableCell>
+                {viewMode === 'a_receber' && (
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    {isSynchronized && !isConfirmed ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-center w-4 h-4">
+                            <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p className="font-medium">Transação Sincronizada</p>
+                          <p className="text-xs text-muted-foreground">
+                            Alterações devem ser feitas na Apólice
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Checkbox 
+                        checked={selectedIds.has(tx.id)}
+                        onCheckedChange={() => onToggleSelect(tx.id)}
+                        disabled={isConfirmed}
+                      />
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="font-mono text-sm">
                   {displayDate}
                 </TableCell>
@@ -196,11 +249,13 @@ function TransactionsTable({
                 </TableCell>
                 <TableCell>
                   {isConfirmed ? (
-                    <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+                    <Badge variant="default" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30 gap-1">
+                      <Check className="w-3 h-3" />
                       Confirmado
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-amber-600 border-amber-500/30">
+                    <Badge variant="outline" className="text-amber-600 border-amber-500/30 gap-1">
+                      <Clock className="w-3 h-3" />
                       Pendente
                     </Badge>
                   )}
@@ -222,26 +277,38 @@ function TransactionsTable({
 export function ReceitasTab({ dateRange }: ReceitasTabProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'efetivado' | 'a_receber'>('efetivado');
   
   const bulkConfirm = useBulkConfirmReceipts();
-  const { data: transactions = [] } = useRevenueTransactions(
-    dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
-  );
 
-  const startDate = dateRange?.from 
-    ? format(dateRange.from, 'yyyy-MM-dd')
-    : format(new Date(), 'yyyy-MM-dd');
-  const endDate = dateRange?.to 
-    ? format(dateRange.to, 'yyyy-MM-dd')
-    : format(new Date(), 'yyyy-MM-dd');
+  // Datas normalizadas
+  const { startDate, endDate } = useMemo(() => {
+    const from = dateRange?.from || new Date();
+    const to = dateRange?.to || new Date();
+    return {
+      startDate: format(startOfDay(from), 'yyyy-MM-dd'),
+      endDate: format(endOfDay(to), 'yyyy-MM-dd')
+    };
+  }, [dateRange]);
 
-  // Filtrar apenas transações que podem ser selecionadas (não confirmadas e não sincronizadas)
-  const selectableTransactions = transactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
+  const { data: allTransactions = [] } = useRevenueTransactions(startDate, endDate);
+
+  // Calcular KPIs
+  const kpis = useMemo(() => {
+    const confirmadas = allTransactions.filter(tx => tx.is_confirmed);
+    const pendentes = allTransactions.filter(tx => !tx.is_confirmed);
+    
+    return {
+      recebido: confirmadas.reduce((sum, tx) => sum + (tx.amount || 0), 0),
+      aReceber: pendentes.reduce((sum, tx) => sum + (tx.amount || 0), 0)
+    };
+  }, [allTransactions]);
+
+  // Filtrar transações que podem ser selecionadas
+  const selectableTransactions = allTransactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
 
   const handleToggleSelect = (id: string) => {
-    const tx = transactions.find(t => t.id === id);
-    // Não permite selecionar se confirmada ou sincronizada
+    const tx = allTransactions.find(t => t.id === id);
     if (tx?.is_confirmed || tx?.legacy_status !== null) return;
     
     setSelectedIds(prev => {
@@ -282,11 +349,11 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
   };
 
   // Contar transações sincronizadas para info
-  const syncedCount = transactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
+  const syncedCount = allTransactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
 
   return (
     <div className="space-y-6">
-      {/* Header com Ações */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Receitas</h2>
@@ -299,8 +366,32 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
         </div>
       </div>
 
+      {/* Toggle + KPIs */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(val) => val && setViewMode(val as 'efetivado' | 'a_receber')}
+          className="bg-muted/50 p-1 rounded-lg"
+        >
+          <ToggleGroupItem value="efetivado" className="gap-2 data-[state=on]:bg-background">
+            <Check className="w-4 h-4" />
+            Efetivado
+          </ToggleGroupItem>
+          <ToggleGroupItem value="a_receber" className="gap-2 data-[state=on]:bg-background">
+            <Clock className="w-4 h-4" />
+            A Receber
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        <div className="flex-1 grid grid-cols-2 gap-3">
+          <KpiCard title="Recebido no Período" value={kpis.recebido} variant="success" icon={Check} />
+          <KpiCard title="Previsão a Receber" value={kpis.aReceber} variant="warning" icon={Clock} />
+        </div>
+      </div>
+
       {/* Info sobre transações sincronizadas */}
-      {syncedCount > 0 && (
+      {syncedCount > 0 && viewMode === 'a_receber' && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm">
           <Info className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <span className="text-muted-foreground">
@@ -314,14 +405,18 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div>
-            <CardTitle>Lançamentos de Receita</CardTitle>
+            <CardTitle>
+              {viewMode === 'efetivado' ? 'Receitas Confirmadas' : 'Receitas Pendentes'}
+            </CardTitle>
             <CardDescription>
-              Transações registradas no módulo Financeiro
+              {viewMode === 'efetivado' 
+                ? 'Transações já recebidas no período'
+                : 'Previsões de recebimento'}
             </CardDescription>
           </div>
           
           {/* Batch Action Button */}
-          {selectedIds.size > 0 && (
+          {viewMode === 'a_receber' && selectedIds.size > 0 && (
             <Button 
               onClick={handleBulkConfirm}
               disabled={bulkConfirm.isPending}
@@ -341,6 +436,7 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
               onToggleSelect={handleToggleSelect}
               onSelectAll={handleSelectAll}
               onViewDetails={(id) => setDetailsId(id)}
+              viewMode={viewMode}
             />
           </ScrollArea>
         </CardContent>

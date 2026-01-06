@@ -404,6 +404,9 @@ export function ConfiguracoesTab() {
       {/* Automação */}
       <AutomationSection />
 
+      {/* Destino das Comissões */}
+      <CommissionTargetSection assetAccounts={assetAccounts} />
+
       {/* Contas Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <AccountListSection
