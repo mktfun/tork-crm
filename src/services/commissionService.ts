@@ -206,12 +206,23 @@ export async function gerarTransacaoDeComissaoERP(
     return null;
   }
 
+  // 🔧 Fallbacks robustos para evitar "undefined" na descrição
+  const safeClientName = (clientName && clientName.trim() !== '' && clientName !== 'undefined') 
+    ? clientName.trim() 
+    : 'Cliente';
+  const safeRamoName = (ramoName && ramoName.trim() !== '' && ramoName !== 'undefined') 
+    ? ramoName.trim() 
+    : 'Seguro';
+  const safePolicyNumber = (policy.policyNumber && policy.policyNumber.trim() !== '' && policy.policyNumber !== 'undefined')
+    ? policy.policyNumber.trim()
+    : '';
+
   // 🔧 Enviar como TEXT - a RPC faz o cast interno para UUID
   const { data, error } = await supabase.rpc('register_policy_commission', {
-    p_policy_id: policy.id, // Enviado como TEXT
-    p_client_name: clientName || 'Cliente',
-    p_ramo_name: ramoName || 'Seguro',
-    p_policy_number: policy.policyNumber || '',
+    p_policy_id: policy.id,
+    p_client_name: safeClientName,
+    p_ramo_name: safeRamoName,
+    p_policy_number: safePolicyNumber,
     p_commission_amount: commissionAmount,
     p_transaction_date: policy.startDate || new Date().toISOString().split('T')[0],
     p_status: 'pending'

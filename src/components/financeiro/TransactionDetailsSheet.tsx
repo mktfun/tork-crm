@@ -129,10 +129,15 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
   // Pode estornar se não está anulada e não é um estorno
   const canReverse = !isVoid && !isReversal;
 
-  // Verificar se é uma provisão pendente de baixa (veio de comissão legada e não tem liquidação ainda)
+  // ✅ CORREÇÃO: Verificar se é uma provisão pendente de baixa
+  // Agora considera TANTO legacy_transaction QUANTO policy com status 'pending'
+  const transactionStatus = (transaction as any)?.status || transaction?.legacyData?.originalStatus;
   const isPendingSettlement = !isVoid && !isReversal && 
-    transaction?.relatedEntityType === 'legacy_transaction' &&
-    transaction?.legacyData?.originalStatus !== 'PAGO';
+    (transaction?.relatedEntityType === 'legacy_transaction' || transaction?.relatedEntityType === 'policy') &&
+    (transactionStatus === 'pending' || transaction?.legacyData?.originalStatus === 'PENDENTE');
+  
+  // Verificar se é origem de apólice (para exibição correta)
+  const isFromPolicy = transaction?.relatedEntityType === 'policy';
 
   // Handler para dar baixa na comissão
   const handleSettlement = async () => {
@@ -281,7 +286,30 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                         Estorno
                       </Badge>
                     )}
-                    {isSynchronized && !isReversal && (
+                    {/* ✅ Badge de Pendente para comissões não liquidadas */}
+                    {isPendingSettlement && (
+                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 border-yellow-500/30">
+                        Pendente
+                      </Badge>
+                    )}
+                    {/* ✅ Badge de Origem: Apólice */}
+                    {isFromPolicy && !isReversal && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="gap-1 cursor-help bg-blue-500/10 text-blue-700 border-blue-500/30">
+                              <FileCheck className="w-3 h-3" />
+                              Origem: Apólice
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Comissão gerada automaticamente.</p>
+                            <p className="text-xs text-muted-foreground">Vinculada a uma apólice ativa.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {isSynchronized && !isReversal && !isFromPolicy && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
