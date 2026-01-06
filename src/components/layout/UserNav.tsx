@@ -1,4 +1,3 @@
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -10,15 +9,27 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { LogOut, Settings as SettingsIcon, User } from 'lucide-react';
 
 export function UserNav() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
 
   // Extrair iniciais do nome do usuário
-  const getInitials = (email: string) => {
-    return email.split('@')[0].substring(0, 2).toUpperCase();
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      const parts = name.trim().split(' ');
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.split('@')[0].substring(0, 2).toUpperCase();
+    }
+    return 'U';
   };
 
   const handleProfile = () => {
@@ -40,9 +51,9 @@ export function UserNav() {
           h-8 w-8 cursor-pointer hover:ring-2 hover:ring-white/20 transition-all
           md:h-9 md:w-9
         ">
-          <AvatarImage src="" alt="Usuário" />
+          <AvatarImage src={profile?.avatar_url || ''} alt="Usuário" />
           <AvatarFallback className="bg-blue-600 text-white text-sm">
-            {user?.email ? getInitials(user.email) : 'U'}
+            {getInitials(profile?.nome_completo, user?.email)}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
