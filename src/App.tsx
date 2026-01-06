@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AIAssistantPopover } from "@/components/ai/AIAssistantPopover";
 import { RootLayout } from "./layouts/RootLayout";
 import { SettingsLayout } from "./layouts/SettingsLayout";
 import { PortalLayout } from "./layouts/PortalLayout";
@@ -71,7 +70,6 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
-            <AIAssistantPopover />
             <div className="min-h-screen">
               <Routes>
                 {/* Rota principal - Landing page para não autenticados */}
