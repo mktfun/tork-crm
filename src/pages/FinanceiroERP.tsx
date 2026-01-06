@@ -16,7 +16,8 @@ import {
   Settings,
   Clock,
   ArrowDownCircle,
-  ArrowUpCircle
+  ArrowUpCircle,
+  CalendarClock
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,6 +44,8 @@ import {
 } from '@/hooks/useFinanceiro';
 import { FinancialAccount, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { parseLocalDate } from '@/utils/dateUtils';
+import { cn } from '@/lib/utils';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -130,61 +133,106 @@ function TransactionCountCard({ count, isLoading }: { count: number; isLoading: 
   );
 }
 
-// ============ TRANSACTIONS LIST ============
+// ============ SIDEBAR - FLUXO RECENTE ============
 
-function TransactionsList() {
+interface SidebarFluxoRecenteProps {
+  onViewDetails?: (id: string) => void;
+}
+
+function SidebarFluxoRecente({ onViewDetails }: SidebarFluxoRecenteProps) {
   const { data: transactions = [], isLoading } = useRecentTransactions();
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
-      </div>
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarClock className="w-4 h-4" />
+            Fluxo Recente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Nenhuma transação registrada ainda.</p>
-        <p className="text-sm">Use o botão "Nova Despesa" para começar.</p>
-      </div>
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarClock className="w-4 h-4" />
+            Fluxo Recente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <ArrowRightLeft className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Nenhuma transação</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <ScrollArea className="h-[300px]">
-      <div className="space-y-2">
-        {transactions.slice(0, 10).map((tx) => (
-          <Card key={tx.id} className="bg-card/30 border-border/30 hover:bg-card/50 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{tx.description}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{format(new Date(tx.transaction_date), "dd 'de' MMM", { locale: ptBR })}</span>
-                    {tx.reference_number && (
-                      <>
-                        <span>•</span>
-                        <span className="truncate">{tx.reference_number}</span>
-                      </>
-                    )}
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
+        <CardTitle className="text-base flex items-center gap-2">
+          <CalendarClock className="w-4 h-4" />
+          Fluxo Recente
+        </CardTitle>
+        <CardDescription className="text-xs">Últimos movimentos</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full max-h-[500px]">
+          <div className="space-y-2 pr-2">
+            {transactions.slice(0, 15).map((tx) => {
+              // Use parseLocalDate to avoid timezone issues
+              const txDate = parseLocalDate(String(tx.transaction_date));
+              const isPending = tx.reference_number?.startsWith('COMMISSION-') || tx.reference_number?.startsWith('LEGACY-');
+              
+              return (
+                <div 
+                  key={tx.id} 
+                  className={cn(
+                    "p-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer",
+                    isPending && "opacity-70 border-l-2 border-amber-500/50"
+                  )}
+                  onClick={() => onViewDetails?.(tx.id)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{tx.description}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span>{format(txDate, "dd/MM", { locale: ptBR })}</span>
+                        {isPending && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 text-amber-600 border-amber-500/30">
+                            Pendente
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <p className={cn(
+                      "text-sm font-semibold flex-shrink-0",
+                      tx.total_amount > 0 ? 'text-emerald-500' : 'text-rose-500'
+                    )}>
+                      {tx.total_amount > 0 ? '+' : ''}{formatCurrency(Math.abs(tx.total_amount))}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right ml-4">
-                  <p className={`font-semibold ${tx.total_amount > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {tx.total_amount > 0 ? '+' : ''}{formatCurrency(Math.abs(tx.total_amount))}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </ScrollArea>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -347,20 +395,6 @@ function VisaoGeral({ dateRange }: VisaoGeralProps) {
         isLoading={cashFlowLoading}
         granularity="day"
       />
-
-      {/* Últimos movimentos */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Últimos Movimentos</CardTitle>
-            <CardDescription>Transações registradas no sistema</CardDescription>
-          </div>
-          <NovaDespesaModal />
-        </CardHeader>
-        <CardContent>
-          <TransactionsList />
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -401,28 +435,45 @@ function DespesasTab({ dateRange }: DespesasTabProps) {
           ) : (
             <ScrollArea className="h-[500px]">
               <div className="space-y-2">
-                {transactions.map((tx) => (
-                  <Card 
-                    key={tx.id} 
-                    className="bg-card/30 border-border/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => setDetailsId(tx.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{tx.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(tx.transaction_date), "dd/MM/yyyy")}
-                            {tx.reference_number && ` • ${tx.reference_number}`}
+                {transactions.map((tx) => {
+                  // Use parseLocalDate to avoid timezone issues
+                  const txDate = parseLocalDate(String(tx.transaction_date));
+                  // Check if pending (not paid yet - future date or manual entry)
+                  const isPending = !tx.reference_number?.includes('PAID');
+                  
+                  return (
+                    <Card 
+                      key={tx.id} 
+                      className={cn(
+                        "bg-card/30 border-border/30 cursor-pointer hover:bg-muted/50 transition-colors",
+                        isPending && "opacity-70 border-l-2 border-amber-500/50"
+                      )}
+                      onClick={() => setDetailsId(tx.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{tx.description}</p>
+                              {isPending && (
+                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30 flex-shrink-0">
+                                  Pendente
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {format(txDate, "dd/MM/yyyy")}
+                              {tx.reference_number && ` • ${tx.reference_number}`}
+                            </p>
+                          </div>
+                          <p className="font-semibold text-rose-500 flex-shrink-0 ml-2">
+                            - {formatCurrency(tx.total_amount)}
                           </p>
                         </div>
-                        <p className="font-semibold text-rose-500">
-                          - {formatCurrency(tx.total_amount)}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </ScrollArea>
           )}
