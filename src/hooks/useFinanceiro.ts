@@ -340,3 +340,28 @@ export function useTransactionDetails(transactionId: string | null, isLegacyId =
     enabled: !!transactionId
   });
 }
+
+/**
+ * Hook para buscar totais pendentes (A Receber e A Pagar)
+ */
+export function usePendingTotals(startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ['pending-totals', startDate, endDate],
+    queryFn: () => financialService.getPendingTotals(startDate, endDate)
+  });
+}
+
+/**
+ * Hook para buscar cash flow com projeção
+ */
+export function useCashFlowWithProjection(
+  startDate: string,
+  endDate: string,
+  granularity: 'day' | 'month' = 'day'
+) {
+  return useQuery({
+    queryKey: ['cash-flow-projection', startDate, endDate, granularity],
+    queryFn: () => financialService.getCashFlowWithProjection(startDate, endDate, granularity),
+    enabled: !!startDate && !!endDate
+  });
+}

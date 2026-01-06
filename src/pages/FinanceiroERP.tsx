@@ -13,7 +13,10 @@ import {
   BarChart3,
   Receipt,
   FileSpreadsheet,
-  Settings
+  Settings,
+  Clock,
+  ArrowDownCircle,
+  ArrowUpCircle
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,7 +38,8 @@ import {
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
   useCashFlowData,
-  useFinancialSummary
+  useFinancialSummary,
+  usePendingTotals
 } from '@/hooks/useFinanceiro';
 import { FinancialAccount, ACCOUNT_TYPE_LABELS } from '@/types/financeiro';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -230,6 +234,7 @@ function VisaoGeral({ dateRange }: VisaoGeralProps) {
     chartPeriod.endDate,
     'day'
   );
+  const { data: pendingTotals, isLoading: pendingLoading } = usePendingTotals(startDate, endDate);
 
   if (accountsLoading || isEnsuring) {
     return (
@@ -271,6 +276,69 @@ function VisaoGeral({ dateRange }: VisaoGeralProps) {
           count={summary?.transactionCount ?? 0} 
           isLoading={summaryLoading}
         />
+      </div>
+
+      {/* Cards de Provisão (A Receber / A Pagar) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-amber-500/20 text-amber-500">
+                <ArrowDownCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">A Receber (Provisão)</p>
+                  <Clock className="w-3 h-3 text-amber-500" />
+                </div>
+                {pendingLoading ? (
+                  <Skeleton className="h-7 w-24 mt-1" />
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-xl font-bold text-amber-500">
+                      {formatCurrency(pendingTotals?.total_a_receber ?? 0)}
+                    </p>
+                    {(pendingTotals?.count_a_receber ?? 0) > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        ({pendingTotals?.count_a_receber} pendentes)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-orange-500/20 text-orange-500">
+                <ArrowUpCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">A Pagar (Previsto)</p>
+                  <Clock className="w-3 h-3 text-orange-500" />
+                </div>
+                {pendingLoading ? (
+                  <Skeleton className="h-7 w-24 mt-1" />
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-xl font-bold text-orange-500">
+                      {formatCurrency(pendingTotals?.total_a_pagar ?? 0)}
+                    </p>
+                    {(pendingTotals?.count_a_pagar ?? 0) > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        ({pendingTotals?.count_a_pagar} pendentes)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Gráfico de Fluxo de Caixa */}
