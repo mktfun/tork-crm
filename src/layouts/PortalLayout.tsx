@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, FileText, CreditCard, User, LogOut } from 'lucide-react';
+import { Home, FileText, CreditCard, User, LogOut, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PortalClient {
@@ -23,6 +23,7 @@ export function PortalLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [client, setClient] = useState<PortalClient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [portalConfig, setPortalConfig] = useState<PortalConfig>({
     show_policies: true,
     show_cards: true,
@@ -36,6 +37,7 @@ export function PortalLayout() {
       setClient(parsedClient);
       fetchPortalConfig(parsedClient.user_id);
     }
+    setIsLoading(false);
   }, []);
 
   const fetchPortalConfig = async (userId: string) => {
@@ -59,6 +61,19 @@ export function PortalLayout() {
     }
   };
 
+  // Loading state - aguarda verificação da sessão
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+          <p className="text-slate-400">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redireciona apenas após verificar sessão
   if (!client) {
     return <Navigate to="/portal" replace />;
   }
