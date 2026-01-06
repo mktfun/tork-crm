@@ -2133,12 +2133,7 @@ export type Database = {
       }
       get_financial_summary: {
         Args: { p_end_date: string; p_start_date: string }
-        Returns: {
-          net_result: number
-          total_expense: number
-          total_income: number
-          transaction_count: number
-        }[]
+        Returns: Json
       }
       get_or_create_ledger_sync_accounts: {
         Args: { p_user_id: string }
@@ -2240,6 +2235,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_user_financial_settings: { Args: never; Returns: Json }
       get_user_role: { Args: { user_id: string }; Returns: string }
       get_user_sinistros_complete: {
         Args: never
@@ -2316,14 +2312,19 @@ export type Database = {
         }[]
       }
       promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
-      settle_commission_transaction: {
-        Args: {
-          p_bank_account_id: string
-          p_settlement_date?: string
-          p_transaction_id: string
-        }
-        Returns: Json
-      }
+      settle_commission_transaction:
+        | {
+            Args: { p_bank_account_id?: string; p_transaction_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_bank_account_id: string
+              p_settlement_date?: string
+              p_transaction_id: string
+            }
+            Returns: Json
+          }
       settle_due_commissions: { Args: never; Returns: string }
       settle_due_commissions_v2: { Args: never; Returns: string }
       show_limit: { Args: never; Returns: number }
