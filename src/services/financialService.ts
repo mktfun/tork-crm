@@ -560,6 +560,41 @@ export async function bulkConfirmReceipts(transactionIds: string[]): Promise<Bul
   };
 }
 
+// ============ LIQUIDAÇÃO (BAIXA) DE COMISSÕES ============
+
+interface SettleCommissionResult {
+  success: boolean;
+  settledAmount?: number;
+  message?: string;
+}
+
+/**
+ * Liquida (dá baixa em) uma comissão pendente, creditando em uma conta bancária.
+ * @param transactionId - ID da transação no financial_transactions
+ * @param bankAccountId - ID da conta bancária (asset) onde o dinheiro entrou
+ * @param settlementDate - Data da liquidação (opcional, default: hoje)
+ */
+export async function settleCommission(params: {
+  transactionId: string;
+  bankAccountId: string;
+  settlementDate?: string;
+}): Promise<SettleCommissionResult> {
+  const { data, error } = await supabase.rpc('settle_commission_transaction', {
+    p_transaction_id: params.transactionId,
+    p_bank_account_id: params.bankAccountId,
+    p_settlement_date: params.settlementDate || new Date().toISOString().split('T')[0]
+  });
+
+  if (error) throw error;
+  
+  const result = data as any;
+  return {
+    success: result?.success ?? false,
+    settledAmount: result?.settledAmount,
+    message: result?.message
+  };
+}
+
 interface TransactionDetails {
   id: string;
   description: string;

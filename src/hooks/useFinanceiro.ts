@@ -303,6 +303,29 @@ export function useBulkConfirmReceipts() {
 }
 
 /**
+ * Hook para liquidar (dar baixa em) comissão pendente
+ */
+export function useSettleCommission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: {
+      transactionId: string;
+      bankAccountId: string;
+      settlementDate?: string;
+    }) => financialService.settleCommission(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-details'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
+    }
+  });
+}
+
+/**
  * Hook para buscar detalhes de uma transação
  * @param transactionId - ID da transação (pode ser ID moderno ou legado)
  * @param isLegacyId - Se true, busca pelo ID legado (tabela transactions)

@@ -16,6 +16,8 @@ import {
   FileWarning,
   Paperclip,
   Image as ImageIcon,
+  CheckCircle,
+  Banknote,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -50,8 +52,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-import { useTransactionDetails, useReverseTransaction } from '@/hooks/useFinanceiro';
-
+import { useTransactionDetails, useReverseTransaction, useSettleCommission, useFinancialAccounts } from '@/hooks/useFinanceiro';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -90,9 +99,13 @@ interface TransactionDetailsSheetProps {
 export function TransactionDetailsSheet({ transactionId, isLegacyId = false, open, onClose }: TransactionDetailsSheetProps) {
   const { data: transaction, isLoading, error } = useTransactionDetails(transactionId, isLegacyId);
   const reverseTransaction = useReverseTransaction();
+  const settleCommission = useSettleCommission();
+  const { data: assetAccounts = [] } = useFinancialAccounts('asset');
   
   const [showReverseDialog, setShowReverseDialog] = useState(false);
   const [reverseReason, setReverseReason] = useState('');
+  const [showSettlementDialog, setShowSettlementDialog] = useState(false);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
 
   // Debug: Ver dados recebidos
   console.log('🔍 DADOS RECEBIDOS NA GAVETA:', transaction);
@@ -115,6 +128,40 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
 
   // Pode estornar se não está anulada e não é um estorno
   const canReverse = !isVoid && !isReversal;
+
+  // Verificar se é uma provisão pendente de baixa (veio de comissão legada e não tem liquidação ainda)
+  const isPendingSettlement = !isVoid && !isReversal && 
+    transaction?.relatedEntityType === 'legacy_transaction' &&
+    transaction?.legacyData?.originalStatus !== 'PAGO';
+
+  // Handler para dar baixa na comissão
+  const handleSettlement = async () => {
+    if (!transactionId || !selectedBankAccount) {
+      toast.error('Selecione uma conta bancária');
+      return;
+    }
+
+    try {
+      const result = await settleCommission.mutateAsync({
+        transactionId,
+        bankAccountId: selectedBankAccount
+      });
+
+      if (result.success) {
+        toast.success('Recebimento confirmado!', {
+          description: `${formatCurrency(result.settledAmount || 0)} creditado na conta bancária.`
+        });
+        setShowSettlementDialog(false);
+        setSelectedBankAccount('');
+        onClose();
+      } else {
+        toast.error(result.message || 'Erro ao dar baixa');
+      }
+    } catch (err: any) {
+      console.error('Erro ao dar baixa:', err);
+      toast.error(err.message || 'Erro ao dar baixa na comissão');
+    }
+  };
 
   const handleReverse = async () => {
     if (!transactionId || !reverseReason.trim()) {
@@ -401,6 +448,25 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                   </>
                 )}
 
+                {/* Botão de Dar Baixa (para provisões pendentes) */}
+                {isPendingSettlement && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <Button
+                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => setShowSettlementDialog(true)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Confirmar Recebimento / Dar Baixa
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Confirme que o valor foi recebido e selecione a conta bancária
+                      </p>
+                    </div>
+                  </>
+                )}
+
                 {/* Botão de Estorno */}
                 <Separator />
                 <div className="space-y-3">
@@ -485,6 +551,65 @@ export function TransactionDetailsSheet({ transactionId, isLegacyId = false, ope
                 </>
               ) : (
                 'Confirmar Estorno'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Confirmação de Baixa */}
+      <AlertDialog open={showSettlementDialog} onOpenChange={setShowSettlementDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-emerald-500" />
+              Confirmar Recebimento
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Confirme que o valor de <strong className="text-foreground">{formatCurrency(totalAmount)}</strong> foi recebido.
+                  Selecione a conta bancária onde o dinheiro entrou.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">
+                    Em qual conta o dinheiro entrou? *
+                  </Label>
+                  <Select
+                    value={selectedBankAccount}
+                    onValueChange={setSelectedBankAccount}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta bancária" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assetAccounts.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.code ? `${acc.code} - ${acc.name}` : acc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedBankAccount('')}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSettlement}
+              disabled={!selectedBankAccount || settleCommission.isPending}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {settleCommission.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                'Confirmar Recebimento'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
