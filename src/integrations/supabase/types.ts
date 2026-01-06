@@ -2336,6 +2336,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      verify_portal_login: {
+        Args: { p_identifier: string; p_password: string }
+        Returns: Json
+      }
       void_financial_transaction: {
         Args: { p_reason?: string; p_transaction_id: string }
         Returns: Json
