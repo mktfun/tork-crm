@@ -20,6 +20,7 @@ interface PortalConfig {
 export default function PortalSettings() {
   const { user } = useAuth();
   const [brokerageId, setBrokerageId] = useState<number | null>(null);
+  const [brokerageSlug, setBrokerageSlug] = useState<string | null>(null);
   const [settings, setSettings] = useState<PortalConfig>({
     portal_enabled: false,
     portal_show_policies: true,
@@ -30,7 +31,9 @@ export default function PortalSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const portalLink = `${window.location.origin}/portal`;
+  // Link de produção hardcoded com slug dinâmico
+  const baseUrl = 'https://crm.tork.services';
+  const portalLink = brokerageSlug ? `${baseUrl}/${brokerageSlug}/portal` : null;
 
   useEffect(() => {
     const fetchBrokerage = async () => {
@@ -39,7 +42,7 @@ export default function PortalSettings() {
       try {
         const { data, error } = await supabase
           .from('brokerages')
-          .select('id, portal_enabled, portal_show_policies, portal_show_cards, portal_allow_profile_edit')
+          .select('id, slug, portal_enabled, portal_show_policies, portal_show_cards, portal_allow_profile_edit')
           .eq('user_id', user.id)
           .limit(1)
           .maybeSingle();
@@ -51,6 +54,7 @@ export default function PortalSettings() {
 
         if (data) {
           setBrokerageId(data.id);
+          setBrokerageSlug(data.slug);
           setSettings({
             portal_enabled: data.portal_enabled ?? false,
             portal_show_policies: data.portal_show_policies ?? true,
@@ -103,6 +107,10 @@ export default function PortalSettings() {
   };
 
   const copyLink = async () => {
+    if (!portalLink) {
+      toast.error('Configure um slug para a corretora primeiro');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(portalLink);
       setCopied(true);
@@ -172,28 +180,45 @@ export default function PortalSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
-              <Input
-                value={portalLink}
-                readOnly
-                className="bg-slate-900/50 border-slate-600 text-white font-mono text-sm"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={copyLink}
-                className="shrink-0 border-slate-600 hover:bg-slate-700"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-400" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Dica: Envie este link via WhatsApp junto com a senha padrão (123456) para primeiro acesso.
-            </p>
+            {portalLink ? (
+              <>
+                <div className="flex gap-2">
+                  <Input
+                    value={portalLink}
+                    readOnly
+                    className="bg-slate-900/50 border-slate-600 text-white font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={copyLink}
+                    className="shrink-0 border-slate-600 hover:bg-slate-700"
+                  >
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Dica: Envie este link via WhatsApp junto com a senha padrão (123456) para primeiro acesso.
+                </p>
+              </>
+            ) : (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-amber-400 text-sm">
+                  ⚠️ Configure um Slug (identificador) nas configurações da corretora para gerar o link do portal.
+                </p>
+                <Button
+                  variant="link"
+                  className="text-amber-400 p-0 h-auto mt-2"
+                  onClick={() => window.location.href = '/dashboard/settings/brokerages'}
+                >
+                  Ir para Configurações da Corretora →
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
