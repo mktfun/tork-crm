@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Loader2, Clock } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -10,7 +10,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  Line,
+  ComposedChart
 } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ interface CashFlowChartProps {
   data: CashFlowDataPoint[];
   isLoading: boolean;
   granularity?: 'day' | 'month';
+  showProjection?: boolean;
 }
 
 function formatCurrency(value: number): string {
@@ -76,22 +79,35 @@ const CustomTooltip = ({ active, payload, label, granularity }: any) => {
   );
 };
 
-export function CashFlowChart({ data, isLoading, granularity = 'day' }: CashFlowChartProps) {
+export function CashFlowChart({ data, isLoading, granularity = 'day', showProjection = false }: CashFlowChartProps) {
   const chartData = useMemo(() => {
-    return data.map(point => ({
-      ...point,
-      formattedPeriod: formatPeriod(point.period, granularity)
-    }));
+    return data.map(point => {
+      // Suportar tanto o formato antigo quanto o novo com projeção
+      const pendingIncome = (point as any).pending_income ?? 0;
+      const pendingExpense = (point as any).pending_expense ?? 0;
+      
+      return {
+        ...point,
+        formattedPeriod: formatPeriod(point.period, granularity),
+        // Projeção = realizado + pendentes
+        projectedIncome: point.income + pendingIncome,
+        projectedExpense: point.expense + pendingExpense
+      };
+    });
   }, [data, granularity]);
 
   const hasData = chartData.length > 0;
+  const hasProjectionData = chartData.some(p => p.projectedIncome > p.income || p.projectedExpense > p.expense);
+  
   const totals = useMemo(() => {
     return chartData.reduce(
       (acc, point) => ({
         income: acc.income + point.income,
-        expense: acc.expense + point.expense
+        expense: acc.expense + point.expense,
+        projectedIncome: acc.projectedIncome + point.projectedIncome,
+        projectedExpense: acc.projectedExpense + point.projectedExpense
       }),
-      { income: 0, expense: 0 }
+      { income: 0, expense: 0, projectedIncome: 0, projectedExpense: 0 }
     );
   }, [chartData]);
 
@@ -112,13 +128,13 @@ export function CashFlowChart({ data, isLoading, granularity = 'day' }: CashFlow
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <CardTitle>Fluxo de Caixa</CardTitle>
             <CardDescription>Evolução de receitas e despesas</CardDescription>
           </div>
           {hasData && (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-500" />
                 <span className="text-sm text-muted-foreground">Receitas:</span>
@@ -133,6 +149,15 @@ export function CashFlowChart({ data, isLoading, granularity = 'day' }: CashFlow
                   {formatCurrency(totals.expense)}
                 </span>
               </div>
+              {hasProjectionData && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm text-muted-foreground">Projeção:</span>
+                  <span className="text-sm font-semibold text-amber-500">
+                    {formatCurrency(totals.projectedIncome - totals.projectedExpense)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -146,7 +171,7 @@ export function CashFlowChart({ data, isLoading, granularity = 'day' }: CashFlow
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
@@ -194,7 +219,30 @@ export function CashFlowChart({ data, isLoading, granularity = 'day' }: CashFlow
                 strokeWidth={2}
                 fill="url(#colorExpense)"
               />
-            </AreaChart>
+              {/* Linhas de projeção tracejadas */}
+              {hasProjectionData && (
+                <>
+                  <Line
+                    type="monotone"
+                    dataKey="projectedIncome"
+                    name="Receita Projetada"
+                    stroke="hsl(142, 76%, 36%)"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="projectedExpense"
+                    name="Despesa Projetada"
+                    stroke="hsl(0, 84%, 60%)"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                </>
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </CardContent>
