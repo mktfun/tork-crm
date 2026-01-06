@@ -182,3 +182,44 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
   console.log('✅ [CENTRALIZADA] Commission transaction created successfully:', data);
   return data;
 }
+
+// 🆕 Função para criar comissão no ERP moderno (partidas dobradas)
+export async function gerarTransacaoDeComissaoERP(
+  policy: Policy, 
+  clientName?: string, 
+  ramoName?: string
+): Promise<{ transaction_id: string; reference_number: string; success: boolean } | null> {
+  console.log('💰 [ERP] Gerando comissão no ERP moderno para apólice:', policy.policyNumber);
+  
+  const commissionAmount = (policy.premiumValue * policy.commissionRate) / 100;
+  
+  if (commissionAmount <= 0) {
+    console.log('⚠️ [ERP] Valor de comissão zero ou negativo, pulando criação');
+    return null;
+  }
+
+  const { data, error } = await supabase.rpc('register_policy_commission', {
+    p_policy_id: policy.id,
+    p_client_name: clientName || 'Cliente',
+    p_ramo_name: ramoName || 'Seguro',
+    p_policy_number: policy.policyNumber || '',
+    p_commission_amount: commissionAmount,
+    p_transaction_date: policy.startDate || new Date().toISOString().split('T')[0],
+    p_status: 'pending'
+  });
+
+  if (error) {
+    console.error('❌ [ERP] Erro ao criar comissão no ERP:', error);
+    // Não lançar erro para não quebrar o fluxo - a comissão legada ainda foi criada
+    return null;
+  }
+
+  const result = data?.[0];
+  if (result?.success) {
+    console.log('✅ [ERP] Comissão criada no ERP moderno:', result.transaction_id);
+  } else {
+    console.warn('⚠️ [ERP] RPC retornou sem sucesso:', result);
+  }
+
+  return result || null;
+}
