@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Loader2, Calendar, Paperclip, X, Upload } from 'lucide-react';
+import { Plus, Loader2, Calendar, Paperclip, X, Upload, Clock } from 'lucide-react';
 import { format, isFuture, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useFinancialAccounts, useRegisterExpense } from '@/hooks/useFinanceiro';
@@ -47,6 +48,7 @@ export function NovaDespesaModal() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPaid, setIsPaid] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: expenseAccounts = [], isLoading: loadingExpense } = useFinancialAccounts('expense');
@@ -234,7 +236,26 @@ export function NovaDespesaModal() {
             </div>
           </div>
 
-          {/* Categoria (Conta de Despesa) */}
+          {/* Checkbox: Já paga? */}
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+            <Checkbox 
+              id="isPaid" 
+              checked={isPaid} 
+              onCheckedChange={(checked) => setIsPaid(!!checked)}
+            />
+            <div className="flex-1">
+              <Label htmlFor="isPaid" className="text-sm font-medium cursor-pointer">
+                Despesa já foi paga
+              </Label>
+              {!isPaid && (
+                <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+                  <Clock className="w-3 h-3" />
+                  Esta despesa aparecerá como "A Pagar" no fluxo de caixa
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Para que foi? (Categoria) *</Label>
             <Select
