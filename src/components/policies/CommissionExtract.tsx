@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Policy } from '@/types';
 import { useTransactions, useClients } from '@/hooks/useAppData';
 import { supabase } from '@/integrations/supabase/client';
 import { AppCard } from '@/components/ui/app-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { DollarSign, Eye, EyeOff, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDate } from '@/utils/dateUtils';
+import { toast } from 'sonner';
 
 interface CommissionExtractProps {
   policy: Policy;
@@ -25,8 +26,10 @@ type CommissionItem = {
 
 export function CommissionExtract({ policy }: CommissionExtractProps) {
   const [showExtract, setShowExtract] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const { transactions } = useTransactions();
   const { clients } = useClients();
+  const queryClient = useQueryClient();
 
   // Comissões da tabela legada
   const legacyCommissions = useMemo(() => 
@@ -36,6 +39,45 @@ export function CommissionExtract({ policy }: CommissionExtractProps) {
     ), 
     [transactions, policy.id]
   );
+
+  // 🆕 Função para gerar comissão manualmente
+  const handleGenerateCommission = async () => {
+    setGenerating(true);
+    try {
+      const client = clients.find(c => c.id === policy.clientId);
+      const commissionAmount = policy.premiumValue * (policy.commissionRate / 100);
+
+      const { data, error } = await supabase.rpc('register_policy_commission', {
+        p_policy_id: policy.id, // TEXT - a RPC faz o cast
+        p_client_name: client?.name || 'Cliente',
+        p_ramo_name: policy.type || 'Seguro',
+        p_policy_number: policy.policyNumber || '',
+        p_commission_amount: commissionAmount,
+        p_transaction_date: policy.startDate || new Date().toISOString().split('T')[0],
+        p_status: 'pending'
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (result?.success) {
+        toast.success('Comissão gerada com sucesso!', {
+          description: `Referência: ${result.reference_number}`
+        });
+        // Invalida cache para recarregar
+        queryClient.invalidateQueries({ queryKey: ['erp-commissions', policy.id] });
+      } else {
+        toast.error('Erro ao gerar comissão');
+      }
+    } catch (error: any) {
+      console.error('Erro ao gerar comissão:', error);
+      toast.error('Erro ao gerar comissão', {
+        description: error.message || 'Tente novamente'
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // 🆕 Query para buscar comissões do ERP moderno
   const { data: erpCommissions = [] } = useQuery({
@@ -176,9 +218,26 @@ export function CommissionExtract({ policy }: CommissionExtractProps) {
         <div>
           <h4 className="font-semibold text-foreground mb-3">Transações no Faturamento</h4>
           {allCommissions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Nenhuma transação de comissão encontrada para esta apólice.
-            </p>
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-sm">
+                Nenhuma transação de comissão encontrada para esta apólice.
+              </p>
+              {policy.status === 'Ativa' && (
+                <Button
+                  onClick={handleGenerateCommission}
+                  disabled={generating}
+                  className="gap-2"
+                  variant="default"
+                >
+                  {generating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {generating ? 'Gerando...' : '✨ Gerar Comissão Financeira'}
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               {allCommissions.map(commission => (

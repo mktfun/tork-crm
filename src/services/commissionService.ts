@@ -167,9 +167,9 @@ export async function gerarTransacaoDeComissao(policy: Policy) {
       due_date: policy.expirationDate,
       status: 'PENDENTE',
       nature: 'RECEITA', // 🔧 CORRIGIDO: usar RECEITA para respeitar o CHECK constraint
-      company_id: policy.insuranceCompany,
+      company_id: policy.insuranceCompany?.toString() || null, // 🔧 Converter UUID para string
       brokerage_id: policy.brokerageId,
-      producer_id: policy.producerId
+      producer_id: policy.producerId?.toString() || null // 🔧 Converter UUID para string
     })
     .select()
     .single();
@@ -191,6 +191,13 @@ export async function gerarTransacaoDeComissaoERP(
 ): Promise<{ transaction_id: string; reference_number: string; success: boolean } | null> {
   console.log('💰 [ERP] Gerando comissão no ERP moderno para apólice:', policy.policyNumber);
   
+  // 🛡️ Validação de UUID antes de enviar
+  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  if (!policy.id || !uuidRegex.test(policy.id)) {
+    console.error('❌ [ERP] ID da apólice inválido (não é UUID):', policy.id);
+    return null;
+  }
+  
   const commissionAmount = (policy.premiumValue * policy.commissionRate) / 100;
   
   if (commissionAmount <= 0) {
@@ -198,8 +205,9 @@ export async function gerarTransacaoDeComissaoERP(
     return null;
   }
 
+  // 🔧 Enviar como TEXT - a RPC faz o cast interno para UUID
   const { data, error } = await supabase.rpc('register_policy_commission', {
-    p_policy_id: policy.id,
+    p_policy_id: policy.id, // Enviado como TEXT
     p_client_name: clientName || 'Cliente',
     p_ramo_name: ramoName || 'Seguro',
     p_policy_number: policy.policyNumber || '',
