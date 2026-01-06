@@ -1,6 +1,6 @@
 
 import { NavLink } from 'react-router-dom';
-import { User, Building, Users, Shield, CreditCard, Tag, MessageCircle, Globe } from 'lucide-react';
+import { User, Building, Users, Shield, Tag, MessageCircle, Globe } from 'lucide-react';
 import { AppCard } from '@/components/ui/app-card';
 
 const navItems = [
@@ -33,12 +33,6 @@ const navItems = [
     path: '/dashboard/settings/ramos',
     icon: Tag,
     description: 'Ramos de seguro'
-  },
-  {
-    name: 'Transações',
-    path: '/dashboard/settings/transactions',
-    icon: CreditCard,
-    description: 'Tipos de operações'
   },
   {
     name: 'Chat Tork',
