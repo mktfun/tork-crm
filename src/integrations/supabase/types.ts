@@ -1983,6 +1983,14 @@ export type Database = {
           period: string
         }[]
       }
+      get_cash_flow_with_projection: {
+        Args: {
+          p_end_date: string
+          p_granularity?: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_client_kpis: {
         Args: { p_search_term?: string; p_status?: string; p_user_id: string }
         Returns: Json
@@ -2137,6 +2145,10 @@ export type Database = {
         }[]
       }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
+      get_pending_totals: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
       get_producao_por_ramo: {
         Args: { end_range: string; p_user_id: string; start_range: string }
         Returns: {
