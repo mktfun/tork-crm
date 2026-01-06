@@ -91,90 +91,89 @@ export default function PortalHome() {
     const days = differenceInDays(new Date(expirationDate), new Date());
     
     if (days < 0) {
-      return <Badge variant="destructive">Vencida</Badge>;
+      return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
-      return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Vence em {days} dias</Badge>;
+      return <Badge className="bg-yellow-600/10 text-yellow-500 border-yellow-600/20">Vence em {days} dias</Badge>;
     } else {
-      return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Vigente</Badge>;
+      return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Vigente</Badge>;
     }
   };
 
-  // Check if any quick action is available
   const hasQuickActions = portalConfig.show_policies || portalConfig.show_cards;
 
   return (
     <div className="space-y-4">
       {/* Welcome Card */}
-      <Card className="bg-gradient-to-br from-purple-600/20 to-blue-600/20 border-purple-500/30">
+      <Card className="bg-gradient-to-br from-yellow-600/10 to-yellow-700/5 border-yellow-600/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-600/20">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-white font-semibold">Bem-vindo(a)!</h2>
-              <p className="text-slate-400 text-sm">{clientName}</p>
+              <h2 className="text-white font-light text-lg">Bem-vindo(a)!</h2>
+              <p className="text-zinc-500 text-sm">{clientName}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Actions - Conditional */}
+      {/* Quick Actions */}
       {hasQuickActions && (
         <div className="grid grid-cols-2 gap-3">
           {portalConfig.show_policies && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-zinc-900/40 border-white/5 hover:bg-zinc-800 hover:border-yellow-600/30"
               onClick={() => navigate('/portal/policies')}
             >
-              <FileText className="w-6 h-6 text-purple-400" />
-              <span className="text-sm text-white">Meus Seguros</span>
+              <FileText className="w-6 h-6 text-yellow-600" />
+              <span className="text-sm text-white font-light">Meus Seguros</span>
             </Button>
           )}
           {portalConfig.show_cards && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-slate-800/50 border-slate-700 hover:bg-slate-700"
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-zinc-900/40 border-white/5 hover:bg-zinc-800 hover:border-yellow-600/30"
               onClick={() => navigate('/portal/cards')}
             >
-              <CreditCard className="w-6 h-6 text-blue-400" />
-              <span className="text-sm text-white">Carteirinhas</span>
+              <CreditCard className="w-6 h-6 text-yellow-600" />
+              <span className="text-sm text-white font-light">Carteirinhas</span>
             </Button>
           )}
         </div>
       )}
 
       {/* Active Policies */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-purple-400" />
+          <CardTitle className="text-lg text-white font-light flex items-center gap-2">
+            <Shield className="w-5 h-5 text-yellow-600" />
             Seguros Ativos
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+              <Loader2 className="w-6 h-6 text-yellow-600 animate-spin" />
             </div>
           ) : policies.length === 0 ? (
             <div className="text-center py-8">
-              <AlertCircle className="w-10 h-10 text-slate-500 mx-auto mb-2" />
-              <p className="text-slate-400">Nenhum seguro ativo encontrado.</p>
+              <AlertCircle className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
+              <p className="text-zinc-500">Nenhum seguro ativo encontrado.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {policies.slice(0, 3).map((policy) => (
                 <div 
                   key={policy.id} 
-                  className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-slate-700"
+                  className="flex justify-between items-center p-3 bg-zinc-950/50 rounded-lg border border-white/5"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white truncate">
+                    <p className="font-light text-white truncate">
                       {policy.insured_asset || 'Apólice'}
                     </p>
-                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <div className="flex items-center gap-2 text-sm text-zinc-500">
                       <Calendar className="w-3 h-3" />
                       <span>
                         Vence: {format(new Date(policy.expiration_date), 'dd/MM/yyyy', { locale: ptBR })}
@@ -188,7 +187,7 @@ export default function PortalHome() {
               {policies.length > 3 && (
                 <Button 
                   variant="ghost" 
-                  className="w-full text-purple-400 hover:text-purple-300"
+                  className="w-full text-yellow-600 hover:text-yellow-500 hover:bg-yellow-600/10"
                   onClick={() => navigate('/portal/policies')}
                 >
                   Ver todos ({policies.length})
@@ -200,15 +199,15 @@ export default function PortalHome() {
       </Card>
 
       {/* Help Card */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-blue-400" />
+            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/5">
+              <AlertCircle className="w-5 h-5 text-zinc-400" />
             </div>
             <div>
-              <h3 className="font-medium text-white">Precisa de ajuda?</h3>
-              <p className="text-sm text-slate-400 mt-1">
+              <h3 className="font-light text-white">Precisa de ajuda?</h3>
+              <p className="text-sm text-zinc-500 mt-1">
                 Entre em contato com sua corretora para dúvidas sobre suas apólices ou sinistros.
               </p>
             </div>

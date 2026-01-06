@@ -18,6 +18,11 @@ interface ClientProfile {
   cep: string | null;
 }
 
+interface UpdateProfileResponse {
+  success: boolean;
+  error?: string;
+}
+
 export default function PortalProfile() {
   const navigate = useNavigate();
   const [form, setForm] = useState<ClientProfile>({
@@ -32,6 +37,7 @@ export default function PortalProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [clientId, setClientId] = useState('');
   const [clientName, setClientName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
@@ -39,6 +45,7 @@ export default function PortalProfile() {
       const client = JSON.parse(clientData);
       setClientId(client.id);
       setClientName(client.name || '');
+      setCurrentPassword(client.portal_password || '');
       fetchClientData(client.id);
     }
   }, []);
@@ -73,7 +80,6 @@ export default function PortalProfile() {
     }
   };
 
-  // Format phone as user types
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 11) {
@@ -85,7 +91,6 @@ export default function PortalProfile() {
     return value;
   };
 
-  // Format CEP as user types
   const formatCep = (value: string) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 8) {
@@ -95,27 +100,38 @@ export default function PortalProfile() {
   };
 
   const handleSave = async () => {
-    if (!clientId) return;
+    if (!clientId || !currentPassword) {
+      toast.error('Sessão inválida. Faça login novamente.');
+      return;
+    }
 
     setIsSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({
-          phone: form.phone,
+      const { data: result, error: rpcError } = await supabase.rpc('update_portal_profile', {
+        p_client_id: clientId,
+        p_verify_password: currentPassword,
+        p_new_password: null,
+        p_new_data: {
+          phone: form.phone.replace(/\D/g, ''),
           email: form.email,
           address: form.address,
           city: form.city,
           state: form.state,
-          cep: form.cep,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', clientId);
+          cep: form.cep?.replace(/\D/g, '')
+        }
+      });
 
-      if (error) {
-        console.error('Error saving:', error);
+      if (rpcError) {
+        console.error('RPC Error:', rpcError);
         toast.error('Erro ao salvar dados');
+        return;
+      }
+
+      const response = result as unknown as UpdateProfileResponse;
+
+      if (!response?.success) {
+        toast.error(response?.error || 'Erro ao salvar dados');
         return;
       }
 
@@ -131,33 +147,33 @@ export default function PortalProfile() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-48 bg-slate-700" />
-        <Skeleton className="h-64 w-full bg-slate-700" />
+        <Skeleton className="h-8 w-48 bg-zinc-800" />
+        <Skeleton className="h-64 w-full bg-zinc-800" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-white">Meus Dados</h2>
+      <h2 className="text-xl font-light text-white tracking-wide">Meus Dados</h2>
 
       {/* Profile Card */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-full flex items-center justify-center shadow-lg shadow-yellow-600/20">
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <CardTitle className="text-lg text-white">{clientName}</CardTitle>
-              <p className="text-sm text-slate-400">Segurado</p>
+              <CardTitle className="text-lg text-white font-light">{clientName}</CardTitle>
+              <p className="text-sm text-zinc-500">Segurado</p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Phone */}
           <div className="space-y-2">
-            <Label className="text-slate-300 flex items-center gap-2">
+            <Label className="text-zinc-400 text-sm font-light flex items-center gap-2">
               <Phone className="w-4 h-4" /> Telefone
             </Label>
             <Input
@@ -166,13 +182,13 @@ export default function PortalProfile() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               maxLength={15}
-              className="bg-slate-900/50 border-slate-600 text-white"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
             />
           </div>
 
           {/* Email */}
           <div className="space-y-2">
-            <Label className="text-slate-300 flex items-center gap-2">
+            <Label className="text-zinc-400 text-sm font-light flex items-center gap-2">
               <Mail className="w-4 h-4" /> Email
             </Label>
             <Input
@@ -180,26 +196,26 @@ export default function PortalProfile() {
               placeholder="seu@email.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="bg-slate-900/50 border-slate-600 text-white"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
             />
           </div>
 
           {/* CEP */}
           <div className="space-y-2">
-            <Label className="text-slate-300">CEP</Label>
+            <Label className="text-zinc-400 text-sm font-light">CEP</Label>
             <Input
               type="text"
               placeholder="00000-000"
               value={form.cep || ''}
               onChange={(e) => setForm({ ...form, cep: formatCep(e.target.value) })}
               maxLength={9}
-              className="bg-slate-900/50 border-slate-600 text-white"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
             />
           </div>
 
           {/* Address */}
           <div className="space-y-2">
-            <Label className="text-slate-300 flex items-center gap-2">
+            <Label className="text-zinc-400 text-sm font-light flex items-center gap-2">
               <MapPin className="w-4 h-4" /> Endereço
             </Label>
             <Input
@@ -207,31 +223,31 @@ export default function PortalProfile() {
               placeholder="Rua, número"
               value={form.address || ''}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="bg-slate-900/50 border-slate-600 text-white"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
             />
           </div>
 
           {/* City / State */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-slate-300">Cidade</Label>
+              <Label className="text-zinc-400 text-sm font-light">Cidade</Label>
               <Input
                 type="text"
                 placeholder="Cidade"
                 value={form.city || ''}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="bg-slate-900/50 border-slate-600 text-white"
+                className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-300">Estado</Label>
+              <Label className="text-zinc-400 text-sm font-light">Estado</Label>
               <Input
                 type="text"
                 placeholder="UF"
                 value={form.state || ''}
                 onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
                 maxLength={2}
-                className="bg-slate-900/50 border-slate-600 text-white"
+                className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
               />
             </div>
           </div>
@@ -239,7 +255,7 @@ export default function PortalProfile() {
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            className="w-full bg-white text-black font-medium hover:bg-zinc-200 h-12"
           >
             {isSaving ? (
               <>
@@ -257,11 +273,11 @@ export default function PortalProfile() {
       </Card>
 
       {/* Change Password */}
-      <Card className="bg-slate-800/50 border-slate-700">
+      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
         <CardContent className="p-4">
           <Button
             variant="outline"
-            className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
+            className="w-full border-white/10 text-zinc-400 hover:bg-zinc-800 hover:text-white h-12"
             onClick={() => navigate('/portal/change-password')}
           >
             <KeyRound className="w-4 h-4 mr-2" />
