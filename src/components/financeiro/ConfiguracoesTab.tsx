@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Landmark, 
   Tags, 
@@ -174,10 +174,28 @@ function AutomationSection() {
 // ============ COMMISSION TARGET SECTION ============
 
 function CommissionTargetSection({ assetAccounts }: { assetAccounts: FinancialAccount[] }) {
-  const { brokerages, updateBrokerage, loading } = useSupabaseBrokerages();
+  const { brokerages, updateBrokerage, addBrokerage, loading } = useSupabaseBrokerages();
   const [saving, setSaving] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   
-  const brokerage = brokerages[0]; // Primeira corretora
+  // Auto-criar corretora se não existir
+  useEffect(() => {
+    const initBrokerage = async () => {
+      if (!loading && brokerages.length === 0 && !initializing) {
+        setInitializing(true);
+        try {
+          await addBrokerage({ name: 'Minha Corretora' });
+        } catch (e) {
+          console.error('Erro ao criar corretora:', e);
+        } finally {
+          setInitializing(false);
+        }
+      }
+    };
+    initBrokerage();
+  }, [loading, brokerages.length, initializing, addBrokerage]);
+  
+  const brokerage = brokerages[0];
   const settings = brokerage?.financial_settings || {};
 
   const handleUpdateSetting = async (key: string, value: string) => {
@@ -195,7 +213,7 @@ function CommissionTargetSection({ assetAccounts }: { assetAccounts: FinancialAc
     }
   };
 
-  if (loading) {
+  if (loading || initializing) {
     return (
       <Card>
         <CardContent className="p-6">
