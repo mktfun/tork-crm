@@ -16,12 +16,19 @@ interface ClientData {
   phone: string;
   birth_date: string | null;
   user_id: string;
+  portal_password?: string;
+}
+
+interface UpdateProfileResponse {
+  success: boolean;
+  error?: string;
 }
 
 export default function PortalOnboarding() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [client, setClient] = useState<ClientData | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('123456');
   
   // Form data
   const [cpf, setCpf] = useState('');
@@ -42,6 +49,9 @@ export default function PortalOnboarding() {
     }
     const clientData = JSON.parse(storedClient);
     setClient(clientData);
+    
+    // Store current password for RPC validation
+    setCurrentPassword(clientData.portal_password || '123456');
     
     // Pre-fill existing data
     if (clientData.cpf_cnpj) setCpf(formatCpf(clientData.cpf_cnpj));
@@ -154,36 +164,46 @@ export default function PortalOnboarding() {
       if (checkError) throw checkError;
 
       if (existingClients && existingClients.length > 0) {
-        // CPF already exists - show error (simplified approach)
         setError(`Este CPF já está cadastrado para "${existingClients[0].name}". Entre em contato com a corretora.`);
         setIsLoading(false);
         return;
       }
 
-      // Update client data
-      const { error: updateError } = await supabase
-        .from('clientes')
-        .update({
+      // Use RPC to update (bypasses RLS)
+      const { data: result, error: rpcError } = await supabase.rpc('update_portal_profile', {
+        p_client_id: client.id,
+        p_verify_password: currentPassword,
+        p_new_password: password,
+        p_new_data: {
           cpf_cnpj: normalizedCpf,
           birth_date: birthDate || null,
           phone: phone.replace(/\D/g, ''),
-          email: email,
-          portal_password: password,
-          portal_first_access: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', client.id);
+          email: email
+        }
+      });
 
-      if (updateError) throw updateError;
+      if (rpcError) {
+        console.error('RPC Error:', rpcError);
+        throw rpcError;
+      }
 
-      // Update session storage
+      const response = result as unknown as UpdateProfileResponse;
+      
+      if (!response?.success) {
+        setError(response?.error || 'Erro ao salvar dados');
+        setIsLoading(false);
+        return;
+      }
+
+      // Update session storage with new data
       const updatedClient = {
         ...client,
         cpf_cnpj: normalizedCpf,
         birth_date: birthDate,
         phone: phone.replace(/\D/g, ''),
         email: email,
-        portal_first_access: false
+        portal_first_access: false,
+        portal_password: password
       };
       sessionStorage.setItem('portal_client', JSON.stringify(updatedClient));
 
@@ -205,14 +225,14 @@ export default function PortalOnboarding() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <Card className="w-full max-w-lg bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+    <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4">
+      <Card className="w-full max-w-lg bg-zinc-900/40 border-white/5 backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-2">
+          <div className="w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-yellow-600/20">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl text-white">Atualize seus dados</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-2xl text-white font-light tracking-wide">Atualize seus dados</CardTitle>
+          <CardDescription className="text-zinc-500">
             Complete seu cadastro para continuar
           </CardDescription>
           
@@ -220,15 +240,15 @@ export default function PortalOnboarding() {
           <div className="flex justify-center gap-2 pt-4">
             {steps.map((s) => (
               <div key={s.number} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
                   step >= s.number 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-slate-700 text-slate-400'
+                    ? 'bg-gradient-to-br from-yellow-600 to-yellow-700 text-white shadow-lg shadow-yellow-600/20' 
+                    : 'bg-zinc-800 text-zinc-500 border border-white/10'
                 }`}>
                   {step > s.number ? <Check className="w-4 h-4" /> : s.number}
                 </div>
                 {s.number < 3 && (
-                  <div className={`w-8 h-0.5 mx-1 ${step > s.number ? 'bg-purple-600' : 'bg-slate-700'}`} />
+                  <div className={`w-8 h-0.5 mx-1 ${step > s.number ? 'bg-yellow-600' : 'bg-zinc-800'}`} />
                 )}
               </div>
             ))}
@@ -240,7 +260,7 @@ export default function PortalOnboarding() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="cpf" className="text-slate-300">CPF *</Label>
+                <Label htmlFor="cpf" className="text-zinc-400 text-sm font-light">CPF *</Label>
                 <Input
                   id="cpf"
                   type="text"
@@ -248,17 +268,17 @@ export default function PortalOnboarding() {
                   value={cpf}
                   onChange={(e) => { setCpf(formatCpf(e.target.value)); setError(''); }}
                   maxLength={14}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="birthDate" className="text-slate-300">Data de Nascimento</Label>
+                <Label htmlFor="birthDate" className="text-zinc-400 text-sm font-light">Data de Nascimento</Label>
                 <Input
                   id="birthDate"
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="bg-slate-900/50 border-slate-600 text-white"
+                  className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
             </div>
@@ -268,7 +288,7 @@ export default function PortalOnboarding() {
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-slate-300">Celular (WhatsApp) *</Label>
+                <Label htmlFor="phone" className="text-zinc-400 text-sm font-light">Celular (WhatsApp) *</Label>
                 <Input
                   id="phone"
                   type="text"
@@ -276,18 +296,18 @@ export default function PortalOnboarding() {
                   value={phone}
                   onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(''); }}
                   maxLength={15}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">E-mail *</Label>
+                <Label htmlFor="email" className="text-zinc-400 text-sm font-light">E-mail *</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
             </div>
@@ -297,32 +317,34 @@ export default function PortalOnboarding() {
           {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-300">Nova Senha *</Label>
+                <Label htmlFor="password" className="text-zinc-400 text-sm font-light">Nova Senha *</Label>
                 <Input
                   id="password"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-slate-300">Confirmar Senha *</Label>
+                <Label htmlFor="confirmPassword" className="text-zinc-400 text-sm font-light">Confirmar Senha *</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder="Repita a senha"
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
-                  className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
                 />
               </div>
             </div>
           )}
 
           {error && (
-            <p className="text-red-400 text-sm text-center">{error}</p>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
           )}
 
           {/* Navigation Buttons */}
@@ -331,7 +353,7 @@ export default function PortalOnboarding() {
               <Button 
                 variant="outline" 
                 onClick={handleBack}
-                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="flex-1 border-white/10 text-zinc-400 hover:bg-zinc-800 hover:text-white h-12"
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Voltar
@@ -341,7 +363,7 @@ export default function PortalOnboarding() {
             {step < 3 ? (
               <Button 
                 onClick={handleNext}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="flex-1 bg-white text-black font-medium hover:bg-zinc-200 h-12"
               >
                 Próximo
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -350,7 +372,7 @@ export default function PortalOnboarding() {
               <Button 
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="flex-1 bg-gradient-to-r from-yellow-600 to-yellow-700 text-white hover:from-yellow-500 hover:to-yellow-600 h-12"
               >
                 {isLoading ? (
                   <>

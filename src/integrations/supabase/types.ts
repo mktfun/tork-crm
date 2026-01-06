@@ -2328,6 +2328,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      update_portal_profile: {
+        Args: {
+          p_client_id: string
+          p_new_data?: Json
+          p_new_password?: string
+          p_verify_password: string
+        }
+        Returns: Json
+      }
       validate_financial_transaction: {
         Args: { p_transaction_id: string }
         Returns: boolean

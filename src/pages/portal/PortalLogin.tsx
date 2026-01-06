@@ -20,6 +20,7 @@ interface PortalLoginResponse {
     phone: string | null;
     user_id: string;
     portal_first_access: boolean;
+    portal_password: string;
   };
 }
 
@@ -42,7 +43,6 @@ export default function PortalLogin() {
     console.log('🔐 Tentando login via RPC...');
 
     try {
-      // Chamar RPC segura (bypassa RLS)
       const { data, error: rpcError } = await supabase.rpc('verify_portal_login', {
         p_identifier: identifier.trim(),
         p_password: password
@@ -63,7 +63,6 @@ export default function PortalLogin() {
         return;
       }
 
-      // Login bem-sucedido
       console.log('✅ Login bem-sucedido:', response.client?.name);
       sessionStorage.setItem('portal_client', JSON.stringify(response.client));
       
@@ -90,24 +89,24 @@ export default function PortalLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <Card className="w-full max-w-md bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+    <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4">
+      <Card className="w-full max-w-md bg-zinc-900/40 border-white/5 backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-purple-400" />
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-600/20">
+            <Shield className="w-8 h-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl text-white">Portal do Segurado</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-2xl text-white font-light tracking-wide">Portal do Segurado</CardTitle>
+            <CardDescription className="text-zinc-500">
               Acesse suas apólices e informações
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="identifier" className="text-slate-300">CPF ou Nome</Label>
+            <Label htmlFor="identifier" className="text-zinc-400 text-sm font-light">CPF ou Nome</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
               <Input
                 id="identifier"
                 type="text"
@@ -115,15 +114,15 @@ export default function PortalLogin() {
                 value={identifier}
                 onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
                 onKeyPress={handleKeyPress}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pl-10"
+                className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pl-10 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
               />
             </div>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-slate-300">Senha</Label>
+            <Label htmlFor="password" className="text-zinc-400 text-sm font-light">Senha</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
               <Input
                 id="password"
                 type="password"
@@ -131,20 +130,20 @@ export default function PortalLogin() {
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 onKeyPress={handleKeyPress}
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 pl-10"
+                className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pl-10 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
               />
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
               <p className="text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
 
           <Button 
             onClick={handleLogin} 
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            className="w-full bg-white text-black font-medium hover:bg-zinc-200 h-12 text-base transition-all"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -157,9 +156,9 @@ export default function PortalLogin() {
             )}
           </Button>
 
-          <div className="text-center pt-4 border-t border-slate-700">
-            <p className="text-slate-400 text-sm">
-              Primeiro acesso? Use a senha <strong className="text-purple-400">123456</strong>
+          <div className="text-center pt-4 border-t border-white/5">
+            <p className="text-zinc-500 text-sm font-light">
+              Primeiro acesso? Use a senha <span className="text-yellow-600 font-medium">123456</span>
             </p>
           </div>
         </CardContent>
