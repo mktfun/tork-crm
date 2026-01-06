@@ -2,7 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Policy } from '@/types';
-import { gerarTransacaoDeComissao } from '@/services/commissionService';
+import { gerarTransacaoDeComissao, gerarTransacaoDeComissaoERP } from '@/services/commissionService';
+
+// Helper para buscar dados de cliente e ramo para descrição rica
+async function fetchPolicyContext(clientId: string, ramoId?: string) {
+  const [clientResult, ramoResult] = await Promise.all([
+    supabase.from('clientes').select('name').eq('id', clientId).single(),
+    ramoId ? supabase.from('ramos').select('nome').eq('id', ramoId).maybeSingle() : Promise.resolve({ data: null })
+  ]);
+  
+  return {
+    clientName: clientResult.data?.name || 'Cliente',
+    ramoName: ramoResult.data?.nome || 'Seguro'
+  };
+}
 
 export function useSupabasePolicies() {
   const queryClient = useQueryClient();
@@ -141,13 +154,23 @@ export function useSupabasePolicies() {
     onSuccess: async (newPolicy) => {
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       
-      // 🎯 **LÓGICA CENTRALIZADA ÚNICA** - Gerar comissão apenas para apólices que não são orçamento
+      // 🎯 **LÓGICA CENTRALIZADA** - Gerar comissão apenas para apólices que não são orçamento
       if (newPolicy.status !== 'Orçamento') {
         try {
           console.log('💰 [CENTRAL] Criando comissão para apólice:', newPolicy.policyNumber, 'Status:', newPolicy.status);
+          
+          // Buscar contexto para descrição rica
+          const context = await fetchPolicyContext(newPolicy.clientId, newPolicy.type);
+          
+          // 1. Criar na tabela legada (compatibilidade)
           await gerarTransacaoDeComissao(newPolicy);
+          
+          // 2. Criar no ERP moderno (partidas dobradas)
+          await gerarTransacaoDeComissaoERP(newPolicy, context.clientName, context.ramoName);
+          
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
-          console.log('✅ [CENTRAL] Transação de comissão criada para apólice:', newPolicy.policyNumber);
+          queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+          console.log('✅ [CENTRAL] Comissões criadas (legado + ERP) para:', newPolicy.policyNumber);
         } catch (commissionError) {
           console.error('❌ [CENTRAL] Erro ao criar transação de comissão:', commissionError);
         }
@@ -239,10 +262,20 @@ export function useSupabasePolicies() {
               automaticRenewal: updatedPolicy.automatic_renewal
             };
 
+            // Buscar contexto para descrição rica
+            const context = await fetchPolicyContext(policy.clientId, policy.type);
+
             console.log('💰 [UPDATE] Gerando comissão para apólice ativada:', policy.policyNumber);
+            
+            // 1. Criar na tabela legada
             await gerarTransacaoDeComissao(policy);
+            
+            // 2. Criar no ERP moderno
+            await gerarTransacaoDeComissaoERP(policy, context.clientName, context.ramoName);
+            
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
-            console.log('✅ [UPDATE] Comissão criada para ativação');
+            queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+            console.log('✅ [UPDATE] Comissões criadas (legado + ERP) para ativação');
           }
         } catch (commissionError) {
           console.error('❌ [UPDATE] Erro ao criar comissão na ativação:', commissionError);
@@ -404,10 +437,20 @@ export function useSupabasePolicies() {
           automaticRenewal: updatedPolicy.automatic_renewal
         };
 
+        // Buscar contexto para descrição rica
+        const context = await fetchPolicyContext(policy.clientId, policy.type);
+
         console.log('💰 [CONVERT] Gerando comissão para conversão de orçamento:', policy.policyNumber);
+        
+        // 1. Criar na tabela legada
         await gerarTransacaoDeComissao(policy);
+        
+        // 2. Criar no ERP moderno
+        await gerarTransacaoDeComissaoERP(policy, context.clientName, context.ramoName);
+        
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        console.log('✅ [CONVERT] Transação de comissão criada para conversão:', policy.policyNumber);
+        queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
+        console.log('✅ [CONVERT] Comissões criadas (legado + ERP) para conversão:', policy.policyNumber);
       } catch (commissionError) {
         console.error('❌ [CONVERT] Erro ao criar transação de comissão:', commissionError);
       }
