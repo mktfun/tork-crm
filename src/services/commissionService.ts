@@ -189,6 +189,7 @@ export async function gerarTransacaoDeComissaoERP(
   clientName?: string, 
   ramoName?: string
 ): Promise<{ transaction_id: string; reference_number: string; success: boolean } | null> {
+  console.log('🚀 [ERP] Disparando criação de comissão para apólice:', policy.id, 'Status: pending');
   console.log('💰 [ERP] Gerando comissão no ERP moderno para apólice:', policy.policyNumber);
   
   // 🛡️ Validação de UUID antes de enviar

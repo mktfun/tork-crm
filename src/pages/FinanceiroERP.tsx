@@ -379,6 +379,9 @@ export default function FinanceiroERP() {
 
         <TabsContent value="visao-geral">
           <VisaoGeral dateRange={dateRange} />
+          <div className="mt-6">
+            <RecentMovements onViewDetails={handleViewTransactionDetails} />
+          </div>
         </TabsContent>
 
         <TabsContent value="receitas">
@@ -398,8 +401,6 @@ export default function FinanceiroERP() {
         </TabsContent>
       </Tabs>
 
-      {/* Últimas Movimentações - no final */}
-      <RecentMovements onViewDetails={handleViewTransactionDetails} />
 
       {/* Deep Link Details Sheet */}
       <TransactionDetailsSheet 
