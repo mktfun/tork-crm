@@ -731,3 +731,43 @@ export async function getTransactionDetails(
     } : null
   };
 }
+
+// Buscar totais pendentes (A Receber e A Pagar)
+export async function getPendingTotals(startDate?: string, endDate?: string) {
+  const { data, error } = await supabase.rpc('get_pending_totals', {
+    p_start_date: startDate || null,
+    p_end_date: endDate || null
+  });
+
+  if (error) throw error;
+  return data as {
+    total_a_receber: number;
+    total_a_pagar: number;
+    count_a_receber: number;
+    count_a_pagar: number;
+  };
+}
+
+// Buscar cash flow com projeção
+export async function getCashFlowWithProjection(
+  startDate: string,
+  endDate: string,
+  granularity: 'day' | 'month' = 'day'
+) {
+  const { data, error } = await supabase.rpc('get_cash_flow_with_projection', {
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_granularity: granularity
+  });
+
+  if (error) throw error;
+  return data as Array<{
+    period: string;
+    income: number;
+    expense: number;
+    pending_income: number;
+    pending_expense: number;
+    net: number;
+    projected_net: number;
+  }>;
+}
