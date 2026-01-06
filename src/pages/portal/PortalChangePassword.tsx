@@ -22,17 +22,22 @@ export default function PortalChangePassword() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [clientId, setClientId] = useState('');
+  const [slug, setSlug] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
-    if (!clientData) {
-      navigate('/portal');
+    const storedSlug = sessionStorage.getItem('portal_brokerage_slug');
+    
+    if (!clientData || !storedSlug) {
+      navigate('/');
       return;
     }
+    
     const client = JSON.parse(clientData);
     setClientId(client.id);
     setStoredPassword(client.portal_password || '');
+    setSlug(storedSlug);
   }, [navigate]);
 
   const handleChangePassword = async () => {
@@ -96,7 +101,7 @@ export default function PortalChangePassword() {
       }
 
       toast.success('Senha alterada com sucesso!');
-      navigate('/portal/home');
+      navigate(`/${slug}/portal/home`);
       
     } catch (err) {
       console.error('Change password error:', err);
@@ -107,11 +112,11 @@ export default function PortalChangePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4">
-      <Card className="w-full max-w-md bg-zinc-900/40 border-white/5 backdrop-blur-xl shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4">
+      <Card className="w-full max-w-md bg-[#0A0A0A] border-white/5 backdrop-blur-xl shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <div className="w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-yellow-600/20">
-            <KeyRound className="w-8 h-8 text-white" />
+          <div className="w-16 h-16 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg shadow-[#D4AF37]/20">
+            <KeyRound className="w-8 h-8 text-black" />
           </div>
           <CardTitle className="text-2xl text-white font-light tracking-wide">Alterar Senha</CardTitle>
           <CardDescription className="text-zinc-500">
@@ -127,7 +132,7 @@ export default function PortalChangePassword() {
               placeholder="Digite sua senha atual"
               value={currentPassword}
               onChange={(e) => { setCurrentPassword(e.target.value); setError(''); }}
-              className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+              className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
             />
           </div>
 
@@ -140,7 +145,7 @@ export default function PortalChangePassword() {
                 placeholder="Mínimo 6 caracteres"
                 value={newPassword}
                 onChange={(e) => { setNewPassword(e.target.value); setError(''); }}
-                className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pr-10 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+                className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pr-10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
               />
               <button
                 type="button"
@@ -160,7 +165,7 @@ export default function PortalChangePassword() {
               placeholder="Digite novamente"
               value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
-              className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-yellow-600/50 focus:ring-yellow-600/20 h-12"
+              className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
             />
           </div>
 
@@ -172,7 +177,7 @@ export default function PortalChangePassword() {
 
           <Button 
             onClick={handleChangePassword} 
-            className="w-full bg-gradient-to-r from-yellow-600 to-yellow-700 text-white hover:from-yellow-500 hover:to-yellow-600 h-12"
+            className="w-full bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black hover:from-[#E5C048] hover:to-[#D4AF37] h-12 font-medium"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -187,7 +192,7 @@ export default function PortalChangePassword() {
 
           <Button 
             variant="outline"
-            onClick={() => navigate('/portal/profile')}
+            onClick={() => navigate(`/${slug}/portal/profile`)}
             className="w-full border-white/10 text-zinc-400 hover:bg-zinc-800 hover:text-white h-12"
           >
             Cancelar

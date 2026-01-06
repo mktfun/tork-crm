@@ -28,6 +28,7 @@ export default function PortalHome() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [clientName, setClientName] = useState('');
+  const [slug, setSlug] = useState('');
   const [portalConfig, setPortalConfig] = useState<PortalConfig>({
     show_policies: true,
     show_cards: true,
@@ -36,9 +37,12 @@ export default function PortalHome() {
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
-    if (clientData) {
+    const storedSlug = sessionStorage.getItem('portal_brokerage_slug');
+    
+    if (clientData && storedSlug) {
       const client = JSON.parse(clientData);
       setClientName(client.name || '');
+      setSlug(storedSlug);
       fetchPolicies(client.id);
       fetchPortalConfig(client.user_id);
     }
@@ -93,7 +97,7 @@ export default function PortalHome() {
     if (days < 0) {
       return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
-      return <Badge className="bg-yellow-600/10 text-yellow-500 border-yellow-600/20">Vence em {days} dias</Badge>;
+      return <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20">Vence em {days} dias</Badge>;
     } else {
       return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Vigente</Badge>;
     }
@@ -104,11 +108,11 @@ export default function PortalHome() {
   return (
     <div className="space-y-4">
       {/* Welcome Card */}
-      <Card className="bg-gradient-to-br from-yellow-600/10 to-yellow-700/5 border-yellow-600/20">
+      <Card className="bg-gradient-to-br from-[#D4AF37]/10 to-[#C5A028]/5 border-[#D4AF37]/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-600/20">
-              <Shield className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-xl flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
+              <Shield className="w-6 h-6 text-black" />
             </div>
             <div>
               <h2 className="text-white font-light text-lg">Bem-vindo(a)!</h2>
@@ -124,20 +128,20 @@ export default function PortalHome() {
           {portalConfig.show_policies && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-zinc-900/40 border-white/5 hover:bg-zinc-800 hover:border-yellow-600/30"
-              onClick={() => navigate('/portal/policies')}
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-[#0A0A0A] border-white/5 hover:bg-zinc-900 hover:border-[#D4AF37]/30"
+              onClick={() => navigate(`/${slug}/portal/policies`)}
             >
-              <FileText className="w-6 h-6 text-yellow-600" />
+              <FileText className="w-6 h-6 text-[#D4AF37]" />
               <span className="text-sm text-white font-light">Meus Seguros</span>
             </Button>
           )}
           {portalConfig.show_cards && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-zinc-900/40 border-white/5 hover:bg-zinc-800 hover:border-yellow-600/30"
-              onClick={() => navigate('/portal/cards')}
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-[#0A0A0A] border-white/5 hover:bg-zinc-900 hover:border-[#D4AF37]/30"
+              onClick={() => navigate(`/${slug}/portal/cards`)}
             >
-              <CreditCard className="w-6 h-6 text-yellow-600" />
+              <CreditCard className="w-6 h-6 text-[#D4AF37]" />
               <span className="text-sm text-white font-light">Carteirinhas</span>
             </Button>
           )}
@@ -145,17 +149,17 @@ export default function PortalHome() {
       )}
 
       {/* Active Policies */}
-      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg text-white font-light flex items-center gap-2">
-            <Shield className="w-5 h-5 text-yellow-600" />
+            <Shield className="w-5 h-5 text-[#D4AF37]" />
             Seguros Ativos
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-yellow-600 animate-spin" />
+              <Loader2 className="w-6 h-6 text-[#D4AF37] animate-spin" />
             </div>
           ) : policies.length === 0 ? (
             <div className="text-center py-8">
@@ -187,8 +191,8 @@ export default function PortalHome() {
               {policies.length > 3 && (
                 <Button 
                   variant="ghost" 
-                  className="w-full text-yellow-600 hover:text-yellow-500 hover:bg-yellow-600/10"
-                  onClick={() => navigate('/portal/policies')}
+                  className="w-full text-[#D4AF37] hover:text-[#E5C048] hover:bg-[#D4AF37]/10"
+                  onClick={() => navigate(`/${slug}/portal/policies`)}
                 >
                   Ver todos ({policies.length})
                 </Button>
@@ -199,7 +203,7 @@ export default function PortalHome() {
       </Card>
 
       {/* Help Card */}
-      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/5">

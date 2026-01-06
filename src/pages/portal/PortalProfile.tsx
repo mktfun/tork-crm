@@ -38,14 +38,18 @@ export default function PortalProfile() {
   const [clientId, setClientId] = useState('');
   const [clientName, setClientName] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
+  const [slug, setSlug] = useState('');
 
   useEffect(() => {
     const clientData = sessionStorage.getItem('portal_client');
-    if (clientData) {
+    const storedSlug = sessionStorage.getItem('portal_brokerage_slug');
+    
+    if (clientData && storedSlug) {
       const client = JSON.parse(clientData);
       setClientId(client.id);
       setClientName(client.name || '');
       setCurrentPassword(client.portal_password || '');
+      setSlug(storedSlug);
       fetchClientData(client.id);
     }
   }, []);
@@ -158,11 +162,11 @@ export default function PortalProfile() {
       <h2 className="text-xl font-light text-white tracking-wide">Meus Dados</h2>
 
       {/* Profile Card */}
-      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-yellow-600 to-yellow-700 rounded-full flex items-center justify-center shadow-lg shadow-yellow-600/20">
-              <User className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-full flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
+              <User className="w-6 h-6 text-black" />
             </div>
             <div>
               <CardTitle className="text-lg text-white font-light">{clientName}</CardTitle>
@@ -182,7 +186,7 @@ export default function PortalProfile() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
               maxLength={15}
-              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
             />
           </div>
 
@@ -196,7 +200,7 @@ export default function PortalProfile() {
               placeholder="seu@email.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
             />
           </div>
 
@@ -209,7 +213,7 @@ export default function PortalProfile() {
               value={form.cep || ''}
               onChange={(e) => setForm({ ...form, cep: formatCep(e.target.value) })}
               maxLength={9}
-              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
             />
           </div>
 
@@ -223,7 +227,7 @@ export default function PortalProfile() {
               placeholder="Rua, número"
               value={form.address || ''}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
-              className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+              className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
             />
           </div>
 
@@ -236,7 +240,7 @@ export default function PortalProfile() {
                 placeholder="Cidade"
                 value={form.city || ''}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+                className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
               />
             </div>
             <div className="space-y-2">
@@ -247,7 +251,7 @@ export default function PortalProfile() {
                 value={form.state || ''}
                 onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
                 maxLength={2}
-                className="bg-zinc-950/50 border-white/10 text-white focus:border-yellow-600/50 focus:ring-yellow-600/20 h-11"
+                className="bg-zinc-950/50 border-white/10 text-white focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-11"
               />
             </div>
           </div>
@@ -273,12 +277,12 @@ export default function PortalProfile() {
       </Card>
 
       {/* Change Password */}
-      <Card className="bg-zinc-900/40 border-white/5 backdrop-blur-xl">
+      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
         <CardContent className="p-4">
           <Button
             variant="outline"
             className="w-full border-white/10 text-zinc-400 hover:bg-zinc-800 hover:text-white h-12"
-            onClick={() => navigate('/portal/change-password')}
+            onClick={() => navigate(`/${slug}/portal/change-password`)}
           >
             <KeyRound className="w-4 h-4 mr-2" />
             Alterar Senha
