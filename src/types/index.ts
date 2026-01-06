@@ -165,12 +165,18 @@ export interface CompanyBranch {
 }
 
 // Novas interfaces para o ecossistema de corretoras e produtores
+export interface BrokerageFinancialSettings {
+  default_commission_asset_account_id?: string;
+  commission_initial_status?: 'pending' | 'completed';
+}
+
 export interface Brokerage {
   id: number;
   name: string;
   cnpj?: string;
   susep_code?: string;
   logo_url?: string;
+  financial_settings?: BrokerageFinancialSettings;
   createdAt: string;
 }
 

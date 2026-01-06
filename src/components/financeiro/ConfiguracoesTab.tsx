@@ -7,7 +7,8 @@ import {
   Trash2, 
   Loader2, 
   ShieldCheck,
-  Zap
+  Zap,
+  Target
 } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,7 @@ import { AccountFormModal } from './AccountFormModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { useFinancialAccountsWithDefaults } from '@/hooks/useFinanceiro';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
+import { useSupabaseBrokerages } from '@/hooks/useSupabaseBrokerages';
 import { FinancialAccount, FinancialAccountType } from '@/types/financeiro';
 import { toast } from '@/hooks/use-toast';
 
@@ -164,6 +166,96 @@ function AutomationSection() {
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ COMMISSION TARGET SECTION ============
+
+function CommissionTargetSection({ assetAccounts }: { assetAccounts: FinancialAccount[] }) {
+  const { brokerages, updateBrokerage, loading } = useSupabaseBrokerages();
+  const [saving, setSaving] = useState(false);
+  
+  const brokerage = brokerages[0]; // Primeira corretora
+  const settings = brokerage?.financial_settings || {};
+
+  const handleUpdateSetting = async (key: string, value: string) => {
+    if (!brokerage) return;
+    setSaving(true);
+    try {
+      await updateBrokerage(brokerage.id, {
+        financial_settings: { ...settings, [key]: value }
+      });
+      toast({ title: "Configuração salva", description: "Preferência atualizada com sucesso." });
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível salvar.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="h-4 bg-muted animate-pulse rounded" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Target className="w-5 h-5 text-primary" />
+          <CardTitle className="text-lg">Destino das Comissões</CardTitle>
+        </div>
+        <CardDescription>
+          Configure em qual conta as comissões automáticas serão registradas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="commission-account">Conta Padrão para Comissões</Label>
+          <Select
+            value={settings.default_commission_asset_account_id || ''}
+            onValueChange={(v) => handleUpdateSetting('default_commission_asset_account_id', v)}
+            disabled={saving}
+          >
+            <SelectTrigger id="commission-account" className="mt-1">
+              <SelectValue placeholder="Selecione uma conta" />
+            </SelectTrigger>
+            <SelectContent>
+              {assetAccounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground mt-1">
+            Conta onde as comissões de novas apólices serão lançadas.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="commission-status">Status Inicial</Label>
+          <Select
+            value={settings.commission_initial_status || 'pending'}
+            onValueChange={(v) => handleUpdateSetting('commission_initial_status', v)}
+            disabled={saving}
+          >
+            <SelectTrigger id="commission-status" className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pendente (provisão)</SelectItem>
+              <SelectItem value="completed">Confirmado (já recebido)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground mt-1">
+            Define se a comissão inicia como pendente ou já confirmada.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

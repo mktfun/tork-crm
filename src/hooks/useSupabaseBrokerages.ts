@@ -31,6 +31,7 @@ export function useSupabaseBrokerages() {
         cnpj: brokerage.cnpj,
         susep_code: brokerage.susep_code,
         logo_url: brokerage.logo_url,
+        financial_settings: brokerage.financial_settings,
         createdAt: brokerage.created_at,
       })) || [];
 
@@ -88,6 +89,7 @@ export function useSupabaseBrokerages() {
           cnpj: updates.cnpj,
           susep_code: updates.susep_code,
           logo_url: updates.logo_url,
+          financial_settings: updates.financial_settings as any,
         })
         .eq('id', id)
         .eq('user_id', user.id)
