@@ -82,15 +82,21 @@ export function useSupabaseBrokerages() {
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Brokerage> }) => {
       if (!user) throw new Error('User not authenticated');
 
+      // 🔧 FIX: Construir objeto apenas com campos definidos para não sobrescrever com undefined
+      const updateData: Record<string, any> = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.cnpj !== undefined) updateData.cnpj = updates.cnpj;
+      if (updates.susep_code !== undefined) updateData.susep_code = updates.susep_code;
+      if (updates.logo_url !== undefined) updateData.logo_url = updates.logo_url;
+      if (updates.financial_settings !== undefined) updateData.financial_settings = updates.financial_settings;
+
+      if (Object.keys(updateData).length === 0) {
+        throw new Error('No valid fields to update');
+      }
+
       const { data, error } = await supabase
         .from('brokerages')
-        .update({
-          name: updates.name,
-          cnpj: updates.cnpj,
-          susep_code: updates.susep_code,
-          logo_url: updates.logo_url,
-          financial_settings: updates.financial_settings as any,
-        })
+        .update(updateData)
         .eq('id', id)
         .eq('user_id', user.id)
         .select()
