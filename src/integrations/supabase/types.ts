@@ -286,6 +286,7 @@ export type Database = {
           portal_enabled: boolean | null
           portal_show_cards: boolean | null
           portal_show_policies: boolean | null
+          slug: string
           susep_code: string | null
           updated_at: string
           user_id: string
@@ -301,6 +302,7 @@ export type Database = {
           portal_enabled?: boolean | null
           portal_show_cards?: boolean | null
           portal_show_policies?: boolean | null
+          slug: string
           susep_code?: string | null
           updated_at?: string
           user_id: string
@@ -316,6 +318,7 @@ export type Database = {
           portal_enabled?: boolean | null
           portal_show_cards?: boolean | null
           portal_show_policies?: boolean | null
+          slug?: string
           susep_code?: string | null
           updated_at?: string
           user_id?: string
@@ -1966,6 +1969,7 @@ export type Database = {
       execute_sql: { Args: { query: string }; Returns: Json }
       fix_backfill_dates: { Args: never; Returns: Json }
       fix_ledger_descriptions: { Args: never; Returns: Json }
+      get_brokerage_by_slug: { Args: { p_slug: string }; Returns: Json }
       get_cash_flow_data: {
         Args: {
           p_end_date: string
@@ -2347,6 +2351,10 @@ export type Database = {
       }
       verify_portal_login: {
         Args: { p_identifier: string; p_password: string }
+        Returns: Json
+      }
+      verify_portal_login_scoped: {
+        Args: { p_identifier: string; p_password: string; p_slug: string }
         Returns: Json
       }
       void_financial_transaction: {

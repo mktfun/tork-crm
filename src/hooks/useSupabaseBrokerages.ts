@@ -46,6 +46,12 @@ export function useSupabaseBrokerages() {
     mutationFn: async (brokerageData: Omit<Brokerage, 'id' | 'createdAt'>) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Generate slug from name
+      const generatedSlug = brokerageData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, '-');
+      
       const { data, error } = await supabase
         .from('brokerages')
         .insert({
@@ -54,6 +60,7 @@ export function useSupabaseBrokerages() {
           cnpj: brokerageData.cnpj || null,
           susep_code: brokerageData.susep_code || null,
           logo_url: brokerageData.logo_url || null,
+          slug: generatedSlug,
         })
         .select()
         .single();

@@ -45,6 +45,7 @@ import PortalHome from "./pages/portal/PortalHome";
 import PortalPolicies from "./pages/portal/PortalPolicies";
 import PortalCards from "./pages/portal/PortalCards";
 import PortalProfile from "./pages/portal/PortalProfile";
+import PortalNotFound from "./pages/portal/PortalNotFound";
 
 // Helper to redirect legacy detail routes to dashboard namespace
 function ParamRedirect({ toBase }: { toBase: string }) {
@@ -126,16 +127,20 @@ function App() {
                   </Route>
                 </Route>
 
-                {/* Portal do Cliente - Rotas públicas (sem ProtectedRoute) */}
-                <Route path="/portal" element={<PortalLogin />} />
-                <Route path="/portal/login" element={<PortalLogin />} />
-                <Route path="/portal/change-password" element={<PortalChangePassword />} />
-                <Route path="/portal/onboarding" element={<PortalOnboarding />} />
-                <Route element={<PortalLayout />}>
-                  <Route path="/portal/home" element={<PortalHome />} />
-                  <Route path="/portal/policies" element={<PortalPolicies />} />
-                  <Route path="/portal/cards" element={<PortalCards />} />
-                  <Route path="/portal/profile" element={<PortalProfile />} />
+                {/* Portal do Cliente - Rotas dinâmicas por corretora */}
+                {/* Legacy routes redirect to portal not found */}
+                <Route path="/portal" element={<PortalNotFound />} />
+                <Route path="/portal/*" element={<PortalNotFound />} />
+                
+                {/* Dynamic portal routes with brokerage slug */}
+                <Route path="/:brokerageSlug/portal" element={<PortalLogin />} />
+                <Route path="/:brokerageSlug/portal/onboarding" element={<PortalOnboarding />} />
+                <Route path="/:brokerageSlug/portal/change-password" element={<PortalChangePassword />} />
+                <Route path="/:brokerageSlug/portal" element={<PortalLayout />}>
+                  <Route path="home" element={<PortalHome />} />
+                  <Route path="policies" element={<PortalPolicies />} />
+                  <Route path="cards" element={<PortalCards />} />
+                  <Route path="profile" element={<PortalProfile />} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />
