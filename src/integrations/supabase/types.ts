@@ -279,6 +279,7 @@ export type Database = {
           api_key: string | null
           cnpj: string | null
           created_at: string
+          financial_settings: Json | null
           id: number
           logo_url: string | null
           name: string
@@ -295,6 +296,7 @@ export type Database = {
           api_key?: string | null
           cnpj?: string | null
           created_at?: string
+          financial_settings?: Json | null
           id?: never
           logo_url?: string | null
           name: string
@@ -311,6 +313,7 @@ export type Database = {
           api_key?: string | null
           cnpj?: string | null
           created_at?: string
+          financial_settings?: Json | null
           id?: never
           logo_url?: string | null
           name?: string
