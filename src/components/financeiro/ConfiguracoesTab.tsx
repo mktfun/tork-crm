@@ -245,9 +245,18 @@ function CommissionTargetSection({ assetAccounts }: { assetAccounts: FinancialAc
             <SelectTrigger id="commission-account" className="mt-1">
               <SelectValue placeholder="Selecione uma conta" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent 
+              className="z-50 bg-popover border shadow-lg"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
               {assetAccounts.map((acc) => (
-                <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                <SelectItem 
+                  key={acc.id} 
+                  value={acc.id}
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  {acc.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

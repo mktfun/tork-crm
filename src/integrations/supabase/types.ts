@@ -2312,22 +2312,39 @@ export type Database = {
         }[]
       }
       promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
-      register_policy_commission: {
-        Args: {
-          p_client_name: string
-          p_commission_amount: number
-          p_policy_id: string
-          p_policy_number: string
-          p_ramo_name: string
-          p_status?: string
-          p_transaction_date?: string
-        }
-        Returns: {
-          reference_number: string
-          success: boolean
-          transaction_id: string
-        }[]
-      }
+      register_policy_commission:
+        | {
+            Args: {
+              p_client_name?: string
+              p_commission_amount?: number
+              p_policy_id: string
+              p_policy_number?: string
+              p_ramo_name?: string
+              p_status?: string
+              p_transaction_date?: string
+            }
+            Returns: {
+              reference_number: string
+              success: boolean
+              transaction_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_client_name: string
+              p_commission_amount: number
+              p_policy_id: string
+              p_policy_number: string
+              p_ramo_name: string
+              p_status?: string
+              p_transaction_date?: string
+            }
+            Returns: {
+              reference_number: string
+              success: boolean
+              transaction_id: string
+            }[]
+          }
       settle_commission_transaction:
         | {
             Args: { p_bank_account_id?: string; p_transaction_id: string }
