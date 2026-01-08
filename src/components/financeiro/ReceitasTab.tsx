@@ -37,9 +37,9 @@ import {
 
 import { NovaReceitaModal } from './NovaReceitaModal';
 import { TransactionDetailsSheet } from './TransactionDetailsSheet';
+import { SettleTransactionModal } from './SettleTransactionModal';
 import { 
-  useRevenueTransactions, 
-  useBulkConfirmReceipts 
+  useRevenueTransactions
 } from '@/hooks/useFinanceiro';
 import { parseLocalDate } from '@/utils/dateUtils';
 
@@ -278,8 +278,7 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'efetivado' | 'a_receber'>('efetivado');
-  
-  const bulkConfirm = useBulkConfirmReceipts();
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
 
   // Datas normalizadas
   const { startDate, endDate } = useMemo(() => {
@@ -330,23 +329,21 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     }
   };
 
-  const handleBulkConfirm = async () => {
+  const handleOpenSettleModal = () => {
     if (selectedIds.size === 0) return;
-    
-    try {
-      const result = await bulkConfirm.mutateAsync(Array.from(selectedIds));
-      
-      if (result.confirmedCount > 0) {
-        toast.success(`${result.confirmedCount} receita(s) confirmada(s) com sucesso!`);
-      } else {
-        toast.info('Nenhuma receita foi confirmada.');
-      }
-      setSelectedIds(new Set());
-    } catch (error: any) {
-      console.error('Erro ao confirmar receitas:', error);
-      toast.error(error.message || 'Erro ao confirmar receitas');
-    }
+    setSettleModalOpen(true);
   };
+
+  const handleSettleSuccess = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Calcular valor total selecionado
+  const selectedTotalAmount = useMemo(() => {
+    return allTransactions
+      .filter(tx => selectedIds.has(tx.id))
+      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  }, [allTransactions, selectedIds]);
 
   // Contar transações sincronizadas para info
   const syncedCount = allTransactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
@@ -418,8 +415,7 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
           {/* Batch Action Button */}
           {viewMode === 'a_receber' && selectedIds.size > 0 && (
             <Button 
-              onClick={handleBulkConfirm}
-              disabled={bulkConfirm.isPending}
+              onClick={handleOpenSettleModal}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700"
             >
               <Check className="w-4 h-4" />
@@ -448,6 +444,15 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
         isLegacyId={false}
         open={!!detailsId}
         onClose={() => setDetailsId(null)}
+      />
+
+      {/* Settle Modal */}
+      <SettleTransactionModal
+        open={settleModalOpen}
+        onClose={() => setSettleModalOpen(false)}
+        transactionIds={Array.from(selectedIds)}
+        totalAmount={selectedTotalAmount}
+        onSuccess={handleSettleSuccess}
       />
     </div>
   );

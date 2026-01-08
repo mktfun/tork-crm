@@ -585,8 +585,7 @@ export async function settleCommission(params: {
 }): Promise<SettleCommissionResult> {
   const { data, error } = await supabase.rpc('settle_commission_transaction', {
     p_transaction_id: params.transactionId,
-    p_bank_account_id: params.bankAccountId,
-    p_settlement_date: params.settlementDate || new Date().toISOString().split('T')[0]
+    p_bank_account_id: params.bankAccountId
   });
 
   if (error) throw error;
@@ -594,7 +593,7 @@ export async function settleCommission(params: {
   const result = data as any;
   return {
     success: result?.success ?? false,
-    settledAmount: result?.settledAmount,
+    settledAmount: result?.amount,
     message: result?.message
   };
 }
