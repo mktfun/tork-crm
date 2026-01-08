@@ -30,6 +30,7 @@ import { ConfiguracoesTab } from '@/components/financeiro/ConfiguracoesTab';
 import { DateRangeFilter } from '@/components/financeiro/DateRangeFilter';
 import { ReceitasTab } from '@/components/financeiro/ReceitasTab';
 import { DespesasTab } from '@/components/financeiro/DespesasTab';
+import { CaixaTab } from '@/components/financeiro/CaixaTab';
 import { TransactionDetailsSheet } from '@/components/financeiro/TransactionDetailsSheet';
 import { 
   useFinancialAccountsWithDefaults, 
@@ -393,6 +394,10 @@ export default function FinanceiroERP() {
             <BarChart3 className="w-4 h-4" />
             Visão Geral
           </TabsTrigger>
+          <TabsTrigger value="caixa" className="gap-2">
+            <Landmark className="w-4 h-4" />
+            Caixa
+          </TabsTrigger>
           <TabsTrigger value="receitas" className="gap-2">
             <TrendingUp className="w-4 h-4" />
             Receitas
@@ -416,6 +421,10 @@ export default function FinanceiroERP() {
           <div className="mt-6">
             <RecentMovements onViewDetails={handleViewTransactionDetails} />
           </div>
+        </TabsContent>
+
+        <TabsContent value="caixa">
+          <CaixaTab dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="receitas">

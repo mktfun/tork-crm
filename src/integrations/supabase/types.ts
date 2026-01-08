@@ -1975,6 +1975,32 @@ export type Database = {
       execute_sql: { Args: { query: string }; Returns: Json }
       fix_backfill_dates: { Args: never; Returns: Json }
       fix_ledger_descriptions: { Args: never; Returns: Json }
+      get_account_balances: {
+        Args: never
+        Returns: {
+          balance: number
+          code: string
+          id: string
+          name: string
+          type: string
+        }[]
+      }
+      get_account_statement: {
+        Args: {
+          p_account_id: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: {
+          amount: number
+          description: string
+          is_reversal: boolean
+          memo: string
+          running_balance: number
+          transaction_date: string
+          transaction_id: string
+        }[]
+      }
       get_brokerage_by_slug: { Args: { p_slug: string }; Returns: Json }
       get_cash_flow_data: {
         Args: {
@@ -2337,6 +2363,7 @@ export type Database = {
             Args: {
               p_client_name: string
               p_commission_amount: number
+              p_company_name?: string
               p_policy_id: string
               p_policy_number: string
               p_ramo_name: string
