@@ -2192,10 +2192,6 @@ export type Database = {
           is_confirmed: boolean
           legacy_status: string
           policy_number: string
-          reference_number: string
-          related_entity_id: string
-          related_entity_type: string
-          status: string
           transaction_date: string
         }[]
       }
