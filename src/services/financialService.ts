@@ -20,6 +20,7 @@ interface RecentTransaction {
   is_void: boolean;
   total_amount: number;
   account_names: string;
+  status: string; // ✅ Campo adicionado pela migration
 }
 
 // ============ CONTAS ============
