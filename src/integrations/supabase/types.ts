@@ -2169,6 +2169,7 @@ export type Database = {
           id: string
           is_void: boolean
           reference_number: string
+          status: string
           total_amount: number
           transaction_date: string
         }[]

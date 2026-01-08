@@ -220,7 +220,8 @@ function RecentMovements({ onViewDetails }: RecentMovementsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
           {transactions.slice(0, 8).map((tx) => {
             const txDate = parseLocalDate(String(tx.transaction_date));
-            const isPending = tx.reference_number?.startsWith('COMMISSION-') || tx.reference_number?.startsWith('LEGACY-');
+            // ✅ Usar status real da RPC (não inferir por reference_number)
+            const isPending = tx.status === 'pending';
             
             return (
               <div 
@@ -233,7 +234,14 @@ function RecentMovements({ onViewDetails }: RecentMovementsProps) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{tx.description}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate">{tx.description}</p>
+                      {isPending && (
+                        <Badge variant="outline" className="text-amber-500 border-amber-500/30 text-[10px] px-1 py-0 h-4 flex-shrink-0">
+                          Pendente
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {format(txDate, "dd/MM", { locale: ptBR })}
                     </p>
