@@ -7,13 +7,13 @@ import {
   TrendingDown, 
   TrendingUp, 
   Loader2, 
-  ArrowRightLeft,
-  DollarSign,
   BarChart3,
   FileSpreadsheet,
   Settings,
   CalendarClock,
-  Landmark
+  Landmark,
+  Clock,
+  ArrowDownToLine
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,25 +55,29 @@ interface GlobalKpiCardProps {
   title: string;
   value: number;
   icon: React.ElementType;
-  variant: 'primary' | 'success' | 'danger';
+  variant: 'primary' | 'success' | 'danger' | 'warning';
   isLoading?: boolean;
+  subtitle?: string;
 }
 
-function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading }: GlobalKpiCardProps) {
+function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle }: GlobalKpiCardProps) {
   const styles = {
     primary: 'from-primary/10 to-primary/5 border-primary/20',
     success: 'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
     danger: 'from-rose-500/10 to-rose-600/5 border-rose-500/20',
+    warning: 'from-amber-500/10 to-amber-600/5 border-amber-500/20',
   };
   const iconStyles = {
     primary: 'bg-primary/20 text-primary',
     success: 'bg-emerald-500/20 text-emerald-500',
     danger: 'bg-rose-500/20 text-rose-500',
+    warning: 'bg-amber-500/20 text-amber-500',
   };
   const valueStyles = {
     primary: 'text-foreground',
     success: 'text-emerald-500',
     danger: 'text-rose-500',
+    warning: 'text-amber-500',
   };
 
   return (
@@ -88,9 +92,14 @@ function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading }: GlobalK
             {isLoading ? (
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
-              <p className={cn('text-xl font-bold', valueStyles[variant])}>
-                {formatCurrency(value)}
-              </p>
+              <>
+                <p className={cn('text-xl font-bold', valueStyles[variant])}>
+                  {formatCurrency(value)}
+                </p>
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -327,14 +336,15 @@ export default function FinanceiroERP() {
         </div>
       </div>
 
-      {/* 3 KPIs Globais */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* 5 KPIs Globais - Efetivados + Pendentes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <GlobalKpiCard
           title="Resultado Líquido"
           value={summary?.netResult ?? 0}
           icon={Landmark}
           variant="primary"
           isLoading={summaryLoading}
+          subtitle="Apenas confirmados"
         />
         <GlobalKpiCard
           title="Receita Efetivada"
@@ -349,6 +359,22 @@ export default function FinanceiroERP() {
           icon={TrendingDown}
           variant="danger"
           isLoading={summaryLoading}
+        />
+        <GlobalKpiCard
+          title="A Receber"
+          value={summary?.pendingIncome ?? 0}
+          icon={Clock}
+          variant="warning"
+          isLoading={summaryLoading}
+          subtitle="Comissões pendentes"
+        />
+        <GlobalKpiCard
+          title="A Pagar"
+          value={summary?.pendingExpense ?? 0}
+          icon={ArrowDownToLine}
+          variant="danger"
+          isLoading={summaryLoading}
+          subtitle="Despesas pendentes"
         />
       </div>
 

@@ -295,12 +295,15 @@ export async function getFinancialSummary(params: {
 
   if (error) throw error;
   
-  const row = (data as any)?.[0] || {};
+  // A RPC retorna JSON diretamente, não array
+  const row = data as any || {};
   return {
-    totalIncome: Number(row.total_income) || 0,
-    totalExpense: Number(row.total_expense) || 0,
-    netResult: Number(row.net_result) || 0,
-    transactionCount: Number(row.transaction_count) || 0
+    totalIncome: Number(row.totalIncome) || 0,
+    totalExpense: Number(row.totalExpense) || 0,
+    netResult: Number(row.netResult) || 0,
+    pendingIncome: Number(row.pendingIncome) || 0,
+    pendingExpense: Number(row.pendingExpense) || 0,
+    transactionCount: Number(row.transactionCount) || 0
   };
 }
 

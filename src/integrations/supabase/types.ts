@@ -2180,45 +2180,24 @@ export type Database = {
           legacy_total: number
         }[]
       }
-      get_revenue_transactions:
-        | {
-            Args: { p_end_date: string; p_limit?: number; p_start_date: string }
-            Returns: {
-              account_name: string
-              amount: number
-              client_name: string
-              description: string
-              id: string
-              is_confirmed: boolean
-              legacy_status: string
-              policy_number: string
-              transaction_date: string
-            }[]
-          }
-        | {
-            Args: {
-              p_end_date: string
-              p_limit?: number
-              p_offset?: number
-              p_start_date: string
-              p_user_id: string
-            }
-            Returns: {
-              account_name: string
-              amount: number
-              client_name: string
-              description: string
-              id: string
-              is_confirmed: boolean
-              legacy_status: string
-              policy_number: string
-              reference_number: string
-              related_entity_id: string
-              related_entity_type: string
-              status: string
-              transaction_date: string
-            }[]
-          }
+      get_revenue_transactions: {
+        Args: { p_end_date: string; p_limit?: number; p_start_date: string }
+        Returns: {
+          account_name: string
+          amount: number
+          client_name: string
+          description: string
+          id: string
+          is_confirmed: boolean
+          legacy_status: string
+          policy_number: string
+          reference_number: string
+          related_entity_id: string
+          related_entity_type: string
+          status: string
+          transaction_date: string
+        }[]
+      }
       get_schema_info: { Args: never; Returns: Json }
       get_transaction_details:
         | { Args: { p_transaction_id: string }; Returns: Json }
@@ -2340,22 +2319,33 @@ export type Database = {
         }[]
       }
       promote_user_to_admin: { Args: { user_email: string }; Returns: boolean }
-      register_policy_commission: {
-        Args: {
-          p_client_name?: string
-          p_commission_amount?: number
-          p_policy_id: string
-          p_policy_number?: string
-          p_ramo_name?: string
-          p_status?: string
-          p_transaction_date?: string
-        }
-        Returns: {
-          reference_number: string
-          success: boolean
-          transaction_id: string
-        }[]
-      }
+      register_policy_commission:
+        | {
+            Args: {
+              p_client_name?: string
+              p_commission_amount?: number
+              p_policy_id: string
+              p_policy_number?: string
+              p_ramo_name?: string
+              p_status?: string
+              p_transaction_date?: string
+            }
+            Returns: {
+              reference_number: string
+              success: boolean
+              transaction_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_client_name: string
+              p_commission_amount: number
+              p_policy_id: string
+              p_policy_number: string
+              p_ramo_name: string
+            }
+            Returns: Json
+          }
       settle_commission_transaction:
         | {
             Args: { p_bank_account_id?: string; p_transaction_id: string }

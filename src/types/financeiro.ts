@@ -199,6 +199,8 @@ export interface FinancialSummary {
   totalIncome: number;
   totalExpense: number;
   netResult: number;
+  pendingIncome: number;
+  pendingExpense: number;
   transactionCount: number;
 }
 
