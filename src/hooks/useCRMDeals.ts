@@ -325,9 +325,9 @@ export function useCRMDeals() {
       console.log('📝 Updating Deal:', data.id, 'stage_id:', data.stage_id);
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
       
-      // Sync com Chat Tork se a etapa mudou
+      // Sync com Tork se a etapa mudou
       if (stageChanged && data.stage_id) {
-        console.log('🔄 Stage changed! Syncing to Chat Tork:', { deal_id: data.id, new_stage_id: data.stage_id });
+        console.log('🔄 Stage changed! Syncing to Tork:', { deal_id: data.id, new_stage_id: data.stage_id });
         toast.promise(
           supabase.functions.invoke('chatwoot-sync', {
             body: {
@@ -339,7 +339,7 @@ export function useCRMDeals() {
           }),
           {
             loading: 'Sincronizando nova etapa...',
-            success: 'Etapa atualizada no Chat Tork!',
+            success: 'Etapa atualizada no Tork!',
             error: 'Erro ao sincronizar etapa'
           }
         );
@@ -350,7 +350,7 @@ export function useCRMDeals() {
         supabase.functions.invoke('chatwoot-sync', {
           body: { action: 'sync_deal_attributes', deal_id: data.id }
         }).then(response => {
-          console.log('📬 Chat Tork audit note sync:', response);
+          console.log('📬 Tork audit note sync:', response);
         }).catch(err => {
           console.warn('Failed to sync deal update note:', err);
         });
@@ -376,7 +376,7 @@ export function useCRMDeals() {
       queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
       toast.success('Negócio removido');
       
-      // Sync deletion to Chat Tork (non-blocking)
+      // Sync deletion to Tork (non-blocking)
       if (deletedDeal.client_id) {
         supabase.functions.invoke('chatwoot-sync', {
           body: {
@@ -386,10 +386,10 @@ export function useCRMDeals() {
           }
         }).then(response => {
           if (response.data?.success) {
-            toast.success('Histórico atualizado no Chat Tork', { id: 'chattork-delete' });
+            toast.success('Histórico atualizado no Tork', { id: 'tork-delete' });
           }
         }).catch(err => {
-          console.warn('Failed to sync deletion to Chat Tork:', err);
+          console.warn('Failed to sync deletion to Tork:', err);
         });
       }
     },
@@ -425,13 +425,13 @@ export function useCRMDeals() {
       
       // Validar que stage_id existe antes de sincronizar
       if (!data.stage_id) {
-        console.error('❌ stage_id is undefined! Cannot sync to Chatwoot.');
+        console.error('❌ stage_id is undefined! Cannot sync to Tork.');
         return;
       }
       
-      console.log('📦 Invoking chatwoot-sync:', { deal_id: data.id, new_stage_id: data.stage_id, sync_token: newSyncToken });
+      console.log('📦 Invoking tork-sync:', { deal_id: data.id, new_stage_id: data.stage_id, sync_token: newSyncToken });
       
-      // Sync com Chat Tork com feedback visual
+      // Sync com Tork com feedback visual
       toast.promise(
         supabase.functions.invoke('chatwoot-sync', {
           body: {
@@ -441,7 +441,7 @@ export function useCRMDeals() {
             sync_token: newSyncToken
           }
         }).then(response => {
-          console.log('📬 Chat Tork sync response:', response);
+          console.log('📬 Tork sync response:', response);
           if (response.error) {
             throw new Error(response.error.message || 'Erro na sincronização');
           }
@@ -457,7 +457,7 @@ export function useCRMDeals() {
             if (data?.warnings) {
               return `Etapa atualizada com avisos: ${data.warnings}`;
             }
-            return 'Etapa atualizada no Chat Tork!';
+            return 'Etapa atualizada no Tork!';
           },
           error: (err) => `Erro: ${err.message}`
         }

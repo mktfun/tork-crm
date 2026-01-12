@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    console.log('Chatwoot webhook received:', JSON.stringify(body, null, 2));
+    console.log('Tork webhook received:', JSON.stringify(body, null, 2));
 
     const { event, account, conversation, contact } = body;
 
@@ -85,7 +85,7 @@ serve(async (req) => {
         );
 
         if (matchingStage && matchingStage.id !== deal.stage_id) {
-          console.log('Updating deal stage from Chatwoot:', deal.id, '->', matchingStage.name);
+          console.log('Updating deal stage from Tork:', deal.id, '->', matchingStage.name);
           
           await supabase
             .from('crm_deals')
@@ -130,7 +130,7 @@ serve(async (req) => {
               chatwoot_synced_at: new Date().toISOString()
             })
             .eq('id', existingClient.id);
-          console.log('Linked existing client to Chatwoot contact:', existingClient.id);
+          console.log('Linked existing client to Tork contact:', existingClient.id);
         }
         break;
       }
@@ -181,7 +181,7 @@ serve(async (req) => {
                 last_sync_source: 'chatwoot',
                 sync_token: crypto.randomUUID()
               });
-            console.log('Created deal from Chatwoot conversation:', conversation.id);
+            console.log('Created deal from Tork conversation:', conversation.id);
           }
         }
         break;
@@ -193,7 +193,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in chatwoot-webhook:', error);
+    console.error('Error in tork-webhook:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -338,12 +338,10 @@ export default function ChatwootSettings() {
 
         <Button variant="outline" className="mt-4" asChild>
           <a 
-            href="https://www.chatwoot.com/docs/product/settings/integrations/webhooks" 
-            target="_blank" 
-            rel="noopener noreferrer"
+            href="/dashboard/documentacao" 
           >
             <ExternalLink className="h-4 w-4 mr-2" />
-            Documentação Chat Tork
+            Ver Documentação
           </a>
         </Button>
       </AppCard>

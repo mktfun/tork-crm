@@ -109,7 +109,7 @@ export function DealCard({ deal, isDragging, onClick, stageColor = '#3B82F6' }: 
       {deal.chatwoot_conversation_id && (
         <div className="mt-2 flex items-center gap-1.5">
           <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-muted-foreground">Sincronizado</span>
+          <span className="text-xs text-muted-foreground">Sincronizado com Tork</span>
         </div>
       )}
     </motion.div>
