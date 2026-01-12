@@ -1,10 +1,8 @@
 "use client";
 
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { Circle, ArrowRight, Shield, FileText, Users, Calendar, DollarSign, BarChart3, CheckCircle, Clock, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Circle, ArrowRight, Shield, FileText, Users, Calendar, DollarSign, BarChart3, CheckCircle, Clock, Zap, Check, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 
 function ElegantShape({
     className,
@@ -205,17 +203,17 @@ function HeroGeometric({
                         >
                             <a
                                 href="/auth"
-                                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-600/30 hover:shadow-xl hover:shadow-blue-500/40 glow-button-cta"
                             >
                                 <span className="flex items-center gap-2">
-                                    Acessar Sistema
+                                    Começar Agora
                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </a>
 
                             <a
                                 href="/auth"
-                                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all duration-300 backdrop-blur-sm border border-white/20 hover:border-white/40"
+                                className="px-8 py-4 bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold rounded-xl transition-all duration-300 backdrop-blur-sm border border-white/[0.1] hover:border-white/[0.2]"
                             >
                                 Criar Conta Grátis
                             </a>
@@ -248,6 +246,73 @@ function HeroGeometric({
             </div>
 
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-[#030303]/80 pointer-events-none" />
+        </div>
+    );
+}
+
+// Social Proof Section - Insurance Company Logos
+function SocialProofSection() {
+    const fadeUpVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: (i: number) => ({
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.8,
+                delay: 0.1 + i * 0.1,
+            },
+        }),
+    };
+
+    const insurers = [
+        "Porto Seguro",
+        "Azul Seguros", 
+        "Bradesco Seguros",
+        "SulAmérica",
+        "HDI Seguros",
+        "Tokio Marine",
+        "Allianz",
+        "Liberty"
+    ];
+
+    return (
+        <div className="relative w-full py-16 bg-[#030303] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/[0.01] to-transparent" />
+            
+            <div className="relative z-10 container mx-auto px-4 md:px-6">
+                <motion.div
+                    custom={0}
+                    variants={fadeUpVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    className="text-center mb-10"
+                >
+                    <p className="text-white/40 text-sm font-medium tracking-wide uppercase">
+                        Milhares de apólices gerenciadas das principais seguradoras
+                    </p>
+                </motion.div>
+
+                <motion.div
+                    custom={1}
+                    variants={fadeUpVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    className="flex flex-wrap justify-center items-center gap-8 md:gap-12"
+                >
+                    {insurers.map((name, index) => (
+                        <div
+                            key={name}
+                            className="px-6 py-3 bg-white/[0.03] rounded-lg border border-white/[0.05] backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300"
+                        >
+                            <span className="text-white/50 font-medium text-sm tracking-wide">
+                                {name}
+                            </span>
+                        </div>
+                    ))}
+                </motion.div>
+            </div>
         </div>
     );
 }
@@ -495,6 +560,211 @@ function BenefitsSection() {
     );
 }
 
+// Pricing Section Component
+function PricingSection() {
+    const fadeUpVariants = {
+        hidden: { opacity: 0, y: 30 },
+        visible: (i: number) => ({
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 1,
+                delay: 0.2 + i * 0.15,
+            },
+        }),
+    };
+
+    const plans = [
+        {
+            name: "Básico",
+            price: "97",
+            description: "Ideal para corretores iniciantes",
+            features: [
+                "Até 5 usuários",
+                "500 apólices",
+                "Gestão de clientes",
+                "Relatórios básicos",
+                "Suporte por email"
+            ],
+            highlighted: false
+        },
+        {
+            name: "Profissional",
+            price: "197",
+            description: "O mais escolhido por corretoras",
+            features: [
+                "Até 15 usuários",
+                "Apólices ilimitadas",
+                "CRM completo",
+                "Relatórios avançados",
+                "Suporte prioritário",
+                "Integrações",
+                "API de acesso"
+            ],
+            highlighted: true
+        },
+        {
+            name: "Enterprise",
+            price: "Sob consulta",
+            description: "Para grandes corretoras",
+            features: [
+                "Usuários ilimitados",
+                "Apólices ilimitadas",
+                "Todas as funcionalidades",
+                "Gerente de conta dedicado",
+                "SLA garantido",
+                "Customizações",
+                "Treinamento presencial"
+            ],
+            highlighted: false
+        }
+    ];
+
+    return (
+        <div className="relative w-full py-24 bg-[#030303] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-600/[0.02] via-transparent to-slate-600/[0.02]" />
+
+            {/* Background shapes */}
+            <div className="absolute inset-0 overflow-hidden">
+                <ElegantShape
+                    delay={0.2}
+                    width={450}
+                    height={110}
+                    rotate={10}
+                    gradient="from-blue-500/[0.06]"
+                    className="left-[-8%] top-[30%]"
+                />
+                <ElegantShape
+                    delay={0.4}
+                    width={380}
+                    height={95}
+                    rotate={-12}
+                    gradient="from-indigo-500/[0.06]"
+                    className="right-[-6%] bottom-[25%]"
+                />
+            </div>
+
+            <div className="relative z-10 container mx-auto px-4 md:px-6">
+                <motion.div
+                    custom={0}
+                    variants={fadeUpVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true }}
+                    className="text-center mb-16"
+                >
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
+                            Planos e
+                        </span>
+                        <br />
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-white/90 to-slate-300">
+                            Preços
+                        </span>
+                    </h2>
+                    <p className="text-lg text-white/60 max-w-2xl mx-auto">
+                        Escolha o plano ideal para o tamanho da sua corretora. Todos incluem teste grátis de 14 dias.
+                    </p>
+                </motion.div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    {plans.map((plan, index) => (
+                        <motion.div
+                            key={plan.name}
+                            custom={index + 1}
+                            variants={fadeUpVariants}
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true }}
+                            className={cn(
+                                "relative group",
+                                plan.highlighted && "md:-mt-4 md:mb-4"
+                            )}
+                        >
+                            {/* Glow effect for highlighted plan */}
+                            {plan.highlighted && (
+                                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/30 via-indigo-600/30 to-blue-600/30 rounded-3xl blur-xl" />
+                            )}
+                            
+                            <div className={cn(
+                                "relative h-full p-8 rounded-2xl backdrop-blur-sm transition-all duration-300",
+                                plan.highlighted 
+                                    ? "bg-gradient-to-b from-white/[0.08] to-white/[0.04] border-2 border-blue-500/30" 
+                                    : "bg-white/[0.03] border border-white/[0.08] hover:border-white/[0.15]"
+                            )}>
+                                {plan.highlighted && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                                        <div className="flex items-center gap-1 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-white text-xs font-semibold shadow-lg shadow-blue-600/30">
+                                            <Star className="w-3 h-3 fill-current" />
+                                            Mais Popular
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="text-center mb-8">
+                                    <h3 className="text-xl font-semibold text-white mb-2">
+                                        {plan.name}
+                                    </h3>
+                                    <p className="text-white/50 text-sm mb-4">
+                                        {plan.description}
+                                    </p>
+                                    <div className="flex items-baseline justify-center gap-1">
+                                        {plan.price !== "Sob consulta" && (
+                                            <span className="text-white/60 text-lg">R$</span>
+                                        )}
+                                        <span className={cn(
+                                            "font-bold text-white",
+                                            plan.price === "Sob consulta" ? "text-2xl" : "text-5xl"
+                                        )}>
+                                            {plan.price}
+                                        </span>
+                                        {plan.price !== "Sob consulta" && (
+                                            <span className="text-white/60">/mês</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <ul className="space-y-4 mb-8">
+                                    {plan.features.map((feature, idx) => (
+                                        <li key={idx} className="flex items-center gap-3">
+                                            <div className={cn(
+                                                "w-5 h-5 rounded-full flex items-center justify-center",
+                                                plan.highlighted 
+                                                    ? "bg-blue-500/20" 
+                                                    : "bg-white/[0.06]"
+                                            )}>
+                                                <Check className={cn(
+                                                    "w-3 h-3",
+                                                    plan.highlighted ? "text-blue-400" : "text-white/60"
+                                                )} />
+                                            </div>
+                                            <span className="text-white/70 text-sm">
+                                                {feature}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <a
+                                    href="/auth"
+                                    className={cn(
+                                        "block w-full py-3 text-center font-semibold rounded-xl transition-all duration-300",
+                                        plan.highlighted
+                                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-500/30"
+                                            : "bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.1] hover:border-white/[0.2]"
+                                    )}
+                                >
+                                    {plan.price === "Sob consulta" ? "Falar com Vendas" : "Começar Teste Grátis"}
+                                </a>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // Final CTA Section Component
 function FinalCTASection() {
     const fadeUpVariants = {
@@ -575,7 +845,7 @@ function FinalCTASection() {
                 >
                     <a
                         href="/auth"
-                        className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-slate-600 hover:from-blue-700 hover:to-slate-700 text-white font-bold text-lg rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl hover:shadow-blue-500/25"
+                        className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-blue-600/30 hover:shadow-blue-500/40 glow-button-cta"
                     >
                         <span className="flex items-center gap-3">
                             Começar Gratuitamente
@@ -584,7 +854,7 @@ function FinalCTASection() {
                     </a>
 
                     <p className="text-white/50 text-sm">
-                        Sem cartão de crédito • Teste grátis • Suporte incluído
+                        Sem cartão de crédito • Teste grátis de 14 dias • Suporte incluído
                     </p>
                 </motion.div>
             </div>
@@ -592,4 +862,4 @@ function FinalCTASection() {
     );
 }
 
-export { HeroGeometric, FeaturesSection, BenefitsSection, FinalCTASection }
+export { HeroGeometric, SocialProofSection, FeaturesSection, BenefitsSection, PricingSection, FinalCTASection }
