@@ -585,9 +585,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
               <p className="text-white font-medium mt-4">{getPhaseLabel()}</p>
               <p className="text-slate-400 text-sm">
-                {bulkPhase === 'ocr' && 'OCR.space extrai o texto dos documentos'}
-                {bulkPhase === 'ai' && 'Lovable AI estrutura os dados extraídos'}
-                {bulkPhase === 'reconciling' && 'Vinculando clientes existentes'}
+                {bulkPhase === 'ocr' && 'Extraindo texto dos PDFs (pdf-parse local + OCR fallback)...'}
+                {bulkPhase === 'ai' && 'Analisando documentos com IA Lovable...'}
+                {bulkPhase === 'reconciling' && 'Vinculando clientes existentes...'}
               </p>
             </div>
             
