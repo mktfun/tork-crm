@@ -457,6 +457,10 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
 
         // Create policy using existing hook (which handles commission generation)
         // Use titulo_sugerido as insuredAsset if available
+        // Handle ORCAMENTO/PROPOSTA with specific status
+        const isOrcamento = item.tipoDocumento === 'ORCAMENTO';
+        const isProposta = item.tipoDocumento === 'PROPOSTA';
+        
         await addPolicy({
           clientId: clientId!,
           policyNumber: item.numeroApolice,
@@ -468,9 +472,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           startDate: item.dataInicio,
           expirationDate: item.dataFim,
           producerId: item.producerId!,
-          status: 'Ativa',
-          automaticRenewal: true,
-          isBudget: false,
+          status: isOrcamento ? 'Orçamento' : isProposta ? 'Pendente' : 'Ativa',
+          automaticRenewal: !isOrcamento && !isProposta,
+          isBudget: isOrcamento,
           pdfUrl,
         });
 

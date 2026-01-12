@@ -271,9 +271,9 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 ## EXTRAÇÃO DE CLIENTE (COMPLETA!)
 - nome_completo: Nome do SEGURADO/ESTIPULANTE/TITULAR (nome completo)
 - cpf_cnpj: CPF ou CNPJ (com ou sem formatação)
-- email: E-mail de contato
-- telefone: Telefone/Celular
-- endereco_completo: Endereço COMPLETO incluindo CEP se disponível
+- email: E-mail de contato (procure em todo o documento)
+- telefone: Telefone/Celular (procure em todo o documento)
+- endereco_completo: Endereço COMPLETO incluindo CEP, cidade e estado
 
 ## EXTRAÇÃO DO OBJETO SEGURADO (CRÍTICO!)
 - AUTO: "Marca Modelo Versão Ano" (Ex: "VW Golf GTI 2024")
@@ -286,41 +286,45 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 - RESIDENCIAL: Número + Complemento ou CEP
 - VIDA/OUTROS: null
 
-## 🎯 VALORES - REGRAS CRÍTICAS PARA HDI, PORTO, AZUL, ALLIANZ
+## 🎯 EXTRAÇÃO DO PRÊMIO LÍQUIDO - MÉTODO POR EXCLUSÃO (CRÍTICO!)
 
-### PRÊMIO LÍQUIDO (MUITO IMPORTANTE!)
-- É o valor BASE **ANTES** do IOF e taxas adicionais
-- Procure por: "Prêmio Líquido", "Premio Comercial", "Valor Base", "Prêmio Líq", "Premio Liq"
-- **NÃO** confunda com "Prêmio Total" ou "Total a Pagar"
-- **NÃO** confunda com valor da PARCELA (é o prêmio dividido!)
+### PASSO 1: PROCURE PELO PRÊMIO LÍQUIDO EXPLÍCITO
+Procure por: "Prêmio Líquido", "Premio Comercial", "Valor Base", "Prêmio Líq", "Premio Liq"
+NÃO confunda com "Prêmio Total" ou "Total a Pagar" (isso inclui IOF!)
 
-### PRÊMIO TOTAL
-- É o valor FINAL com IOF, custos e adicionais
-- Procure por: "Prêmio Total", "Total a Pagar", "Valor Total"
+### PASSO 2: SE NÃO ENCONTRAR, CALCULE POR EXCLUSÃO
+Se encontrar "Prêmio Total" (ou "Total a Pagar") e "IOF" separados:
+→ premio_liquido = premio_total - IOF
 
-### PARCELA vs LÍQUIDO
-- PARCELA = Prêmio dividido em N vezes (ex: "4x de R$ 500")
-- LÍQUIDO = Valor base total ANTES do parcelamento
-- Se encontrar "Forma de Pagamento: 4x de R$ 500", o LÍQUIDO é ~R$ 1.850 a 2.000 (NÃO R$ 500!)
+Se encontrar apenas o Prêmio Total SEM o IOF separado:
+→ premio_liquido = premio_total / 1.0738 (IOF padrão é 7.38%)
 
-### PECULARIDADES POR SEGURADORA
-- HDI: "Demonstrativo" contém o prêmio líquido em linha separada
-- PORTO SEGURO: "Resumo do Seguro" tem os valores, atenção à "Parcela" vs "Total"
-- AZUL: "Quadro Resumo" mostra prêmio líquido e IOF separados
-- ALLIANZ: "Síntese" contém os valores totais
+### PASSO 3: ALERTA DE PARCELA!
+Se você encontrar "4x de R$ 500" ou "Parcela: R$ 500", isso é PARCELA, NÃO é líquido!
+→ Para calcular líquido aproximado: parcela × número_parcelas × 0.93
+→ Exemplo: 4 × 500 × 0.93 = 1860 (prêmio líquido aproximado)
 
-### RETORNO (OBRIGATÓRIO)
-- AMBOS devem ser NUMBER puro! Exemplo: 1234.56 (NÃO "R$ 1.234,56")
+### PECULIARIDADES POR SEGURADORA
+- HDI: O "Demonstrativo de Prêmio" contém o líquido em linha própria. Atenção: não confundir com parcela!
+- PORTO SEGURO: "Resumo do Seguro" mostra valores. "Valor da Parcela" ≠ "Prêmio Líquido"!
+- AZUL: "Quadro Resumo" mostra prêmio líquido e IOF separados. Use o LÍQUIDO!
+- ALLIANZ: "Síntese" ou "Resumo Financeiro". Procure "Prêmio Comercial" ou calcule.
+
+### RETORNO OBRIGATÓRIO
+- Retorne NUMBER puro! Exemplo: 1234.56 (NÃO "R$ 1.234,56")
 - Se o valor vier como "1.234,56", converta para 1234.56
-- Se só encontrar o total com IOF, calcule líquido = total / 1.0738 (aproximado)
+- NUNCA retorne o valor da parcela como prêmio líquido!
 
 ## TÍTULO SUGERIDO (formato EXATO)
-"[PRIMEIRO_NOME] - [RAMO] ([OBJETO]) - [IDENTIFICACAO] - [SEGURADORA]"
+"[PRIMEIRO_NOME] - [RAMO] ([OBJETO]) - [IDENTIFICACAO] - [SEGURADORA][ - TIPO]"
 Exemplos:
 - "João - Auto (Golf GTI) - ABC1D23 - Porto Seguro"
 - "Maria - Residencial (Apto) - São Paulo - Bradesco"
 - "Carlos - Vida - Mapfre"
-- "Luis - Auto (Corolla) - ABC1D23 - HDI - PROPOSTA" (incluir tipo se for proposta)
+- "Luis - Auto (Corolla) - XYZ9A88 - HDI - PROPOSTA"
+- "Ana - Auto (Onix) - DEF4G56 - Azul - ENDOSSO"
+
+Inclua o tipo (PROPOSTA, ENDOSSO) no final apenas se NÃO for apólice normal.
 
 ## TIPO DE OPERAÇÃO
 - NOVA: Primeiro contrato com este cliente/bem
