@@ -29,10 +29,12 @@ import {
   reconcileClient, 
   matchSeguradora, 
   matchRamo, 
-  createClient, 
+  createClient,
+  createClientFromEdited,
   uploadPolicyPdf,
   validateImportItem 
 } from '@/services/policyImportService';
+import { useAppStore } from '@/store';
 
 interface ImportPoliciesModalProps {
   open: boolean;
@@ -73,6 +75,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   const { producers } = useSupabaseProducers();
   const { data: ramos = [] } = useSupabaseRamos();
   const { addPolicy } = usePolicies();
+  const activeBrokerageId = useAppStore(state => state.activeBrokerageId);
   
   const [step, setStep] = useState<Step>('upload');
   const [files, setFiles] = useState<File[]>([]);
@@ -503,21 +506,30 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       try {
         let clientId = item.clientId;
 
-        // Create client if new
+        // Create client if new - USA DADOS EDITADOS, NÃO DA IA!
         if (item.clientStatus === 'new') {
-          const newClient = await createClient(item.extracted.cliente, user.id);
+          console.log('📝 [CREATE] Criando cliente com dados editados:', item.clientName, item.clientCpfCnpj);
+          const newClient = await createClientFromEdited(
+            item.clientName,                              // Editado pelo usuário
+            item.clientCpfCnpj,                          // Editado pelo usuário
+            item.extracted.cliente.email,                 // Da IA (ainda não editável)
+            item.extracted.cliente.telefone,              // Da IA
+            item.extracted.cliente.endereco_completo,     // Da IA
+            user.id
+          );
           if (!newClient) {
             throw new Error('Falha ao criar cliente');
           }
           clientId = newClient.id;
         }
 
-        // Upload PDF with structured naming
+        // Upload PDF with structured naming - PASSA BROKERAGE ID
         const pdfUrl = await uploadPolicyPdf(
           item.file, 
           user.id,
           item.clientCpfCnpj || undefined,
-          item.numeroApolice || undefined
+          item.numeroApolice || undefined,
+          activeBrokerageId                              // Agora passa o brokerageId!
         );
 
         // Create policy using existing hook (which handles commission generation)
@@ -525,6 +537,14 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
         // Handle ORCAMENTO/PROPOSTA with specific status
         const isOrcamento = item.tipoDocumento === 'ORCAMENTO';
         const isProposta = item.tipoDocumento === 'PROPOSTA';
+        
+        console.log('💾 [SAVE] Salvando apólice:', {
+          clientId,
+          policyNumber: item.numeroApolice,
+          premiumValue: item.premioLiquido,
+          pdfUrl,
+          brokerageId: activeBrokerageId
+        });
         
         await addPolicy({
           clientId: clientId!,
@@ -541,6 +561,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           automaticRenewal: !isOrcamento && !isProposta,
           isBudget: isOrcamento,
           pdfUrl,
+          brokerageId: activeBrokerageId ? Number(activeBrokerageId) : undefined,
         });
 
         success++;
