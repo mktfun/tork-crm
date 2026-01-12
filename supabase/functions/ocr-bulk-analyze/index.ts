@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const OCR_SPACE_KEY = 'K82045193188957';
 
-// Keywords EXPANDIDAS para não perder NADA relevante
+// Keywords EXPANDIDAS para não perder NADA relevante - v3.1 "SNIPER"
 const KEYWORDS = [
   // Dados pessoais
   'NOME', 'CPF', 'CNPJ', 'SEGURADO', 'TITULAR', 'ESTIPULANTE', 'PROPONENTE',
@@ -20,9 +20,12 @@ const KEYWORDS = [
   // Vigência/Datas
   'VIGENCIA', 'INICIO', 'TERMINO', 'FIM', 'VALIDADE', 'EMISSAO',
   
-  // Valores financeiros
+  // Valores financeiros - SNIPER MODE
   'PREMIO', 'LIQUIDO', 'TOTAL', 'IOF', 'VALOR', 'PARCELA', 'COMISSAO',
-  'CUSTO', 'ADICIONAL', 'DESCONTO',
+  'CUSTO', 'ADICIONAL', 'DESCONTO', 'DEMONSTRATIVO', 'FINANCEIRO', 'MENSAL',
+  'PAGAMENTO', 'FORMA', 'CUSTO_APOLICE', 'CUSTO APOLICE',
+  'PRÊMIO LÍQUIDO', 'PREMIO LIQUIDO', 'PRÊMIO COMERCIAL', 'VALOR BASE',
+  'PREMIO LIQ', 'PRÊMIO LÍQ', 'LÍQUIDO', 'LIQ',
   
   // Identificação do produto
   'RAMO', 'CIA', 'SEGURADORA', 'COBERTURA', 'FRANQUIA', 'IS', 'LMI',
@@ -247,7 +250,7 @@ serve(async (req) => {
       .map(t => `\n\n=== DOCUMENTO: ${t.fileName} ===\n${t.text}\n`)
       .join('');
 
-    const systemPrompt = `Você é um ANALISTA SÊNIOR de seguros brasileiro com 20 anos de experiência.
+    const systemPrompt = `Você é um ANALISTA SÊNIOR de seguros brasileiro ESPECIALISTA em HDI, Porto Seguro, Azul e Allianz.
 Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 
 ## IDENTIFICAÇÃO DO TIPO DE DOCUMENTO
@@ -283,10 +286,33 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 - RESIDENCIAL: Número + Complemento ou CEP
 - VIDA/OUTROS: null
 
-## VALORES (ATENÇÃO MÁXIMA!)
-- premio_liquido: Valor BASE **ANTES** do IOF e taxas (procure por "Prêmio Líquido", "Premio Comercial")
-- premio_total: Valor FINAL com IOF e custos (procure por "Prêmio Total", "Total a Pagar")
+## 🎯 VALORES - REGRAS CRÍTICAS PARA HDI, PORTO, AZUL, ALLIANZ
+
+### PRÊMIO LÍQUIDO (MUITO IMPORTANTE!)
+- É o valor BASE **ANTES** do IOF e taxas adicionais
+- Procure por: "Prêmio Líquido", "Premio Comercial", "Valor Base", "Prêmio Líq", "Premio Liq"
+- **NÃO** confunda com "Prêmio Total" ou "Total a Pagar"
+- **NÃO** confunda com valor da PARCELA (é o prêmio dividido!)
+
+### PRÊMIO TOTAL
+- É o valor FINAL com IOF, custos e adicionais
+- Procure por: "Prêmio Total", "Total a Pagar", "Valor Total"
+
+### PARCELA vs LÍQUIDO
+- PARCELA = Prêmio dividido em N vezes (ex: "4x de R$ 500")
+- LÍQUIDO = Valor base total ANTES do parcelamento
+- Se encontrar "Forma de Pagamento: 4x de R$ 500", o LÍQUIDO é ~R$ 1.850 a 2.000 (NÃO R$ 500!)
+
+### PECULARIDADES POR SEGURADORA
+- HDI: "Demonstrativo" contém o prêmio líquido em linha separada
+- PORTO SEGURO: "Resumo do Seguro" tem os valores, atenção à "Parcela" vs "Total"
+- AZUL: "Quadro Resumo" mostra prêmio líquido e IOF separados
+- ALLIANZ: "Síntese" contém os valores totais
+
+### RETORNO (OBRIGATÓRIO)
 - AMBOS devem ser NUMBER puro! Exemplo: 1234.56 (NÃO "R$ 1.234,56")
+- Se o valor vier como "1.234,56", converta para 1234.56
+- Se só encontrar o total com IOF, calcule líquido = total / 1.0738 (aproximado)
 
 ## TÍTULO SUGERIDO (formato EXATO)
 "[PRIMEIRO_NOME] - [RAMO] ([OBJETO]) - [IDENTIFICACAO] - [SEGURADORA]"
@@ -294,6 +320,7 @@ Exemplos:
 - "João - Auto (Golf GTI) - ABC1D23 - Porto Seguro"
 - "Maria - Residencial (Apto) - São Paulo - Bradesco"
 - "Carlos - Vida - Mapfre"
+- "Luis - Auto (Corolla) - ABC1D23 - HDI - PROPOSTA" (incluir tipo se for proposta)
 
 ## TIPO DE OPERAÇÃO
 - NOVA: Primeiro contrato com este cliente/bem

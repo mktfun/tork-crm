@@ -192,13 +192,20 @@ export async function createClient(
   return newClient;
 }
 
-// Upload do PDF para o Storage
+// Upload do PDF para o Storage com nome estruturado
 export async function uploadPolicyPdf(
   file: File,
-  userId: string
+  userId: string,
+  cpfCnpj?: string,
+  numeroApolice?: string
 ): Promise<string | null> {
+  const timestamp = Date.now();
+  const cleanCpf = cpfCnpj?.replace(/[^\d]/g, '') || 'sem-cpf';
+  const cleanApolice = numeroApolice?.replace(/[^\w]/g, '') || 'sem-numero';
   const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}/${crypto.randomUUID()}.${fileExt}`;
+  
+  // Padrão: userId/cpf_cnpj/apolice_timestamp.pdf
+  const fileName = `${userId}/${cleanCpf}/${cleanApolice}_${timestamp}.${fileExt}`;
 
   const { data, error } = await supabase.storage
     .from('policy-docs')
