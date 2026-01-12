@@ -15,7 +15,8 @@ import {
   LucideIcon,
   Megaphone,
   Kanban,
-  Wallet
+  Wallet,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChangelogs } from '@/hooks/useChangelogs';
@@ -61,6 +62,7 @@ const menuSections = [
     title: 'Sistema',
     items: [
       { id: 'novidades', name: 'Novidades', icon: Megaphone, path: '/dashboard/novidades' },
+      { id: 'documentacao', name: 'Documentação', icon: BookOpen, path: '/dashboard/documentacao' },
       { id: 'settings', name: 'Configurações', icon: Settings, path: '/dashboard/settings' },
     ]
   }

@@ -35,6 +35,7 @@ import Novidades from "./pages/Novidades";
 import CRM from "./pages/CRM";
 import ChatTorkSettings from "./pages/settings/ChatTorkSettings";
 import PortalSettings from "./pages/settings/PortalSettings";
+import Documentation from "./pages/Documentation";
 
 // Portal do Cliente
 import PortalLogin from "./pages/portal/PortalLogin";
@@ -109,6 +110,7 @@ function App() {
                   <Route path="reports" element={<Reports />} />
                   <Route path="novidades" element={<Novidades />} />
                   <Route path="crm" element={<CRM />} />
+                  <Route path="documentacao" element={<Documentation />} />
                   <Route path="demo/mobile-menu" element={<ModernMobileMenuDemo />} />
                   
                   {/* Rotas de configurações com layout próprio */}

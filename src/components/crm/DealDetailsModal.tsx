@@ -287,7 +287,7 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
               {deal.chatwoot_conversation_id && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className="h-2 w-2 rounded-full bg-green-400" />
-                  <span>Sincronizado com Chat Tork</span>
+                  <span>Sincronizado com Tork</span>
                 </div>
               )}
             </>
@@ -295,12 +295,12 @@ export function DealDetailsModal({ deal, open, onOpenChange }: DealDetailsModalP
 
           {/* Actions */}
           <div className="flex flex-col gap-2 pt-4 border-t border-border">
-            {/* Chat Tork Button */}
+            {/* Tork Button */}
             {chatTorkUrl && (
               <Button asChild variant="outline" className="w-full">
                 <a href={chatTorkUrl} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="h-4 w-4 mr-2" />
-                  Abrir no Chat Tork
+                  Abrir no Tork
                   <ExternalLink className="h-3.5 w-3.5 ml-2" />
                 </a>
               </Button>
