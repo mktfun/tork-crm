@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const OCR_SPACE_KEY = 'K82045193188957';
 
-// Keywords EXPANDIDAS para não perder NADA relevante - v3.1 "SNIPER"
+// Keywords EXPANDIDAS para não perder NADA relevante - v3.2 "SNIPER PLUS"
 const KEYWORDS = [
   // Dados pessoais
   'NOME', 'CPF', 'CNPJ', 'SEGURADO', 'TITULAR', 'ESTIPULANTE', 'PROPONENTE',
@@ -44,6 +44,28 @@ const KEYWORDS = [
   // Empresarial
   'EMPRESA', 'RAZAO SOCIAL', 'RC', 'RESPONSABILIDADE'
 ];
+
+// ======== v3.2 - HEURÍSTICA DE QUALIDADE DO TEXTO ========
+function evaluateTextQuality(text: string): { score: number; keywordHits: number; digitRatio: number; printableRatio: number } {
+  const upperText = text.toUpperCase();
+  
+  // 1. Contar keywords encontradas
+  const keywordHits = KEYWORDS.filter(kw => upperText.includes(kw)).length;
+  
+  // 2. Proporção de dígitos e valores monetários
+  const digitMatches = text.match(/\d/g) || [];
+  const monetaryMatches = text.match(/R\$\s*[\d.,]+|\d{1,3}[.]\d{3}[,]\d{2}/g) || [];
+  const digitRatio = (digitMatches.length + monetaryMatches.length * 10) / Math.max(text.length, 1);
+  
+  // 3. Proporção de caracteres imprimíveis legíveis
+  const printableChars = text.match(/[A-Za-zÀ-ÿ0-9\s.,\-:;/()@]/g) || [];
+  const printableRatio = printableChars.length / Math.max(text.length, 1);
+  
+  // Score composto: keywords têm peso maior
+  const score = (keywordHits * 5) + (digitRatio * 100) + (printableRatio * 20);
+  
+  return { score, keywordHits, digitRatio, printableRatio };
+}
 
 // Função para filtrar linhas essenciais com FALLBACK inteligente
 function filterEssentialText(text: string, maxChars: number = 15000): string {
@@ -135,13 +157,51 @@ function extractTextFromPdfBuffer(buffer: Uint8Array): string {
   }
 }
 
+// ======== v3.2 - GERADOR DE TÍTULO INTELIGENTE NO BACKEND ========
+function generateSmartTitle(policy: any): string {
+  // Extrair primeiro nome do cliente
+  const clientName = policy.nome_cliente || 'Cliente';
+  const firstName = clientName.split(' ')[0].replace(/NÃO|IDENTIFICADO|TEXTO|SEGURO/gi, '').trim() || 'Cliente';
+  
+  // Ramo
+  const ramo = policy.ramo_seguro || 'Seguro';
+  
+  // Objeto resumido
+  let objeto = '';
+  if (policy.objeto_segurado) {
+    // Para auto: pegar marca/modelo
+    const objParts = policy.objeto_segurado.split(' ').slice(0, 2);
+    objeto = objParts.join(' ').substring(0, 20);
+  } else if (policy.descricao_bem) {
+    objeto = policy.descricao_bem.substring(0, 20);
+  }
+  
+  // Identificação (placa, CEP, etc)
+  const identificacao = policy.identificacao_adicional || '';
+  
+  // Seguradora
+  const seguradora = policy.nome_seguradora || 'Seguradora';
+  
+  // Tipo de documento (só adiciona se não for apólice normal)
+  const tipo = policy.tipo_documento && policy.tipo_documento !== 'APOLICE' ? ` - ${policy.tipo_documento}` : '';
+  
+  // Montar título
+  let titulo = `${firstName} - ${ramo}`;
+  if (objeto) titulo += ` (${objeto})`;
+  if (identificacao) titulo += ` - ${identificacao}`;
+  titulo += ` - ${seguradora}`;
+  titulo += tipo;
+  
+  return titulo.substring(0, 100); // Limitar tamanho
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   const totalStartTime = performance.now();
-  console.log("🚀 [BULK-OCR] Iniciando processamento híbrido...");
+  console.log("🚀 [BULK-OCR v3.2] Iniciando processamento com heurística de qualidade...");
 
   try {
     const { files } = await req.json();
@@ -152,12 +212,13 @@ serve(async (req) => {
 
     console.log(`📁 [BULK-OCR] Recebidos ${files.length} arquivos`);
 
-    const allTexts: { fileName: string; text: string }[] = [];
+    const allTexts: { fileName: string; text: string; source: 'LOCAL' | 'OCR' }[] = [];
     const ocrErrors: string[] = [];
 
     for (const [index, file] of files.entries()) {
       const fileStart = performance.now();
       let extractedText = "";
+      let textSource: 'LOCAL' | 'OCR' = 'LOCAL';
 
       try {
         // Limpeza robusta do base64
@@ -177,19 +238,39 @@ serve(async (req) => {
 
         // --- TENTATIVA 1: EXTRAÇÃO LOCAL RÁPIDA (regex-based) ---
         console.log(`📖 [LOCAL] Tentando extração direta: ${file.fileName}`);
-        extractedText = extractTextFromPdfBuffer(binaryData);
+        const localText = extractTextFromPdfBuffer(binaryData);
         
-        if (extractedText.length > 100) {
-          console.log(`✅ [LOCAL] Sucesso! ${file.fileName}: ${extractedText.length} chars em ${Math.round(performance.now() - fileStart)}ms`);
+        // ======== v3.2 - AVALIAR QUALIDADE DO TEXTO LOCAL ========
+        const quality = evaluateTextQuality(localText);
+        console.log(`🔍 [QUALIDADE] ${file.fileName}: score=${quality.score.toFixed(1)}, keywords=${quality.keywordHits}, digits=${(quality.digitRatio * 100).toFixed(1)}%, printable=${(quality.printableRatio * 100).toFixed(1)}%`);
+        
+        // REGRA: aceitar LOCAL apenas se tiver boa qualidade
+        // Mínimo: 3 keywords encontradas E score > 30 E printable > 60%
+        const isLocalGoodEnough = quality.keywordHits >= 3 && quality.score > 30 && quality.printableRatio > 0.6;
+        
+        if (localText.length > 100 && isLocalGoodEnough) {
+          extractedText = localText;
+          textSource = 'LOCAL';
+          console.log(`✅ [LOCAL] Texto ACEITO! ${file.fileName}: ${extractedText.length} chars, score=${quality.score.toFixed(1)} em ${Math.round(performance.now() - fileStart)}ms`);
         } else {
-          console.log(`⚠️ [LOCAL] Texto insuficiente (${extractedText.length} chars), tentando OCR...`);
+          // Texto local é lixo ou insuficiente - forçar OCR
+          const reason = localText.length <= 100 
+            ? `texto curto (${localText.length} chars)` 
+            : `baixa qualidade (score=${quality.score.toFixed(1)}, keywords=${quality.keywordHits})`;
+          console.log(`⚠️ [LOCAL] REJEITADO: ${reason}, forçando OCR...`);
           
           // --- TENTATIVA 2: OCR.SPACE ---
           if (binaryData.length > 1024 * 1024) {
             console.error(`❌ [OCR] ${file.fileName} é muito grande (${fileSizeKB}KB > 1024KB) para OCR gratuito`);
             ocrErrors.push(`${file.fileName}: arquivo muito grande para OCR (${fileSizeKB}KB)`);
+            // Usar texto local mesmo ruim como fallback
+            if (localText.length > 50) {
+              extractedText = localText;
+              textSource = 'LOCAL';
+              console.log(`⚠️ [FALLBACK] Usando texto local ruim como último recurso`);
+            }
           } else {
-            console.log(`🔍 [OCR] Tentando OCR.space para ${file.fileName}...`);
+            console.log(`🔍 [OCR] Chamando OCR.space para ${file.fileName}...`);
             
             const formData = new FormData();
             formData.append('apikey', OCR_SPACE_KEY);
@@ -208,10 +289,21 @@ serve(async (req) => {
             
             if (!ocrData.IsErroredOnProcessing && ocrData.ParsedResults?.[0]?.ParsedText) {
               extractedText = ocrData.ParsedResults[0].ParsedText;
-              console.log(`✅ [OCR] Sucesso! ${file.fileName}: ${extractedText.length} chars em ${Math.round(performance.now() - fileStart)}ms`);
+              textSource = 'OCR';
+              
+              // Avaliar qualidade do OCR também
+              const ocrQuality = evaluateTextQuality(extractedText);
+              console.log(`✅ [OCR] Sucesso! ${file.fileName}: ${extractedText.length} chars, score=${ocrQuality.score.toFixed(1)}, keywords=${ocrQuality.keywordHits} em ${Math.round(performance.now() - fileStart)}ms`);
             } else {
               console.error(`❌ [OCR] Falha em ${file.fileName}:`, ocrData.ErrorMessage?.[0] || 'Erro desconhecido');
               ocrErrors.push(`${file.fileName}: ${ocrData.ErrorMessage?.[0] || 'Falha no OCR'}`);
+              
+              // Usar texto local como último recurso
+              if (localText.length > 50) {
+                extractedText = localText;
+                textSource = 'LOCAL';
+                console.log(`⚠️ [FALLBACK] OCR falhou, usando texto local como último recurso`);
+              }
             }
           }
         }
@@ -221,7 +313,11 @@ serve(async (req) => {
           // Filtra apenas linhas essenciais para economizar tokens da IA
           const filteredText = filterEssentialText(extractedText);
           console.log(`🔎 [FILTRO] ${file.fileName}: ${extractedText.length} → ${filteredText.length} chars (${Math.round(100 * filteredText.length / extractedText.length)}%)`);
-          allTexts.push({ fileName: file.fileName, text: filteredText });
+          
+          // Log preview do texto para debug
+          console.log(`📝 [PREVIEW] ${file.fileName} (primeiros 500 chars):\n${filteredText.substring(0, 500)}...`);
+          
+          allTexts.push({ fileName: file.fileName, text: filteredText, source: textSource });
         }
 
       } catch (err: any) {
@@ -231,7 +327,7 @@ serve(async (req) => {
     }
 
     const ocrDuration = ((performance.now() - totalStartTime) / 1000).toFixed(2);
-    console.log(`📊 [EXTRAÇÃO] Fase concluída em ${ocrDuration}s - ${allTexts.length}/${files.length} arquivos extraídos`);
+    console.log(`📊 [EXTRAÇÃO] Fase concluída em ${ocrDuration}s - ${allTexts.length}/${files.length} arquivos (LOCAL: ${allTexts.filter(t => t.source === 'LOCAL').length}, OCR: ${allTexts.filter(t => t.source === 'OCR').length})`);
 
     if (allTexts.length === 0) {
       throw new Error(`Nenhum texto pôde ser extraído. Erros: ${ocrErrors.join('; ')}`);
@@ -265,7 +361,7 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 3. CPF: formato XXX.XXX.XXX-XX | CNPJ: formato XX.XXX.XXX/XXXX-XX
 4. Datas: formato YYYY-MM-DD
 5. VALORES NUMÉRICOS: SEM "R$", SEM pontos de milhar. Use PONTO como decimal (ex: 1234.56)
-6. Se não encontrar um campo, use null
+6. Se não encontrar um campo, use null (NÃO use 0 para valores não encontrados!)
 7. arquivo_origem deve conter EXATAMENTE o nome do arquivo fonte
 
 ## EXTRAÇÃO DE CLIENTE (COMPLETA!)
@@ -274,6 +370,7 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 - email: E-mail de contato (procure em todo o documento)
 - telefone: Telefone/Celular (procure em todo o documento)
 - endereco_completo: Endereço COMPLETO incluindo CEP, cidade e estado
+- cep: CEP do endereço (formato XXXXX-XXX ou XXXXXXXX)
 
 ## EXTRAÇÃO DO OBJETO SEGURADO (CRÍTICO!)
 - AUTO: "Marca Modelo Versão Ano" (Ex: "VW Golf GTI 2024")
@@ -282,7 +379,7 @@ Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 - EMPRESARIAL: "Tipo - Atividade" (Ex: "Comércio - Padaria")
 
 ## IDENTIFICAÇÃO ADICIONAL
-- AUTO: PLACA do veículo (formato ABC1D23 ou ABC-1234)
+- AUTO: PLACA do veículo (formato ABC1D23 ou ABC-1234) - CAMPO OBRIGATÓRIO PARA AUTO!
 - RESIDENCIAL: Número + Complemento ou CEP
 - VIDA/OUTROS: null
 
@@ -314,6 +411,7 @@ Se você encontrar "4x de R$ 500" ou "Parcela: R$ 500", isso é PARCELA, NÃO é
 - Retorne NUMBER puro! Exemplo: 1234.56 (NÃO "R$ 1.234,56")
 - Se o valor vier como "1.234,56", converta para 1234.56
 - NUNCA retorne o valor da parcela como prêmio líquido!
+- SE NÃO ENCONTRAR O VALOR, RETORNE null, NÃO RETORNE 0!
 
 ## TÍTULO SUGERIDO (formato EXATO)
 "[PRIMEIRO_NOME] - [RAMO] ([OBJETO]) - [IDENTIFICACAO] - [SEGURADORA][ - TIPO]"
@@ -358,6 +456,7 @@ Se for ENDOSSO, preencha endosso_motivo com o tipo:
                   email: { type: 'string', nullable: true },
                   telefone: { type: 'string', nullable: true },
                   endereco_completo: { type: 'string', nullable: true, description: 'Endereço completo incluindo CEP' },
+                  cep: { type: 'string', nullable: true, description: 'CEP do endereço' },
                   
                   // Documento
                   tipo_documento: { type: 'string', enum: ['APOLICE', 'PROPOSTA', 'ORCAMENTO', 'ENDOSSO'], nullable: true },
@@ -375,11 +474,13 @@ Se for ENDOSSO, preencha endosso_motivo com o tipo:
                   // Objeto segurado
                   descricao_bem: { type: 'string', nullable: true },
                   objeto_segurado: { type: 'string', nullable: true, description: 'Ex: VW Golf GTI 2024' },
-                  identificacao_adicional: { type: 'string', nullable: true, description: 'Placa, CEP ou outro identificador' },
+                  identificacao_adicional: { type: 'string', nullable: true, description: 'PLACA do veículo, CEP ou outro identificador' },
+                  placa: { type: 'string', nullable: true, description: 'Placa do veículo (formato ABC1D23 ou ABC-1234)' },
+                  modelo_veiculo: { type: 'string', nullable: true, description: 'Marca e modelo do veículo' },
                   
-                  // Valores (NUMBERS puros!)
-                  premio_liquido: { type: 'number', description: 'Valor ANTES do IOF, sem R$' },
-                  premio_total: { type: 'number', description: 'Valor TOTAL com IOF, sem R$' },
+                  // Valores (NUMBERS puros! null se não encontrar)
+                  premio_liquido: { type: 'number', nullable: true, description: 'Valor ANTES do IOF, sem R$. null se não encontrar!' },
+                  premio_total: { type: 'number', nullable: true, description: 'Valor TOTAL com IOF, sem R$. null se não encontrar!' },
                   
                   // Metadados
                   titulo_sugerido: { type: 'string', description: 'NOME - RAMO (OBJETO) - ID - CIA' },
@@ -411,94 +512,90 @@ Se for ENDOSSO, preencha endosso_motivo com o tipo:
 TEXTO EXTRAÍDO:
 ${aggregatedText}
 
-Retorne um array JSON com os seguintes campos para cada documento:
-{
-  "nome_cliente": "string",
-  "cpf_cnpj": "string | null",
-  "email": "string | null",
-  "telefone": "string | null",
-  "numero_apolice": "string",
-  "nome_seguradora": "string",
-  "ramo_seguro": "string (normalizado: Auto, Residencial, Vida, etc)",
-  "descricao_bem": "string | null",
-  "objeto_segurado": "string | null (marca/modelo do carro, tipo de imóvel, etc)",
-  "identificacao_adicional": "string | null (placa do veículo ou endereço resumido)",
-  "tipo_operacao": "RENOVACAO | NOVA | ENDOSSO",
-  "titulo_sugerido": "NOME - RAMO (OBJETO - IDENTIFICACAO)",
-  "data_inicio": "YYYY-MM-DD",
-  "data_fim": "YYYY-MM-DD",
-  "premio_liquido": number,
-  "premio_total": number,
-  "arquivo_origem": "nome do arquivo fonte"
-}` 
+IMPORTANTE: 
+- Para valores monetários (premio_liquido, premio_total), retorne NUMBER ou null. NUNCA retorne 0 se não encontrar!
+- Para placa de veículo, procure padrões ABC1D23 ou ABC-1234
+- O arquivo_origem deve ser EXATAMENTE igual ao nome após "=== DOCUMENTO: ... ==="
+
+Retorne um array JSON com os campos especificados.`
           }
         ],
         tools: [tool],
         tool_choice: { type: 'function', function: { name: 'extract_policies' } }
-      })
+      }),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error(`❌ [IA] Erro na API:`, aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        throw new Error('Rate limit da IA atingido. Aguarde alguns segundos.');
-      }
-      if (aiResponse.status === 402) {
-        throw new Error('Créditos insuficientes. Adicione créditos na sua conta Lovable.');
-      }
-      
-      throw new Error(`Erro na IA: ${aiResponse.status}`);
+      console.error('❌ [IA] Erro na resposta:', aiResponse.status, errorText);
+      throw new Error(`Erro na IA: ${aiResponse.status} - ${errorText.substring(0, 200)}`);
     }
 
     const aiData = await aiResponse.json();
     const aiDuration = ((performance.now() - aiStartTime) / 1000).toFixed(2);
+    console.log(`⏱️ [IA] Resposta recebida em ${aiDuration}s`);
+
+    // Extrair dados do function call
+    let extractedPolicies: any[] = [];
     
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      console.error('AI response:', JSON.stringify(aiData, null, 2));
-      throw new Error('IA não retornou dados estruturados');
+    if (aiData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments) {
+      try {
+        const args = JSON.parse(aiData.choices[0].message.tool_calls[0].function.arguments);
+        extractedPolicies = args.policies || [];
+        
+        // ======== v3.2 - PÓS-PROCESSAMENTO: GERAR TÍTULOS INTELIGENTES NO BACKEND ========
+        extractedPolicies = extractedPolicies.map(policy => {
+          // Recalcular título para garantir consistência
+          const smartTitle = generateSmartTitle(policy);
+          
+          // Se a IA retornou placa, usar como identificacao_adicional
+          if (policy.placa && !policy.identificacao_adicional) {
+            policy.identificacao_adicional = policy.placa;
+          }
+          
+          return {
+            ...policy,
+            titulo_sugerido: smartTitle
+          };
+        });
+        
+        console.log(`✅ [IA] Extraídas ${extractedPolicies.length} apólices com títulos recalculados`);
+      } catch (parseError) {
+        console.error('❌ [IA] Erro ao parsear resposta:', parseError);
+        throw new Error('Falha ao processar resposta da IA');
+      }
+    } else {
+      console.error('❌ [IA] Formato de resposta inesperado:', JSON.stringify(aiData).substring(0, 500));
+      throw new Error('Resposta da IA em formato inesperado');
     }
 
-    const extractedData = JSON.parse(toolCall.function.arguments);
-    const finalData = extractedData.policies || [];
-
     const totalDuration = ((performance.now() - totalStartTime) / 1000).toFixed(2);
-    console.log(`✅ [SUCESSO] ${finalData.length} apólices extraídas em ${totalDuration}s (Extração: ${ocrDuration}s, IA: ${aiDuration}s)`);
+    console.log(`🏁 [BULK-OCR v3.2] Concluído em ${totalDuration}s - ${extractedPolicies.length} apólices extraídas`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      data: finalData,
-      processedFiles: allTexts.map(t => t.fileName),
-      errors: ocrErrors,
-      stats: {
-        total: files.length,
-        success: allTexts.length,
-        failed: ocrErrors.length
-      },
-      metrics: {
-        totalDurationSec: totalDuration,
-        ocrDurationSec: ocrDuration,
-        aiDurationSec: aiDuration,
-        filesProcessed: allTexts.length,
-        policiesExtracted: finalData.length
-      }
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: extractedPolicies,
+        processed_files: allTexts.map(t => `${t.fileName} (${t.source})`),
+        errors: ocrErrors.length > 0 ? ocrErrors : undefined,
+        metrics: {
+          ocr_duration_seconds: parseFloat(ocrDuration),
+          ai_duration_seconds: parseFloat(aiDuration),
+          total_duration_seconds: parseFloat(totalDuration)
+        }
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error: any) {
-    const totalDuration = ((performance.now() - totalStartTime) / 1000).toFixed(2);
-    console.error(`💀 [FATAL] Erro após ${totalDuration}s:`, error.message);
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message,
-      metrics: { totalDurationSec: totalDuration }
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('💥 [BULK-OCR] Erro fatal:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || 'Erro desconhecido',
+        data: []
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    );
   }
 });

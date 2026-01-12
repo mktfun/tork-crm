@@ -154,8 +154,8 @@ export function useSupabasePolicies() {
     onSuccess: async (newPolicy) => {
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       
-      // 🎯 **LÓGICA CENTRALIZADA** - Gerar comissão apenas para apólices que não são orçamento
-      if (newPolicy.status !== 'Orçamento') {
+      // 🎯 **LÓGICA CENTRALIZADA** - Gerar comissão APENAS para apólices ATIVAS (não orçamento, não proposta)
+      if (newPolicy.status === 'Ativa') {
         try {
           console.log('💰 [CENTRAL] Criando comissão para apólice:', newPolicy.policyNumber, 'Status:', newPolicy.status);
           
@@ -175,7 +175,7 @@ export function useSupabasePolicies() {
           console.error('❌ [CENTRAL] Erro ao criar transação de comissão:', commissionError);
         }
       } else {
-        console.log('📋 [CENTRAL] Orçamento criado, sem geração de comissão:', newPolicy.policyNumber);
+        console.log('📋 [CENTRAL] Apólice não ativa (status:', newPolicy.status, '), sem geração de comissão:', newPolicy.policyNumber);
       }
 
       console.log('✅ Apólice criada:', newPolicy);
@@ -415,47 +415,9 @@ export function useSupabasePolicies() {
     onSuccess: async (updatedPolicy) => {
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       
-      // 🎯 **COMISSÃO VIA CENTRALIZADA** - Criar comissão usando a função centralizada
-      try {
-        const policy: Policy = {
-          id: updatedPolicy.id,
-          clientId: updatedPolicy.client_id,
-          policyNumber: updatedPolicy.policy_number,
-          insuranceCompany: updatedPolicy.insurance_company,
-          type: updatedPolicy.type,
-          insuredAsset: updatedPolicy.insured_asset,
-          premiumValue: typeof updatedPolicy.premium_value === 'string' ? parseFloat(updatedPolicy.premium_value) : updatedPolicy.premium_value,
-          commissionRate: typeof updatedPolicy.commission_rate === 'string' ? parseFloat(updatedPolicy.commission_rate) : updatedPolicy.commission_rate,
-          status: updatedPolicy.status as 'Aguardando Apólice',
-          expirationDate: updatedPolicy.expiration_date,
-          createdAt: updatedPolicy.created_at,
-          userId: updatedPolicy.user_id,
-          producerId: updatedPolicy.producer_id,
-          brokerageId: updatedPolicy.brokerage_id,
-          startDate: updatedPolicy.start_date,
-          bonus_class: updatedPolicy.bonus_class,
-          automaticRenewal: updatedPolicy.automatic_renewal
-        };
-
-        // Buscar contexto para descrição rica
-        const context = await fetchPolicyContext(policy.clientId, policy.type);
-
-        console.log('💰 [CONVERT] Gerando comissão para conversão de orçamento:', policy.policyNumber);
-        
-        // 1. Criar na tabela legada
-        await gerarTransacaoDeComissao(policy);
-        
-        // 2. Criar no ERP moderno
-        await gerarTransacaoDeComissaoERP(policy, context.clientName, context.ramoName);
-        
-        queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-        console.log('✅ [CONVERT] Comissões criadas (legado + ERP) para conversão:', policy.policyNumber);
-      } catch (commissionError) {
-        console.error('❌ [CONVERT] Erro ao criar transação de comissão:', commissionError);
-      }
-
-      console.log('✅ Orçamento convertido em apólice:', updatedPolicy);
+      // 🎯 **SEM COMISSÃO** - Conversão para "Aguardando Apólice" NÃO gera comissão
+      // Comissão só é gerada quando status muda para "Ativa" (via updatePolicy ou ativarEAnexarPdf)
+      console.log('📋 [CONVERT] Orçamento convertido para "Aguardando Apólice" - sem comissão até ativação:', updatedPolicy.policy_number);
     },
     onError: (error) => {
       console.error('Erro ao converter orçamento:', error);
