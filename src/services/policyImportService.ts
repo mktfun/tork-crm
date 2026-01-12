@@ -188,7 +188,7 @@ function extractCityState(endereco: string | null | undefined): { city: string |
   return { city: null, state: null };
 }
 
-// Cria um novo cliente com dados completos
+// Cria um novo cliente com dados completos (usa dados da IA)
 export async function createClient(
   data: ExtractedPolicyData['cliente'] & { cep?: string | null },
   userId: string
@@ -219,6 +219,45 @@ export async function createClient(
     return null;
   }
 
+  return newClient;
+}
+
+// Cria cliente usando dados EDITADOS da tabela (não da IA)
+// Isso garante que o corretor pode corrigir nomes/CPFs antes de salvar
+export async function createClientFromEdited(
+  clientName: string,
+  cpfCnpj: string | null,
+  email: string | null,
+  telefone: string | null,
+  endereco: string | null,
+  userId: string
+): Promise<{ id: string } | null> {
+  const cep = extractCep(endereco);
+  const { city, state } = extractCityState(endereco);
+  
+  const { data: newClient, error } = await supabase
+    .from('clientes')
+    .insert({
+      user_id: userId,
+      name: clientName,
+      cpf_cnpj: cpfCnpj,
+      email: email || '',
+      phone: telefone || '',
+      address: endereco || '',
+      cep: cep,
+      city: city,
+      state: state,
+      status: 'Ativo',
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Error creating client from edited data:', error);
+    return null;
+  }
+
+  console.log('✅ [CREATE] Cliente criado com dados editados:', clientName, cpfCnpj);
   return newClient;
 }
 
