@@ -574,6 +574,55 @@ DEPENDÊNCIAS CRÍTICAS:
   animation-delay: 4s;
 }
 
+/* Premium Glow Button Effect */
+.glow-button {
+  position: relative;
+}
+
+.glow-button::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(99, 102, 241, 0.4));
+  border-radius: inherit;
+  filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.glow-button:hover::before {
+  opacity: 1;
+}
+
+/* CTA Glow Button with Pulse */
+.glow-button-cta {
+  position: relative;
+}
+
+.glow-button-cta::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(99, 102, 241, 0.5));
+  border-radius: inherit;
+  filter: blur(20px);
+  opacity: 0.6;
+  animation: glow-pulse 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
 /* MODERN MOBILE MENU COMPONENT STYLES */
 :root {
   --component-inactive-color: var(--muted-foreground);
