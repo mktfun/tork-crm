@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 export interface CRMStage {
   id: string;
   user_id: string;
+  pipeline_id: string | null;
   name: string;
   color: string;
   chatwoot_label: string | null;
@@ -59,18 +60,24 @@ const PRESET_COLORS = [
 
 export { PRESET_COLORS };
 
-export function useCRMStages() {
+export function useCRMStages(pipelineId: string | null = null) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const stagesQuery = useQuery({
-    queryKey: ['crm-stages', user?.id],
+    queryKey: ['crm-stages', user?.id, pipelineId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('crm_stages')
         .select('*')
-        .eq('user_id', user!.id)
-        .order('position', { ascending: true });
+        .eq('user_id', user!.id);
+
+      // Se pipelineId for fornecido, filtrar por ele
+      if (pipelineId) {
+        query = query.eq('pipeline_id', pipelineId);
+      }
+
+      const { data, error } = await query.order('position', { ascending: true });
 
       if (error) throw error;
       return data as CRMStage[];
@@ -79,10 +86,17 @@ export function useCRMStages() {
   });
 
   const initializeStages = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (targetPipelineId?: string) => {
+      const pId = targetPipelineId || pipelineId;
+      
+      if (!pId) {
+        throw new Error('Pipeline ID é obrigatório para criar etapas');
+      }
+
       const stagesToInsert = DEFAULT_STAGES.map(stage => ({
         ...stage,
-        user_id: user!.id
+        user_id: user!.id,
+        pipeline_id: pId
       }));
 
       const { data, error } = await supabase
@@ -104,7 +118,13 @@ export function useCRMStages() {
   });
 
   const createStage = useMutation({
-    mutationFn: async (stage: { name: string; color: string }) => {
+    mutationFn: async (stage: { name: string; color: string; pipeline_id?: string }) => {
+      const pId = stage.pipeline_id || pipelineId;
+      
+      if (!pId) {
+        throw new Error('Pipeline ID é obrigatório para criar etapa');
+      }
+
       const currentStages = stagesQuery.data || [];
       const maxPosition = currentStages.length;
 
@@ -112,6 +132,7 @@ export function useCRMStages() {
         .from('crm_stages')
         .insert({
           user_id: user!.id,
+          pipeline_id: pId,
           name: stage.name,
           color: stage.color,
           chatwoot_label: stage.name.toLowerCase().replace(/\s+/g, '_'),
@@ -222,26 +243,36 @@ export function useCRMStages() {
   };
 }
 
-export function useCRMDeals() {
+export function useCRMDeals(pipelineId: string | null = null) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Primeiro buscar as stages do pipeline para filtrar deals
+  const { stages } = useCRMStages(pipelineId);
+  const stageIds = stages.map(s => s.id);
+
   const dealsQuery = useQuery({
-    queryKey: ['crm-deals', user?.id],
+    queryKey: ['crm-deals', user?.id, pipelineId, stageIds],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('crm_deals')
         .select(`
           *,
           client:clientes(id, name, phone, email)
         `)
-        .eq('user_id', user!.id)
-        .order('position', { ascending: true });
+        .eq('user_id', user!.id);
+
+      // Se temos stageIds, filtrar por eles
+      if (pipelineId && stageIds.length > 0) {
+        query = query.in('stage_id', stageIds);
+      }
+
+      const { data, error } = await query.order('position', { ascending: true });
 
       if (error) throw error;
       return data as CRMDeal[];
     },
-    enabled: !!user
+    enabled: !!user && (pipelineId === null || stageIds.length > 0)
   });
 
   // Subscribe to realtime updates
