@@ -100,16 +100,22 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
     onOpenChange(false);
   };
 
-  // Handle file selection
+  // Handle file selection with 5MB limit
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
-    const validFiles = selectedFiles.filter(file => 
-      file.type === 'application/pdf' || file.type.startsWith('image/')
-    );
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     
-    if (validFiles.length !== selectedFiles.length) {
-      toast.warning('Alguns arquivos foram ignorados. Apenas PDFs e imagens são aceitos.');
-    }
+    const validFiles = selectedFiles.filter(file => {
+      if (file.size > MAX_SIZE) {
+        toast.warning(`${file.name} ignorado: maior que 5MB`);
+        return false;
+      }
+      if (!(file.type === 'application/pdf' || file.type.startsWith('image/'))) {
+        toast.warning(`${file.name} ignorado: apenas PDFs e imagens são aceitos.`);
+        return false;
+      }
+      return true;
+    });
     
     setFiles(prev => [...prev, ...validFiles]);
   };
@@ -441,16 +447,22 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           clientId = newClient.id;
         }
 
-        // Upload PDF
-        const pdfUrl = await uploadPolicyPdf(item.file, user.id);
+        // Upload PDF with structured naming
+        const pdfUrl = await uploadPolicyPdf(
+          item.file, 
+          user.id,
+          item.clientCpfCnpj || undefined,
+          item.numeroApolice || undefined
+        );
 
         // Create policy using existing hook (which handles commission generation)
+        // Use titulo_sugerido as insuredAsset if available
         await addPolicy({
           clientId: clientId!,
           policyNumber: item.numeroApolice,
           insuranceCompany: item.seguradoraId!,
           type: item.ramoId!,
-          insuredAsset: item.objetoSegurado,
+          insuredAsset: item.tituloSugerido || item.objetoSegurado,
           premiumValue: item.premioLiquido,
           commissionRate: item.commissionRate,
           startDate: item.dataInicio,
@@ -745,10 +757,16 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                   <TableBody>
                     {items.map((item) => (
                       <TableRow key={item.id} className={item.processError ? 'bg-red-900/20' : !item.isValid ? 'bg-yellow-900/10' : ''}>
-                        {/* PDF Thumbnail */}
+                        {/* PDF Thumbnail with attachment indicator */}
                         <TableCell>
-                          <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-purple-400" />
+                          <div className="relative">
+                            <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center">
+                              <FileText className="w-5 h-5 text-purple-400" />
+                            </div>
+                            {/* Indicador de anexo 📎 */}
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
+                              <span className="text-[8px]">📎</span>
+                            </div>
                           </div>
                         </TableCell>
 
