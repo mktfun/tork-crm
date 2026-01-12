@@ -90,3 +90,34 @@ export interface PolicyImportResult {
     error?: string;
   }[];
 }
+
+// Dados extraídos pelo OCR Bulk
+export interface BulkOCRExtractedPolicy {
+  nome_cliente: string;
+  cpf_cnpj: string | null;
+  email: string | null;
+  telefone: string | null;
+  numero_apolice: string;
+  nome_seguradora: string;
+  ramo_seguro: string;
+  descricao_bem: string | null;
+  data_inicio: string;
+  data_fim: string;
+  premio_liquido: number;
+  premio_total: number;
+  arquivo_origem: string;
+}
+
+// Resposta da Edge Function ocr-bulk-analyze
+export interface BulkOCRResponse {
+  success: boolean;
+  data?: BulkOCRExtractedPolicy[];
+  processedFiles?: string[];
+  errors?: Array<{ fileName: string; error: string }>;
+  stats?: {
+    total: number;
+    success: number;
+    failed: number;
+  };
+  error?: string;
+}

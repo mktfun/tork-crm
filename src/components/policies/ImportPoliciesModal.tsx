@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, CreditCard, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
@@ -20,7 +20,9 @@ import { usePolicies } from '@/hooks/useAppData';
 import { 
   ExtractedPolicyData, 
   PolicyImportItem, 
-  AnalyzePolicyResult 
+  AnalyzePolicyResult,
+  BulkOCRExtractedPolicy,
+  BulkOCRResponse
 } from '@/types/policyImport';
 import { 
   reconcileClient, 
@@ -38,6 +40,12 @@ interface ImportPoliciesModalProps {
 
 type Step = 'upload' | 'processing' | 'review' | 'complete';
 type FileProcessingStatus = 'pending' | 'processing' | 'success' | 'error' | 'rate_limited';
+type ProcessingMode = 'standard' | 'bulk-ocr';
+type BulkProcessingPhase = 'ocr' | 'ai' | 'reconciling';
+
+// OCR.space rate limits (free tier)
+const OCR_BATCH_SIZE = 10;        // Process 10 files per batch
+const DELAY_BETWEEN_BATCHES = 20000; // 20s between batches (180 req/hour = 3 req/min)
 
 export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalProps) {
   const { user } = useAuth();
@@ -60,6 +68,14 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   // Document type toggle
   const [documentType, setDocumentType] = useState<'policy' | 'card'>('policy');
   
+  // Processing mode: standard (one-by-one) or bulk-ocr (batch with OCR.space)
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>('bulk-ocr');
+  
+  // Bulk OCR progress state
+  const [bulkPhase, setBulkPhase] = useState<BulkProcessingPhase>('ocr');
+  const [bulkBatchIndex, setBulkBatchIndex] = useState(0);
+  const [bulkTotalBatches, setBulkTotalBatches] = useState(0);
+  
   // Processing constants
   const DELAY_BETWEEN_FILES = 5000; // 5 seconds between files
   const BACKOFF_ON_429 = 15000; // 15 seconds on rate limit
@@ -77,6 +93,10 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
     setBatchCommissionRate('');
     setProcessingStatus(new Map());
     setDocumentType('policy');
+    setProcessingMode('bulk-ocr');
+    setBulkPhase('ocr');
+    setBulkBatchIndex(0);
+    setBulkTotalBatches(0);
   }, []);
 
   const handleClose = () => {
@@ -264,8 +284,205 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
     }
   };
 
-  // Process files with OCR - Sequential with delays
-  const processFiles = async () => {
+  // Utility: chunk array into batches
+  const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  // Process files with Bulk OCR (OCR.space + Lovable AI)
+  const processBulkOCR = async () => {
+    if (!user || files.length === 0) return;
+    
+    setStep('processing');
+    setBulkPhase('ocr');
+    
+    // Chunk files into batches
+    const batches = chunkArray(files, OCR_BATCH_SIZE);
+    setBulkTotalBatches(batches.length);
+    
+    const allPolicies: BulkOCRExtractedPolicy[] = [];
+    const fileMap = new Map<string, File>();
+    
+    // Create file map for later reference
+    files.forEach(f => fileMap.set(f.name, f));
+    
+    // Initialize status
+    const initialStatus = new Map<number, FileProcessingStatus>();
+    files.forEach((_, i) => initialStatus.set(i, 'pending'));
+    setProcessingStatus(initialStatus);
+    
+    try {
+      for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+        setBulkBatchIndex(batchIdx);
+        setBulkPhase('ocr');
+        
+        const batch = batches[batchIdx];
+        const startIdx = batchIdx * OCR_BATCH_SIZE;
+        
+        // Mark batch files as processing
+        batch.forEach((_, i) => {
+          setProcessingStatus(prev => new Map(prev).set(startIdx + i, 'processing'));
+        });
+        
+        // Convert files to base64
+        const filesBase64 = await Promise.all(
+          batch.map(async (file) => ({
+            base64: await fileToBase64(file),
+            fileName: file.name,
+            mimeType: file.type
+          }))
+        );
+        
+        setBulkPhase('ai');
+        
+        // Call the bulk OCR edge function
+        const { data, error } = await supabase.functions.invoke<BulkOCRResponse>('ocr-bulk-analyze', {
+          body: { files: filesBase64 }
+        });
+        
+        if (error) {
+          console.error('Bulk OCR error:', error);
+          // Mark all in batch as error
+          batch.forEach((_, i) => {
+            setProcessingStatus(prev => new Map(prev).set(startIdx + i, 'error'));
+          });
+          
+          if (error.message?.includes('429')) {
+            toast.error('Rate limit da IA atingido. Aguarde e tente novamente.');
+          } else if (error.message?.includes('402')) {
+            toast.error('Créditos insuficientes. Adicione créditos na sua conta.');
+          } else {
+            toast.error(`Erro no lote ${batchIdx + 1}: ${error.message}`);
+          }
+          continue;
+        }
+        
+        if (data?.success && data.data) {
+          allPolicies.push(...data.data);
+          
+          // Mark successful files
+          data.processedFiles?.forEach((fileName) => {
+            const fileIdx = files.findIndex(f => f.name === fileName);
+            if (fileIdx !== -1) {
+              setProcessingStatus(prev => new Map(prev).set(fileIdx, 'success'));
+            }
+          });
+          
+          // Mark failed files
+          data.errors?.forEach(({ fileName }) => {
+            const fileIdx = files.findIndex(f => f.name === fileName);
+            if (fileIdx !== -1) {
+              setProcessingStatus(prev => new Map(prev).set(fileIdx, 'error'));
+            }
+          });
+        }
+        
+        // Wait between batches (except last)
+        if (batchIdx < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        }
+      }
+      
+      // Reconcile clients
+      setBulkPhase('reconciling');
+      
+      const processedItems: PolicyImportItem[] = await Promise.all(
+        allPolicies.map(async (policy) => {
+          // Find the original file
+          const file = fileMap.get(policy.arquivo_origem) || files[0];
+          
+          // Convert to ExtractedPolicyData format for reconciliation
+          const extracted: ExtractedPolicyData = {
+            cliente: {
+              nome_completo: policy.nome_cliente,
+              cpf_cnpj: policy.cpf_cnpj,
+              email: policy.email,
+              telefone: policy.telefone,
+              endereco_completo: null,
+            },
+            apolice: {
+              numero_apolice: policy.numero_apolice,
+              nome_seguradora: policy.nome_seguradora,
+              data_inicio: policy.data_inicio,
+              data_fim: policy.data_fim,
+              ramo_seguro: policy.ramo_seguro,
+            },
+            objeto_segurado: {
+              descricao_bem: policy.descricao_bem || '',
+            },
+            valores: {
+              premio_liquido: policy.premio_liquido || 0,
+              premio_total: policy.premio_total || 0,
+            },
+          };
+          
+          // Reconcile client
+          const clientResult = await reconcileClient(extracted, user.id);
+          const seguradoraMatch = await matchSeguradora(policy.nome_seguradora, user.id);
+          const ramoMatch = await matchRamo(policy.ramo_seguro, user.id);
+          
+          const item: PolicyImportItem = {
+            id: crypto.randomUUID(),
+            file,
+            filePreviewUrl: URL.createObjectURL(file),
+            fileName: policy.arquivo_origem,
+            extracted,
+            clientStatus: clientResult.status,
+            clientId: clientResult.clientId,
+            clientName: policy.nome_cliente,
+            clientCpfCnpj: policy.cpf_cnpj,
+            matchedBy: clientResult.matchedBy,
+            seguradoraId: seguradoraMatch?.id || null,
+            seguradoraNome: policy.nome_seguradora,
+            ramoId: ramoMatch?.id || null,
+            ramoNome: policy.ramo_seguro,
+            producerId: null,
+            commissionRate: 15,
+            numeroApolice: policy.numero_apolice,
+            dataInicio: policy.data_inicio,
+            dataFim: policy.data_fim,
+            objetoSegurado: policy.descricao_bem || '',
+            premioLiquido: policy.premio_liquido || 0,
+            premioTotal: policy.premio_total || 0,
+            estimatedCommission: (policy.premio_liquido || 0) * 0.15,
+            isValid: false,
+            validationErrors: [],
+            isProcessing: false,
+            isProcessed: true,
+          };
+          
+          // Validate
+          item.validationErrors = validateImportItem(item);
+          item.isValid = item.validationErrors.length === 0;
+          
+          return item;
+        })
+      );
+      
+      setItems(processedItems);
+      
+      if (processedItems.length === 0) {
+        toast.error('Nenhum documento foi processado com sucesso');
+        setStep('upload');
+        return;
+      }
+      
+      toast.success(`${processedItems.length} apólice(s) extraída(s) com sucesso!`);
+      setStep('review');
+      
+    } catch (error: any) {
+      console.error('Bulk OCR error:', error);
+      toast.error(error.message || 'Erro ao processar documentos');
+      setStep('upload');
+    }
+  };
+
+  // Process files with standard method - Sequential with delays
+  const processFilesStandard = async () => {
     if (!user || files.length === 0) return;
     
     setStep('processing');
@@ -345,6 +562,15 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
 
     setItems(processedItems);
     setStep('review');
+  };
+
+  // Main process function that delegates to the right mode
+  const processFiles = async () => {
+    if (processingMode === 'bulk-ocr') {
+      await processBulkOCR();
+    } else {
+      await processFilesStandard();
+    }
   };
 
   // Retry processing a single failed item
@@ -567,6 +793,39 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
         {/* Step: Upload */}
         {step === 'upload' && (
           <div className="space-y-4 flex-1 overflow-auto">
+            {/* Processing Mode Toggle */}
+            <div className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+              <div className="flex items-center gap-4">
+                <Label className="text-slate-300">Modo de Processamento:</Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={processingMode === 'bulk-ocr' ? 'default' : 'outline'}
+                    onClick={() => setProcessingMode('bulk-ocr')}
+                    size="sm"
+                    className={processingMode === 'bulk-ocr' ? 'bg-green-600 hover:bg-green-700' : ''}
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    Bulk OCR (Econômico)
+                  </Button>
+                  <Button 
+                    variant={processingMode === 'standard' ? 'default' : 'outline'}
+                    onClick={() => setProcessingMode('standard')}
+                    size="sm"
+                    className={processingMode === 'standard' ? 'bg-purple-600 hover:bg-purple-700' : ''}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Padrão (1 por vez)
+                  </Button>
+                </div>
+              </div>
+              
+              {processingMode === 'bulk-ocr' && (
+                <Badge variant="outline" className="text-green-400 border-green-400/50 text-xs">
+                  ~98% mais barato
+                </Badge>
+              )}
+            </div>
+
             {/* Document Type Toggle */}
             <div className="flex items-center justify-center gap-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
               <Label className="text-slate-300">Tipo de Documento:</Label>
@@ -611,6 +870,11 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 {documentType === 'policy' ? 'Arraste PDFs de apólices aqui' : 'Arraste imagens de carteirinhas aqui'}
               </p>
               <p className="text-slate-400 text-sm">ou clique para selecionar arquivos</p>
+              {processingMode === 'bulk-ocr' && (
+                <p className="text-green-400 text-xs mt-2">
+                  💡 Bulk OCR: processa até {OCR_BATCH_SIZE} arquivos por lote usando OCR.space + IA
+                </p>
+              )}
             </div>
 
             {files.length > 0 && (
@@ -649,10 +913,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               <Button
                 onClick={processFiles}
                 disabled={files.length === 0}
-                className="bg-purple-600 hover:bg-purple-700"
+                className={processingMode === 'bulk-ocr' ? 'bg-green-600 hover:bg-green-700' : 'bg-purple-600 hover:bg-purple-700'}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Processar com IA
+                {processingMode === 'bulk-ocr' ? (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Processar em Lote
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Processar com IA
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -663,15 +936,57 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           <div className="py-6 space-y-4 flex-1 overflow-auto">
             <div className="text-center">
               <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
-              <p className="text-white font-medium mt-4">
-                Processando {processingIndex + 1} de {files.length || items.length}...
-              </p>
-              <p className="text-slate-400 text-sm">
-                Extraindo dados com inteligência artificial (2s entre cada)
-              </p>
+              
+              {processingMode === 'bulk-ocr' ? (
+                <>
+                  <p className="text-white font-medium mt-4">
+                    {bulkPhase === 'ocr' && `Extraindo texto via OCR... (Lote ${bulkBatchIndex + 1}/${bulkTotalBatches || 1})`}
+                    {bulkPhase === 'ai' && 'Analisando com IA...'}
+                    {bulkPhase === 'reconciling' && 'Reconciliando clientes...'}
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    {bulkPhase === 'ocr' && 'OCR.space extrai o texto dos documentos'}
+                    {bulkPhase === 'ai' && 'Lovable AI estrutura os dados extraídos'}
+                    {bulkPhase === 'reconciling' && 'Vinculando clientes existentes'}
+                  </p>
+                  
+                  {/* Phase indicator */}
+                  <div className="flex justify-center gap-2 mt-4">
+                    <Badge variant={bulkPhase === 'ocr' ? 'default' : 'outline'} className={bulkPhase === 'ocr' ? 'bg-green-600' : ''}>
+                      1. OCR
+                    </Badge>
+                    <Badge variant={bulkPhase === 'ai' ? 'default' : 'outline'} className={bulkPhase === 'ai' ? 'bg-purple-600' : ''}>
+                      2. IA
+                    </Badge>
+                    <Badge variant={bulkPhase === 'reconciling' ? 'default' : 'outline'} className={bulkPhase === 'reconciling' ? 'bg-blue-600' : ''}>
+                      3. Vincular
+                    </Badge>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-white font-medium mt-4">
+                    Processando {processingIndex + 1} de {files.length || items.length}...
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    Extraindo dados com inteligência artificial (5s entre cada)
+                  </p>
+                </>
+              )}
             </div>
             
-            <Progress value={(processingIndex + 1) / (files.length || items.length) * 100} className="w-full max-w-md mx-auto" />
+            {processingMode === 'bulk-ocr' ? (
+              <Progress 
+                value={
+                  bulkPhase === 'ocr' ? ((bulkBatchIndex + 1) / (bulkTotalBatches || 1)) * 50 :
+                  bulkPhase === 'ai' ? 75 :
+                  90
+                } 
+                className="w-full max-w-md mx-auto" 
+              />
+            ) : (
+              <Progress value={(processingIndex + 1) / (files.length || items.length) * 100} className="w-full max-w-md mx-auto" />
+            )}
             
             {/* File status list */}
             <ScrollArea className="h-48 border border-slate-700 rounded-lg p-2 max-w-md mx-auto">
