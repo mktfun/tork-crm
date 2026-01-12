@@ -165,11 +165,38 @@ export async function reconcileClient(
   return { status: 'new' };
 }
 
-// Cria um novo cliente
+// Extrai CEP do endereço
+function extractCep(endereco: string | null | undefined): string | null {
+  if (!endereco) return null;
+  const match = endereco.match(/\d{5}-?\d{3}/);
+  return match ? match[0].replace('-', '') : null;
+}
+
+// Extrai cidade e UF do endereço (heurística simples)
+function extractCityState(endereco: string | null | undefined): { city: string | null; state: string | null } {
+  if (!endereco) return { city: null, state: null };
+  
+  // Procura por padrão "Cidade - UF" ou "Cidade/UF" ou "Cidade, UF"
+  const ufMatch = endereco.match(/([A-Za-zÀ-ÿ\s]+)[\s\-\/,]+([A-Z]{2})\s*(?:\d{5}|$)/i);
+  if (ufMatch) {
+    return { 
+      city: ufMatch[1].trim().substring(0, 50), 
+      state: ufMatch[2].toUpperCase() 
+    };
+  }
+  
+  return { city: null, state: null };
+}
+
+// Cria um novo cliente com dados completos
 export async function createClient(
-  data: ExtractedPolicyData['cliente'],
+  data: ExtractedPolicyData['cliente'] & { cep?: string | null },
   userId: string
 ): Promise<{ id: string } | null> {
+  // Extrair CEP se não veio separado
+  const cep = data.cep || extractCep(data.endereco_completo);
+  const { city, state } = extractCityState(data.endereco_completo);
+  
   const { data: newClient, error } = await supabase
     .from('clientes')
     .insert({
@@ -178,7 +205,10 @@ export async function createClient(
       cpf_cnpj: data.cpf_cnpj,
       email: data.email || '',
       phone: data.telefone || '',
-      address: data.endereco_completo,
+      address: data.endereco_completo || '',
+      cep: cep,
+      city: city,
+      state: state,
       status: 'Ativo',
     })
     .select('id')
@@ -193,20 +223,26 @@ export async function createClient(
 }
 
 // Upload do PDF para o Storage com nome estruturado
+// Suporta organização por brokerage_id (preferido) ou user_id
 export async function uploadPolicyPdf(
   file: File,
   userId: string,
   cpfCnpj?: string,
-  numeroApolice?: string
+  numeroApolice?: string,
+  brokerageId?: number | string | null
 ): Promise<string | null> {
   const timestamp = Date.now();
   const cleanCpf = cpfCnpj?.replace(/[^\d]/g, '') || 'sem-cpf';
-  const cleanApolice = numeroApolice?.replace(/[^\w]/g, '') || 'sem-numero';
-  const fileExt = file.name.split('.').pop();
   
-  // Padrão: userId/cpf_cnpj/apolice_timestamp.pdf
-  const fileName = `${userId}/${cleanCpf}/${cleanApolice}_${timestamp}.${fileExt}`;
+  // Limpar nome do arquivo original para usar no path
+  const originalName = file.name.replace(/[^\w.\-]/g, '_').substring(0, 50);
+  const fileExt = file.name.split('.').pop() || 'pdf';
+  
+  // Padrão: brokerage_id/cpf_cnpj/timestamp_nome.pdf (ou userId se não houver brokerage)
+  const basePath = brokerageId ? String(brokerageId) : userId;
+  const fileName = `${basePath}/${cleanCpf}/${timestamp}_${originalName}`;
 
+  // Tentar primeiro o bucket policy-docs (que já existe e é público)
   const { data, error } = await supabase.storage
     .from('policy-docs')
     .upload(fileName, file, {
@@ -223,6 +259,7 @@ export async function uploadPolicyPdf(
     .from('policy-docs')
     .getPublicUrl(data.path);
 
+  console.log('📎 [UPLOAD] PDF salvo:', urlData.publicUrl);
   return urlData.publicUrl;
 }
 
