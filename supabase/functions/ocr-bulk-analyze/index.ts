@@ -35,21 +35,28 @@ serve(async (req) => {
       const fileStart = performance.now();
       
       try {
+        // Limpeza robusta do base64 - usa pop() para garantir
+        const base64Clean = file.base64.split(',').pop() || file.base64;
+        
+        // Determina se é PDF ou imagem
+        const isPdf = file.mimeType?.includes('pdf') || file.fileName?.toLowerCase().endsWith('.pdf');
+        
+        console.log(`📄 [DEBUG] ${file.fileName}: isPdf=${isPdf}, base64 length=${base64Clean.length} chars`);
+        console.log(`📄 [DEBUG] Base64 preview: ${base64Clean.substring(0, 50)}...`);
+        
         const formData = new FormData();
         formData.append('apikey', OCR_SPACE_KEY);
         formData.append('language', 'por');
         formData.append('OCREngine', '2'); // Melhor para números
         formData.append('isTable', 'true'); // Melhora extração de tabelas
         
-        // Limpeza do base64 se necessário
-        const base64Data = file.base64.includes(',') ? file.base64.split(',')[1] : file.base64;
-        
-        // Determina prefixo correto baseado no mimeType
-        const dataPrefix = file.mimeType?.includes('pdf') 
-          ? 'data:application/pdf;base64,' 
-          : `data:${file.mimeType || 'image/png'};base64,`;
-          
-        formData.append('base64Image', `${dataPrefix}${base64Data}`);
+        // ⚠️ CRÍTICO: O parâmetro 'filetype' é OBRIGATÓRIO para PDFs!
+        if (isPdf) {
+          formData.append('filetype', 'PDF');
+          formData.append('base64Image', `data:application/pdf;base64,${base64Clean}`);
+        } else {
+          formData.append('base64Image', `data:${file.mimeType || 'image/png'};base64,${base64Clean}`);
+        }
 
         const ocrRes = await fetch('https://api.ocr.space/parse/image', {
           method: 'POST',
@@ -58,8 +65,17 @@ serve(async (req) => {
 
         const ocrData = await ocrRes.json();
         
+        // Log completo da resposta do OCR para debug
+        console.log(`📄 [OCR Response] ${file.fileName}:`, JSON.stringify({
+          IsErrored: ocrData.IsErroredOnProcessing,
+          ExitCode: ocrData.OCRExitCode,
+          ErrorMessage: ocrData.ErrorMessage,
+          HasText: !!ocrData.ParsedResults?.[0]?.ParsedText,
+          TextLength: ocrData.ParsedResults?.[0]?.ParsedText?.length || 0
+        }));
+        
         if (ocrData.IsErroredOnProcessing || ocrData.OCRExitCode !== 1) {
-          throw new Error(ocrData.ErrorMessage?.[0] || 'Falha no OCR');
+          throw new Error(ocrData.ErrorMessage?.[0] || ocrData.ErrorDetails || 'Falha no OCR');
         }
         
         if (ocrData.ParsedResults?.[0]?.ParsedText) {
