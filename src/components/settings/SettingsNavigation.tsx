@@ -34,12 +34,13 @@ const navItems = [
     icon: Tag,
     description: 'Ramos de seguro'
   },
-  {
-    name: 'Chat Tork',
-    path: '/dashboard/settings/chat-tork',
-    icon: MessageCircle,
-    description: 'Integração CRM'
-  },
+  // TEMPORARIAMENTE OCULTO - Chat Tork
+  // {
+  //   name: 'Chat Tork',
+  //   path: '/dashboard/settings/chat-tork',
+  //   icon: MessageCircle,
+  //   description: 'Integração CRM'
+  // },
   {
     name: 'Portal do Cliente',
     path: '/dashboard/settings/portal',
