@@ -7,40 +7,80 @@ const corsHeaders = {
 
 const OCR_SPACE_KEY = 'K82045193188957';
 
-// Keywords para filtrar texto essencial (incluindo dados de veículos e imóveis)
+// Keywords EXPANDIDAS para não perder NADA relevante
 const KEYWORDS = [
-  'NOME', 'CPF', 'CNPJ', 'APOLICE', 'SEGURADO', 'VIGENCIA', 'PREMIO', 
-  'LIQUIDO', 'RAMO', 'ENDOSSO', 'RENOVACAO', 'CIA', 'SEGURADORA', 
-  'EMAIL', 'INICIO', 'TERMINO', 'VALOR', 'COBERTURA',
-  'PLACA', 'MARCA', 'MODELO', 'VEICULO', 'CHASSI', 'ANO', 'FABRICACAO', 'RENAVAM', // Auto
-  'CASA', 'APARTAMENTO', 'CONDOMINIO', 'ENDERECO', 'LOGRADOURO', 'RESIDENCIAL', 'IMÓVEL', // Residencial
-  'VIDA', 'PESSOA', 'BENEFICIARIO', 'CAPITAL', 'SEGURADA' // Vida/Pessoas
+  // Dados pessoais
+  'NOME', 'CPF', 'CNPJ', 'SEGURADO', 'TITULAR', 'ESTIPULANTE', 'PROPONENTE',
+  'EMAIL', 'TELEFONE', 'CELULAR', 'CONTATO', 'ENDERECO', 'CEP', 'BAIRRO', 'CIDADE', 'UF',
+  
+  // Tipos de documento
+  'APOLICE', 'PROPOSTA', 'ORCAMENTO', 'COTACAO', 'ENDOSSO', 
+  'RENOVACAO', 'PROVISORIO', 'CERTIFICADO', 'BILHETE',
+  
+  // Vigência/Datas
+  'VIGENCIA', 'INICIO', 'TERMINO', 'FIM', 'VALIDADE', 'EMISSAO',
+  
+  // Valores financeiros
+  'PREMIO', 'LIQUIDO', 'TOTAL', 'IOF', 'VALOR', 'PARCELA', 'COMISSAO',
+  'CUSTO', 'ADICIONAL', 'DESCONTO',
+  
+  // Identificação do produto
+  'RAMO', 'CIA', 'SEGURADORA', 'COBERTURA', 'FRANQUIA', 'IS', 'LMI',
+  
+  // Auto
+  'PLACA', 'MARCA', 'MODELO', 'VEICULO', 'CHASSI', 'ANO', 
+  'FABRICACAO', 'RENAVAM', 'FIPE', 'ZERO KM', 'COMBUSTIVEL',
+  
+  // Residencial/RE
+  'CASA', 'APARTAMENTO', 'CONDOMINIO', 'LOGRADOURO', 
+  'RESIDENCIAL', 'IMOVEL', 'COMERCIAL', 'INCENDIO', 'ALUGUEL',
+  
+  // Vida/Pessoas
+  'VIDA', 'PESSOA', 'BENEFICIARIO', 'CAPITAL', 'SEGURADA', 'MORTE', 'INVALIDEZ',
+  
+  // Empresarial
+  'EMPRESA', 'RAZAO SOCIAL', 'RC', 'RESPONSABILIDADE'
 ];
 
-// Função para filtrar apenas linhas essenciais do texto (reduz tokens para IA)
+// Função para filtrar linhas essenciais com FALLBACK inteligente
 function filterEssentialText(text: string, maxChars: number = 15000): string {
   const lines = text.split('\n');
-  const relevantLines: string[] = [];
-  let totalChars = 0;
+  const relevantLines: Set<string> = new Set();
   
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const upperLine = line.toUpperCase();
+    
     // Verifica se a linha contém alguma keyword importante
     const hasKeyword = KEYWORDS.some(kw => upperLine.includes(kw));
-    // Ou se contém padrões importantes (CPF, datas, valores)
+    // Ou se contém padrões importantes (CPF, CNPJ, datas, valores)
     const hasPattern = /\d{3}[.\-]\d{3}[.\-]\d{3}[.\-]\d{2}|\d{2}[.\-]\d{3}[.\-]\d{3}[\/]\d{4}[.\-]\d{2}|\d{2}\/\d{2}\/\d{4}|R\$\s*[\d.,]+|\d{1,3}[.]\d{3}[,]\d{2}/.test(line);
-    // Ou se parece com placa de veículo
+    // Ou se parece com placa de veículo (Mercosul ou antiga)
     const hasPlaca = /[A-Z]{3}[\-\s]?\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4}/i.test(line);
     
     if (hasKeyword || hasPattern || hasPlaca) {
-      if (totalChars + line.length <= maxChars) {
-        relevantLines.push(line);
-        totalChars += line.length;
+      // Adiciona linha anterior para contexto (se houver)
+      if (i > 0 && lines[i - 1].trim()) {
+        relevantLines.add(lines[i - 1]);
+      }
+      // Adiciona a linha atual
+      relevantLines.add(line);
+      // Adiciona linha posterior para contexto (se houver)
+      if (i < lines.length - 1 && lines[i + 1].trim()) {
+        relevantLines.add(lines[i + 1]);
       }
     }
   }
   
-  return relevantLines.join('\n');
+  const filtered = Array.from(relevantLines).join('\n').substring(0, maxChars);
+  
+  // FALLBACK: se filtrou demais (< 100 chars), usa texto original truncado
+  if (filtered.length < 100 && text.length > 100) {
+    console.log('⚠️ [FILTRO] Muito agressivo, usando texto original truncado');
+    return text.substring(0, maxChars);
+  }
+  
+  return filtered;
 }
 
 // Função para extrair texto de PDF digital usando regex patterns
@@ -207,36 +247,72 @@ serve(async (req) => {
       .map(t => `\n\n=== DOCUMENTO: ${t.fileName} ===\n${t.text}\n`)
       .join('');
 
-    const systemPrompt = `Você é um especialista em extração de dados de apólices de seguro brasileiras.
-Analise o texto extraído de múltiplos documentos de seguro.
+    const systemPrompt = `Você é um ANALISTA SÊNIOR de seguros brasileiro com 20 anos de experiência.
+Analise o texto extraído de documentos de seguro com MÁXIMA PRECISÃO.
 
-REGRAS IMPORTANTES:
+## IDENTIFICAÇÃO DO TIPO DE DOCUMENTO
+- APOLICE: Documento oficial EMITIDO após pagamento
+- PROPOSTA: Documento ANTES da emissão (aguardando aprovação/pagamento)
+- ORCAMENTO/COTACAO: Apenas estimativa de preço, sem compromisso
+- ENDOSSO: ALTERAÇÃO em apólice já existente
+
+## REGRAS CRÍTICAS
 1. Para cada documento separado por "=== DOCUMENTO: ... ===" extraia os dados
 2. Retorne SEMPRE um array JSON, mesmo para um único documento
-3. CPF: formato XXX.XXX.XXX-XX, CNPJ: formato XX.XXX.XXX/XXXX-XX
+3. CPF: formato XXX.XXX.XXX-XX | CNPJ: formato XX.XXX.XXX/XXXX-XX
 4. Datas: formato YYYY-MM-DD
-5. Valores numéricos: sem R$, pontos de milhar. Use ponto como decimal
+5. VALORES NUMÉRICOS: SEM "R$", SEM pontos de milhar. Use PONTO como decimal (ex: 1234.56)
 6. Se não encontrar um campo, use null
-7. Para ramo_seguro, normalize para: "Auto", "Residencial", "Vida", "Empresarial", "Saúde", "Viagem", "Transporte", etc.
-8. arquivo_origem deve conter o nome do arquivo do documento de onde os dados foram extraídos
+7. arquivo_origem deve conter EXATAMENTE o nome do arquivo fonte
 
-EXTRAÇÃO DO OBJETO SEGURADO (MUITO IMPORTANTE):
-- Para AUTO: extraia marca, modelo e PLACA do veículo (Ex: "Toyota Corolla", placa "ABC-1D23")
-- Para RESIDENCIAL: extraia tipo do imóvel e endereço resumido (Ex: "Apartamento - Rua X, 123")
-- Para VIDA/PESSOAS: extraia tipo de cobertura (Ex: "Vida Individual", "Vida em Grupo")
+## EXTRAÇÃO DE CLIENTE (COMPLETA!)
+- nome_completo: Nome do SEGURADO/ESTIPULANTE/TITULAR (nome completo)
+- cpf_cnpj: CPF ou CNPJ (com ou sem formatação)
+- email: E-mail de contato
+- telefone: Telefone/Celular
+- endereco_completo: Endereço COMPLETO incluindo CEP se disponível
 
-CAMPOS ADICIONAIS:
-- objeto_segurado: descrição do bem (carro, casa, pessoa)
-- identificacao_adicional: para AUTO = placa; para RESIDENCIAL = número/complemento do endereço; para VIDA = null
-- tipo_operacao: 'RENOVACAO', 'NOVA' ou 'ENDOSSO' (inferir do texto)
-- titulo_sugerido: formato "[NOME_CLIENTE] - [RAMO] ([OBJETO_SEGURADO] - [IDENTIFICACAO])" 
-  Ex: "João Silva - Auto (Toyota Corolla - ABC1D23)"`;
+## EXTRAÇÃO DO OBJETO SEGURADO (CRÍTICO!)
+- AUTO: "Marca Modelo Versão Ano" (Ex: "VW Golf GTI 2024")
+- RESIDENCIAL: "Tipo - Cidade/Bairro" (Ex: "Apartamento - São Paulo/Pinheiros")
+- VIDA: "Tipo de Plano" (Ex: "Vida Individual", "AP Coletivo")
+- EMPRESARIAL: "Tipo - Atividade" (Ex: "Comércio - Padaria")
+
+## IDENTIFICAÇÃO ADICIONAL
+- AUTO: PLACA do veículo (formato ABC1D23 ou ABC-1234)
+- RESIDENCIAL: Número + Complemento ou CEP
+- VIDA/OUTROS: null
+
+## VALORES (ATENÇÃO MÁXIMA!)
+- premio_liquido: Valor BASE **ANTES** do IOF e taxas (procure por "Prêmio Líquido", "Premio Comercial")
+- premio_total: Valor FINAL com IOF e custos (procure por "Prêmio Total", "Total a Pagar")
+- AMBOS devem ser NUMBER puro! Exemplo: 1234.56 (NÃO "R$ 1.234,56")
+
+## TÍTULO SUGERIDO (formato EXATO)
+"[PRIMEIRO_NOME] - [RAMO] ([OBJETO]) - [IDENTIFICACAO] - [SEGURADORA]"
+Exemplos:
+- "João - Auto (Golf GTI) - ABC1D23 - Porto Seguro"
+- "Maria - Residencial (Apto) - São Paulo - Bradesco"
+- "Carlos - Vida - Mapfre"
+
+## TIPO DE OPERAÇÃO
+- NOVA: Primeiro contrato com este cliente/bem
+- RENOVACAO: Continuação de apólice anterior (procure por "Renovação", "Apólice Anterior")
+- ENDOSSO: Alteração em apólice vigente (procure por "Endosso", "Alteração")
+
+## DETECÇÃO DE ENDOSSO
+Se for ENDOSSO, preencha endosso_motivo com o tipo:
+- "Substituição de Veículo"
+- "Alteração de Endereço"
+- "Inclusão de Cobertura"
+- "Alteração de Condutor"
+- etc.`;
 
     const tool = {
       type: 'function',
       function: {
         name: 'extract_policies',
-        description: 'Extrai dados estruturados de apólices de seguro',
+        description: 'Extrai dados estruturados de apólices de seguro brasileiras',
         parameters: {
           type: 'object',
           properties: {
@@ -245,25 +321,40 @@ CAMPOS ADICIONAIS:
               items: {
                 type: 'object',
                 properties: {
-                  nome_cliente: { type: 'string' },
+                  // Cliente
+                  nome_cliente: { type: 'string', description: 'Nome completo do segurado/estipulante' },
                   cpf_cnpj: { type: 'string', nullable: true },
                   email: { type: 'string', nullable: true },
                   telefone: { type: 'string', nullable: true },
-                  numero_apolice: { type: 'string' },
-                  nome_seguradora: { type: 'string' },
-                  ramo_seguro: { type: 'string' },
-                  descricao_bem: { type: 'string', nullable: true },
-                  objeto_segurado: { type: 'string', nullable: true, description: 'Ex: Toyota Corolla, Apartamento, Vida Individual' },
-                  identificacao_adicional: { type: 'string', nullable: true, description: 'Placa do veículo ou endereço do imóvel' },
+                  endereco_completo: { type: 'string', nullable: true, description: 'Endereço completo incluindo CEP' },
+                  
+                  // Documento
+                  tipo_documento: { type: 'string', enum: ['APOLICE', 'PROPOSTA', 'ORCAMENTO', 'ENDOSSO'], nullable: true },
+                  numero_apolice: { type: 'string', description: 'Número da apólice ou proposta' },
+                  numero_proposta: { type: 'string', nullable: true, description: 'Número da proposta (se diferente)' },
                   tipo_operacao: { type: 'string', enum: ['RENOVACAO', 'NOVA', 'ENDOSSO'], nullable: true },
-                  titulo_sugerido: { type: 'string', description: 'Formato: NOME - RAMO (OBJETO - IDENTIFICACAO)' },
-                  data_inicio: { type: 'string' },
-                  data_fim: { type: 'string' },
-                  premio_liquido: { type: 'number' },
-                  premio_total: { type: 'number' },
+                  endosso_motivo: { type: 'string', nullable: true, description: 'Motivo do endosso se aplicável' },
+                  
+                  // Seguro
+                  nome_seguradora: { type: 'string' },
+                  ramo_seguro: { type: 'string', description: 'Auto, Residencial, Vida, Empresarial, etc.' },
+                  data_inicio: { type: 'string', description: 'YYYY-MM-DD' },
+                  data_fim: { type: 'string', description: 'YYYY-MM-DD' },
+                  
+                  // Objeto segurado
+                  descricao_bem: { type: 'string', nullable: true },
+                  objeto_segurado: { type: 'string', nullable: true, description: 'Ex: VW Golf GTI 2024' },
+                  identificacao_adicional: { type: 'string', nullable: true, description: 'Placa, CEP ou outro identificador' },
+                  
+                  // Valores (NUMBERS puros!)
+                  premio_liquido: { type: 'number', description: 'Valor ANTES do IOF, sem R$' },
+                  premio_total: { type: 'number', description: 'Valor TOTAL com IOF, sem R$' },
+                  
+                  // Metadados
+                  titulo_sugerido: { type: 'string', description: 'NOME - RAMO (OBJETO) - ID - CIA' },
                   arquivo_origem: { type: 'string' }
                 },
-                required: ['nome_cliente', 'numero_apolice', 'nome_seguradora', 'ramo_seguro', 'arquivo_origem', 'titulo_sugerido']
+                required: ['nome_cliente', 'numero_apolice', 'nome_seguradora', 'ramo_seguro', 'arquivo_origem', 'titulo_sugerido', 'data_inicio', 'data_fim']
               }
             }
           },

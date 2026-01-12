@@ -33,6 +33,9 @@ export interface AnalyzePolicyResult {
 // Status de reconciliação do cliente
 export type ClientReconcileStatus = 'matched' | 'new';
 
+// Tipo de documento detectado pela IA
+export type DocumentType = 'APOLICE' | 'PROPOSTA' | 'ORCAMENTO' | 'ENDOSSO';
+
 // Item processado para a tabela de revisão
 export interface PolicyImportItem {
   id: string;              // UUID temporário
@@ -66,6 +69,13 @@ export interface PolicyImportItem {
   premioLiquido: number;
   premioTotal: number;
   
+  // NOVOS CAMPOS v3.0
+  tipoDocumento: DocumentType | null;
+  tipoOperacao: 'RENOVACAO' | 'NOVA' | 'ENDOSSO' | null;
+  endossoMotivo: string | null;
+  tituloSugerido: string;
+  identificacaoAdicional: string | null;  // Placa, CEP, etc
+  
   // Calculado
   estimatedCommission: number;
   
@@ -91,24 +101,39 @@ export interface PolicyImportResult {
   }[];
 }
 
-// Dados extraídos pelo OCR Bulk
+// Dados extraídos pelo OCR Bulk (v3.0 expandido)
 export interface BulkOCRExtractedPolicy {
+  // Cliente
   nome_cliente: string;
   cpf_cnpj: string | null;
   email: string | null;
   telefone: string | null;
+  endereco_completo: string | null;         // NOVO: Endereço completo com CEP
+  
+  // Documento
+  tipo_documento: DocumentType | null;      // NOVO: APOLICE, PROPOSTA, ORCAMENTO, ENDOSSO
   numero_apolice: string;
+  numero_proposta: string | null;           // NOVO: Se diferente do número da apólice
+  tipo_operacao: 'RENOVACAO' | 'NOVA' | 'ENDOSSO' | null;
+  endosso_motivo: string | null;            // NOVO: Motivo do endosso
+  
+  // Seguro
   nome_seguradora: string;
   ramo_seguro: string;
-  descricao_bem: string | null;
-  objeto_segurado: string | null;          // Ex: Toyota Corolla, Apartamento
-  identificacao_adicional: string | null;  // Placa do veículo ou endereço
-  tipo_operacao: 'RENOVACAO' | 'NOVA' | 'ENDOSSO' | null;
-  titulo_sugerido: string;                 // NOME - RAMO (OBJETO - ID)
   data_inicio: string;
   data_fim: string;
+  
+  // Objeto segurado
+  descricao_bem: string | null;
+  objeto_segurado: string | null;           // Ex: VW Golf GTI 2024
+  identificacao_adicional: string | null;   // Placa do veículo ou endereço/CEP
+  
+  // Valores (NUMBERS puros!)
   premio_liquido: number;
   premio_total: number;
+  
+  // Metadados
+  titulo_sugerido: string;                  // NOME - RAMO (OBJETO) - ID - CIA
   arquivo_origem: string;
 }
 

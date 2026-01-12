@@ -20,7 +20,8 @@ import {
   ExtractedPolicyData, 
   PolicyImportItem, 
   BulkOCRExtractedPolicy,
-  BulkOCRResponse
+  BulkOCRResponse,
+  DocumentType
 } from '@/types/policyImport';
 import { 
   reconcileClient, 
@@ -264,7 +265,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               cpf_cnpj: policy.cpf_cnpj,
               email: policy.email,
               telefone: policy.telefone,
-              endereco_completo: null,
+              endereco_completo: policy.endereco_completo || null,
             },
             apolice: {
               numero_apolice: policy.numero_apolice,
@@ -274,7 +275,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               ramo_seguro: policy.ramo_seguro,
             },
             objeto_segurado: {
-              descricao_bem: policy.descricao_bem || '',
+              descricao_bem: policy.descricao_bem || policy.objeto_segurado || '',
             },
             valores: {
               premio_liquido: policy.premio_liquido || 0,
@@ -286,6 +287,13 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           const clientResult = await reconcileClient(extracted, user.id);
           const seguradoraMatch = await matchSeguradora(policy.nome_seguradora, user.id);
           const ramoMatch = await matchRamo(policy.ramo_seguro, user.id);
+          
+          // Build objeto_segurado with identificacao_adicional
+          const objetoCompleto = policy.objeto_segurado 
+            ? (policy.identificacao_adicional 
+                ? `${policy.objeto_segurado} - ${policy.identificacao_adicional}` 
+                : policy.objeto_segurado)
+            : policy.descricao_bem || '';
           
           const item: PolicyImportItem = {
             id: crypto.randomUUID(),
@@ -304,12 +312,18 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             ramoNome: policy.ramo_seguro,
             producerId: null,
             commissionRate: 15,
-            numeroApolice: policy.numero_apolice,
+            numeroApolice: policy.numero_apolice || policy.numero_proposta || '',
             dataInicio: policy.data_inicio,
             dataFim: policy.data_fim,
-            objetoSegurado: policy.descricao_bem || '',
+            objetoSegurado: objetoCompleto,
             premioLiquido: policy.premio_liquido || 0,
             premioTotal: policy.premio_total || 0,
+            // NOVOS CAMPOS v3.0
+            tipoDocumento: policy.tipo_documento || null,
+            tipoOperacao: policy.tipo_operacao || null,
+            endossoMotivo: policy.endosso_motivo || null,
+            tituloSugerido: policy.titulo_sugerido || '',
+            identificacaoAdicional: policy.identificacao_adicional || null,
             estimatedCommission: (policy.premio_liquido || 0) * 0.15,
             isValid: false,
             validationErrors: [],
@@ -754,7 +768,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                                 {item.clientStatus === 'matched' ? (
                                   <UserCheck className="w-4 h-4 text-green-400" />
                                 ) : (
-                                  <UserPlus className="w-4 h-4 text-blue-400" />
+                                  <UserPlus className="w-4 h-4 text-yellow-400" />
                                 )}
                                 <Input
                                   value={item.clientName}
@@ -763,16 +777,21 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                                   placeholder="Nome do cliente"
                                 />
                               </div>
-                              <div className="text-xs text-slate-400 pl-6">
+                              {/* Badge de Status do Cliente v3.0 */}
+                              <div className="pl-6">
                                 {item.clientStatus === 'matched' ? (
-                                  <span className="text-green-400">
-                                    ✓ Vinculado ({item.matchedBy === 'cpf_cnpj' ? 'CPF' : 'Email'})
-                                  </span>
+                                  <Badge className="bg-green-600/20 text-green-400 border-green-600/40 text-[10px] h-5">
+                                    <UserCheck className="w-3 h-3 mr-1" />
+                                    Vinculando a {item.clientName.split(' ')[0]}
+                                  </Badge>
                                 ) : (
-                                  <span className="text-blue-400">🆕 Criar novo</span>
+                                  <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/40 text-[10px] h-5">
+                                    <UserPlus className="w-3 h-3 mr-1" />
+                                    Criando Novo Cliente
+                                  </Badge>
                                 )}
                                 {item.clientCpfCnpj && (
-                                  <span className="ml-2">{item.clientCpfCnpj}</span>
+                                  <span className="ml-2 text-xs text-slate-400">{item.clientCpfCnpj}</span>
                                 )}
                               </div>
                             </div>
@@ -782,13 +801,53 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                         {/* Apólice */}
                         <TableCell>
                           {!item.processError && (
-                            <div className="text-sm">
+                            <div className="text-sm space-y-1">
+                              {/* Badges de Tipo de Documento v3.0 */}
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {item.tipoDocumento === 'PROPOSTA' && (
+                                  <Badge variant="outline" className="text-blue-400 border-blue-400/40 text-[10px] h-4 px-1">
+                                    📋 Proposta
+                                  </Badge>
+                                )}
+                                {item.tipoDocumento === 'ORCAMENTO' && (
+                                  <Badge variant="outline" className="text-amber-400 border-amber-400/40 text-[10px] h-4 px-1">
+                                    💰 Orçamento
+                                  </Badge>
+                                )}
+                                {item.tipoDocumento === 'ENDOSSO' && (
+                                  <Badge variant="outline" className="text-purple-400 border-purple-400/40 text-[10px] h-4 px-1">
+                                    📝 Endosso
+                                  </Badge>
+                                )}
+                                {item.tipoOperacao === 'RENOVACAO' && (
+                                  <Badge variant="outline" className="text-cyan-400 border-cyan-400/40 text-[10px] h-4 px-1">
+                                    🔄 Renovação
+                                  </Badge>
+                                )}
+                              </div>
+                              
                               <div className={`font-medium text-white ${!item.numeroApolice ? 'text-red-400' : ''}`}>
                                 {item.numeroApolice || '⚠️ Não detectado'}
                               </div>
+                              
+                              {/* Título Sugerido pela IA v3.0 */}
+                              {item.tituloSugerido && (
+                                <div className="text-purple-300 text-[10px] truncate max-w-48" title={item.tituloSugerido}>
+                                  💡 {item.tituloSugerido}
+                                </div>
+                              )}
+                              
                               <div className="text-slate-400 text-xs truncate max-w-40" title={item.objetoSegurado}>
                                 {item.objetoSegurado || '-'}
                               </div>
+                              
+                              {/* Motivo do Endosso */}
+                              {item.endossoMotivo && (
+                                <div className="text-purple-400 text-[10px]">
+                                  ↳ {item.endossoMotivo}
+                                </div>
+                              )}
+                              
                               <div className={`text-xs ${item.premioLiquido === 0 ? 'text-red-400' : 'text-slate-500'}`}>
                                 R$ {item.premioLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </div>
