@@ -126,6 +126,7 @@ export default function CRM() {
             <RefreshCw className="h-4 w-4 mr-2" />
             Sincronizar
           </Button>
+          {/* TEMPORARIAMENTE OCULTO - Chat Tork em desenvolvimento
           <Button 
             variant="outline" 
             size="sm"
@@ -134,6 +135,7 @@ export default function CRM() {
             <MessageCircle className="h-4 w-4 mr-2" />
             Chat Tork
           </Button>
+          */}
         </div>
       </motion.div>
 
