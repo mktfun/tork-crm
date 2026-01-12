@@ -8,14 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, Zap, Eye, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
 import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
 import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 import { usePolicies } from '@/hooks/useAppData';
+import { cn } from '@/lib/utils';
 import { 
   ExtractedPolicyData, 
   PolicyImportItem, 
@@ -90,6 +92,13 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   // Performance metrics
   const [processingMetrics, setProcessingMetrics] = useState<ProcessingMetrics | null>(null);
   
+  // PDF Preview state
+  const [previewItem, setPreviewItem] = useState<PolicyImportItem | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  
+  // Track manually edited fields for visual feedback
+  const [editedFields, setEditedFields] = useState<Map<string, Set<string>>>(new Map());
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetModal = useCallback(() => {
@@ -104,11 +113,53 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
     setBulkPhase('ocr');
     setOcrProgress(0);
     setProcessingMetrics(null);
+    setPreviewItem(null);
+    setPreviewOpen(false);
+    setEditedFields(new Map());
   }, []);
 
   const handleClose = () => {
     resetModal();
     onOpenChange(false);
+  };
+
+  // Mark field as manually edited
+  const markFieldEdited = (itemId: string, field: string) => {
+    setEditedFields(prev => {
+      const newMap = new Map(prev);
+      const fields = newMap.get(itemId) || new Set();
+      fields.add(field);
+      newMap.set(itemId, fields);
+      return newMap;
+    });
+  };
+
+  // Check if field was manually edited
+  const isFieldEdited = (itemId: string, field: string): boolean => {
+    return editedFields.get(itemId)?.has(field) || false;
+  };
+
+  // Handle premio change with sanitization
+  const handlePremioChange = (itemId: string, rawValue: string) => {
+    // Remove tudo exceto números, vírgula e ponto
+    let cleaned = rawValue.replace(/[^\d,.-]/g, '');
+    
+    // Trata formato brasileiro (1.234,56) -> (1234.56)
+    if (cleaned.includes(',')) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    }
+    
+    const numValue = parseFloat(cleaned) || 0;
+    markFieldEdited(itemId, 'premioLiquido');
+    
+    // Update with recalculated commission
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      updateItem(itemId, { 
+        premioLiquido: numValue,
+        estimatedCommission: numValue * (item.commissionRate / 100)
+      });
+    }
   };
 
   // Handle file selection with 5MB limit
@@ -762,25 +813,36 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">PDF</TableHead>
+                      <TableHead className="w-12">Doc</TableHead>
                       <TableHead className="w-56">Cliente</TableHead>
-                      <TableHead>Apólice</TableHead>
+                      <TableHead className="w-48">Apólice / Prêmio</TableHead>
                       <TableHead>Seguradora</TableHead>
                       <TableHead>Ramo</TableHead>
                       <TableHead>Produtor</TableHead>
                       <TableHead className="w-32">% / Comissão</TableHead>
-                      <TableHead className="w-20"></TableHead>
+                      <TableHead className="w-16"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.map((item) => (
                       <TableRow key={item.id} className={item.processError ? 'bg-red-900/20' : !item.isValid ? 'bg-yellow-900/10' : ''}>
-                        {/* PDF Thumbnail with attachment indicator */}
+                        {/* Doc Preview Button */}
                         <TableCell>
                           <div className="relative">
-                            <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center">
-                              <FileText className="w-5 h-5 text-purple-400" />
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-10 h-10 p-0 hover:bg-purple-600/20"
+                              onClick={() => {
+                                setPreviewItem(item);
+                                setPreviewOpen(true);
+                              }}
+                              title="Visualizar documento"
+                            >
+                              <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center">
+                                <Eye className="w-5 h-5 text-purple-400" />
+                              </div>
+                            </Button>
                             {/* Indicador de anexo 📎 */}
                             <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-600 rounded-full flex items-center justify-center">
                               <span className="text-[8px]">📎</span>
@@ -802,43 +864,70 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 {item.clientStatus === 'matched' ? (
-                                  <UserCheck className="w-4 h-4 text-green-400" />
+                                  <UserCheck className="w-4 h-4 text-green-400 flex-shrink-0" />
                                 ) : (
-                                  <UserPlus className="w-4 h-4 text-yellow-400" />
+                                  <UserPlus className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                                 )}
                                 <Input
                                   value={item.clientName}
-                                  onChange={(e) => updateItem(item.id, { clientName: e.target.value })}
-                                  className={`h-8 bg-slate-700 border-slate-600 text-sm ${!item.clientName ? 'border-red-500 bg-red-900/20' : ''}`}
+                                  onChange={(e) => {
+                                    markFieldEdited(item.id, 'clientName');
+                                    updateItem(item.id, { clientName: e.target.value });
+                                  }}
+                                  className={cn(
+                                    "h-8 bg-slate-700 border-slate-600 text-sm",
+                                    !item.clientName && "border-red-500 bg-red-900/20",
+                                    isFieldEdited(item.id, 'clientName') && "text-sky-400 border-sky-500/50"
+                                  )}
                                   placeholder="Nome do cliente"
                                 />
                               </div>
-                              {/* Badge de Status do Cliente v3.0 */}
+                              {/* CPF/CNPJ Editável */}
                               <div className="pl-6">
+                                <Input
+                                  value={item.clientCpfCnpj || ''}
+                                  onChange={(e) => {
+                                    markFieldEdited(item.id, 'clientCpfCnpj');
+                                    updateItem(item.id, { clientCpfCnpj: e.target.value });
+                                  }}
+                                  className={cn(
+                                    "h-6 text-xs bg-transparent border-slate-600/30 px-1 w-36",
+                                    isFieldEdited(item.id, 'clientCpfCnpj') && "text-sky-400 border-sky-500/50"
+                                  )}
+                                  placeholder="CPF/CNPJ"
+                                />
+                              </div>
+                              {/* Badge de Status do Cliente */}
+                              <div className="pl-6 flex items-center gap-1">
                                 {item.clientStatus === 'matched' ? (
                                   <Badge className="bg-green-600/20 text-green-400 border-green-600/40 text-[10px] h-5">
                                     <UserCheck className="w-3 h-3 mr-1" />
-                                    Vinculando a {item.clientName.split(' ')[0]}
+                                    Vinculando
                                   </Badge>
                                 ) : (
                                   <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/40 text-[10px] h-5">
                                     <UserPlus className="w-3 h-3 mr-1" />
-                                    Criando Novo Cliente
+                                    Novo
                                   </Badge>
                                 )}
-                                {item.clientCpfCnpj && (
-                                  <span className="ml-2 text-xs text-slate-400">{item.clientCpfCnpj}</span>
+                                {editedFields.get(item.id)?.size && editedFields.get(item.id)!.size > 0 && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-sky-400 border-sky-400/40 text-[9px] h-4 px-1"
+                                  >
+                                    ✏️ Auditado
+                                  </Badge>
                                 )}
                               </div>
                             </div>
                           )}
                         </TableCell>
 
-                        {/* Apólice */}
+                        {/* Apólice + Prêmio Editáveis */}
                         <TableCell>
                           {!item.processError && (
                             <div className="text-sm space-y-1">
-                              {/* Badges de Tipo de Documento v3.0 */}
+                              {/* Badges de Tipo de Documento */}
                               <div className="flex items-center gap-1 flex-wrap">
                                 {item.tipoDocumento === 'PROPOSTA' && (
                                   <Badge variant="outline" className="text-blue-400 border-blue-400/40 text-[10px] h-4 px-1">
@@ -862,19 +951,42 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                                 )}
                               </div>
                               
-                              <div className={`font-medium text-white ${!item.numeroApolice ? 'text-red-400' : ''}`}>
-                                {item.numeroApolice || '⚠️ Não detectado'}
-                              </div>
+                              {/* Número da Apólice - EDITÁVEL */}
+                              <Input
+                                value={item.numeroApolice}
+                                onChange={(e) => {
+                                  markFieldEdited(item.id, 'numeroApolice');
+                                  updateItem(item.id, { numeroApolice: e.target.value });
+                                }}
+                                className={cn(
+                                  "h-7 bg-slate-700 border-slate-600 text-sm font-medium",
+                                  !item.numeroApolice && "border-red-500 bg-red-900/20",
+                                  isFieldEdited(item.id, 'numeroApolice') && "text-sky-400 border-sky-500/50"
+                                )}
+                                placeholder="Nº Apólice"
+                              />
                               
-                              {/* Título Sugerido pela IA v3.0 */}
+                              {/* Título Sugerido pela IA */}
                               {item.tituloSugerido && (
-                                <div className="text-purple-300 text-[10px] truncate max-w-48" title={item.tituloSugerido}>
+                                <div className="text-purple-300 text-[10px] truncate max-w-44" title={item.tituloSugerido}>
                                   💡 {item.tituloSugerido}
                                 </div>
                               )}
                               
-                              <div className="text-slate-400 text-xs truncate max-w-40" title={item.objetoSegurado}>
-                                {item.objetoSegurado || '-'}
+                              {/* Prêmio Líquido - EDITÁVEL */}
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-slate-400 text-xs">R$</span>
+                                <Input
+                                  type="text"
+                                  value={item.premioLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  onChange={(e) => handlePremioChange(item.id, e.target.value)}
+                                  className={cn(
+                                    "h-6 w-24 bg-transparent border-slate-600/50 text-xs px-2",
+                                    item.premioLiquido === 0 && "border-red-500 bg-red-900/20 text-red-400",
+                                    isFieldEdited(item.id, 'premioLiquido') && "text-sky-400 border-sky-500/50"
+                                  )}
+                                  placeholder="0,00"
+                                />
                               </div>
                               
                               {/* Motivo do Endosso */}
@@ -883,10 +995,6 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                                   ↳ {item.endossoMotivo}
                                 </div>
                               )}
-                              
-                              <div className={`text-xs ${item.premioLiquido === 0 ? 'text-red-400' : 'text-slate-500'}`}>
-                                R$ {item.premioLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </div>
                             </div>
                           )}
                         </TableCell>
@@ -1052,6 +1160,52 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             </Button>
           </div>
         )}
+
+        {/* PDF Preview Sheet */}
+        <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
+          <SheetContent 
+            side="right" 
+            className="w-[600px] sm:max-w-[600px] bg-slate-900 border-slate-700 p-0"
+          >
+            <SheetHeader className="p-4 border-b border-slate-700">
+              <SheetTitle className="text-white flex items-center gap-2">
+                <FileText className="w-5 h-5 text-purple-400" />
+                {previewItem?.fileName || 'Documento'}
+              </SheetTitle>
+              <SheetDescription className="text-slate-400">
+                {previewItem?.tituloSugerido || 'Visualização do documento original'}
+              </SheetDescription>
+            </SheetHeader>
+            
+            {/* PDF Viewer */}
+            <div className="h-[calc(100vh-180px)] w-full bg-slate-800">
+              {previewItem?.filePreviewUrl ? (
+                <iframe
+                  src={previewItem.filePreviewUrl}
+                  className="w-full h-full border-0"
+                  title="Preview do documento"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-500">
+                  Não foi possível carregar o preview
+                </div>
+              )}
+            </div>
+            
+            {/* Open in new tab button */}
+            <div className="absolute bottom-4 right-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => previewItem?.filePreviewUrl && window.open(previewItem.filePreviewUrl, '_blank')}
+                className="bg-slate-800 border-slate-600"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Abrir em nova aba
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </DialogContent>
     </Dialog>
   );
