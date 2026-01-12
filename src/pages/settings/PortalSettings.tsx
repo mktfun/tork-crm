@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Globe, Copy, Check, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { SettingsPanel } from '@/components/settings/SettingsPanel';
@@ -13,7 +14,9 @@ import { SettingsPanel } from '@/components/settings/SettingsPanel';
 interface PortalConfig {
   portal_enabled: boolean;
   portal_show_policies: boolean;
+  portal_allow_policy_download: boolean;
   portal_show_cards: boolean;
+  portal_allow_card_download: boolean;
   portal_allow_profile_edit: boolean;
 }
 
@@ -24,7 +27,9 @@ export default function PortalSettings() {
   const [settings, setSettings] = useState<PortalConfig>({
     portal_enabled: false,
     portal_show_policies: true,
+    portal_allow_policy_download: true,
     portal_show_cards: true,
+    portal_allow_card_download: true,
     portal_allow_profile_edit: true,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +47,7 @@ export default function PortalSettings() {
       try {
         const { data, error } = await supabase
           .from('brokerages')
-          .select('id, slug, portal_enabled, portal_show_policies, portal_show_cards, portal_allow_profile_edit')
+          .select('id, slug, portal_enabled, portal_show_policies, portal_allow_policy_download, portal_show_cards, portal_allow_card_download, portal_allow_profile_edit')
           .eq('user_id', user.id)
           .limit(1)
           .maybeSingle();
@@ -58,7 +63,9 @@ export default function PortalSettings() {
           setSettings({
             portal_enabled: data.portal_enabled ?? false,
             portal_show_policies: data.portal_show_policies ?? true,
+            portal_allow_policy_download: data.portal_allow_policy_download ?? true,
             portal_show_cards: data.portal_show_cards ?? true,
+            portal_allow_card_download: data.portal_allow_card_download ?? true,
             portal_allow_profile_edit: data.portal_allow_profile_edit ?? true,
           });
         }
@@ -86,7 +93,9 @@ export default function PortalSettings() {
         .update({
           portal_enabled: settings.portal_enabled,
           portal_show_policies: settings.portal_show_policies,
+          portal_allow_policy_download: settings.portal_allow_policy_download,
           portal_show_cards: settings.portal_show_cards,
+          portal_allow_card_download: settings.portal_allow_card_download,
           portal_allow_profile_edit: settings.portal_allow_profile_edit,
         })
         .eq('id', brokerageId);
@@ -122,7 +131,19 @@ export default function PortalSettings() {
   };
 
   const updateSetting = (key: keyof PortalConfig, value: boolean) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    setSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      
+      // Se desabilitar a exibição, desabilita o download também
+      if (key === 'portal_show_policies' && !value) {
+        newSettings.portal_allow_policy_download = false;
+      }
+      if (key === 'portal_show_cards' && !value) {
+        newSettings.portal_allow_card_download = false;
+      }
+      
+      return newSettings;
+    });
   };
 
   if (isLoading) {
@@ -252,34 +273,79 @@ export default function PortalSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="text-white font-medium">Exibir Apólices</Label>
-                <p className="text-sm text-slate-400">
-                  Mostra a lista de seguros ativos do cliente
-                </p>
+            {/* Apólices */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-white font-medium">Exibir Apólices</Label>
+                  <p className="text-sm text-slate-400">
+                    Mostra a lista de seguros do cliente
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.portal_show_policies}
+                  onCheckedChange={(v) => updateSetting('portal_show_policies', v)}
+                  disabled={!settings.portal_enabled}
+                />
               </div>
-              <Switch
-                checked={settings.portal_show_policies}
-                onCheckedChange={(v) => updateSetting('portal_show_policies', v)}
-                disabled={!settings.portal_enabled}
-              />
+              
+              {/* Sub-opção de download */}
+              <div className="ml-8 flex items-center gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+                <Checkbox
+                  id="allow_policy_download"
+                  checked={settings.portal_allow_policy_download}
+                  onCheckedChange={(v) => updateSetting('portal_allow_policy_download', !!v)}
+                  disabled={!settings.portal_enabled || !settings.portal_show_policies}
+                  className="border-slate-500"
+                />
+                <div>
+                  <Label htmlFor="allow_policy_download" className="text-slate-300 text-sm cursor-pointer">
+                    Permitir Download do PDF
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Cliente pode baixar o PDF da apólice
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="text-white font-medium">Exibir Carteirinhas</Label>
-                <p className="text-sm text-slate-400">
-                  Mostra carteirinhas digitais de saúde/odonto
-                </p>
+            {/* Carteirinhas */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-white font-medium">Exibir Carteirinhas</Label>
+                  <p className="text-sm text-slate-400">
+                    Mostra carteirinhas digitais de saúde/odonto
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.portal_show_cards}
+                  onCheckedChange={(v) => updateSetting('portal_show_cards', v)}
+                  disabled={!settings.portal_enabled}
+                />
               </div>
-              <Switch
-                checked={settings.portal_show_cards}
-                onCheckedChange={(v) => updateSetting('portal_show_cards', v)}
-                disabled={!settings.portal_enabled}
-              />
+              
+              {/* Sub-opção de download */}
+              <div className="ml-8 flex items-center gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+                <Checkbox
+                  id="allow_card_download"
+                  checked={settings.portal_allow_card_download}
+                  onCheckedChange={(v) => updateSetting('portal_allow_card_download', !!v)}
+                  disabled={!settings.portal_enabled || !settings.portal_show_cards}
+                  className="border-slate-500"
+                />
+                <div>
+                  <Label htmlFor="allow_card_download" className="text-slate-300 text-sm cursor-pointer">
+                    Permitir Download da Carteirinha
+                  </Label>
+                  <p className="text-xs text-slate-500">
+                    Cliente pode baixar a carteirinha como imagem
+                  </p>
+                </div>
+              </div>
             </div>
 
+            {/* Edição de Perfil */}
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <Label className="text-white font-medium">Permitir Edição de Perfil</Label>

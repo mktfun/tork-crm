@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreditCard, Phone, Calendar, Shield, AlertCircle, Building2 } from 'lucide-react';
+import { CreditCard, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { VirtualCard } from '@/components/portal/VirtualCard';
+import { getCompanyAssistance } from '@/utils/insuranceAssistance';
 
 interface Policy {
   id: string;
@@ -20,22 +20,45 @@ interface Policy {
 interface Company {
   id: string;
   name: string;
+  assistance_phone: string | null;
 }
 
 export default function PortalCards() {
   const [policies, setPolicies] = useState<Policy[]>([]);
-  const [companies, setCompanies] = useState<Record<string, string>>({});
-  const [clientName, setClientName] = useState('');
+  const [companies, setCompanies] = useState<Record<string, Company>>({});
+  const [clientData, setClientData] = useState<{ name: string; cpf_cnpj: string | null } | null>(null);
+  const [canDownload, setCanDownload] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const clientData = sessionStorage.getItem('portal_client');
-    if (clientData) {
-      const client = JSON.parse(clientData);
-      setClientName(client.name || '');
+    const storedClient = sessionStorage.getItem('portal_client');
+    if (storedClient) {
+      const client = JSON.parse(storedClient);
+      setClientData({
+        name: client.name || '',
+        cpf_cnpj: client.cpf_cnpj || null,
+      });
       fetchData(client.id, client.user_id);
+      fetchPortalConfig(client.user_id);
     }
   }, []);
+
+  const fetchPortalConfig = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('brokerages')
+        .select('portal_allow_card_download')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setCanDownload(data.portal_allow_card_download ?? true);
+      }
+    } catch (err) {
+      console.error('Error fetching portal config:', err);
+    }
+  };
 
   const fetchData = async (clientId: string, userId: string) => {
     try {
@@ -53,12 +76,12 @@ export default function PortalCards() {
 
       const { data: companiesData } = await supabase
         .from('companies')
-        .select('id, name')
+        .select('id, name, assistance_phone')
         .eq('user_id', userId);
 
-      const companiesMap: Record<string, string> = {};
+      const companiesMap: Record<string, Company> = {};
       companiesData?.forEach((c: Company) => {
-        companiesMap[c.id] = c.name;
+        companiesMap[c.id] = c;
       });
 
       setCompanies(companiesMap);
@@ -70,12 +93,22 @@ export default function PortalCards() {
     }
   };
 
+  const getAssistancePhone = (policy: Policy): string | null => {
+    if (!policy.insurance_company) return null;
+    
+    const company = companies[policy.insurance_company];
+    if (!company) return null;
+
+    // Usa a função utilitária que faz matching fuzzy com fallback
+    return getCompanyAssistance(company.name, company.assistance_phone);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48 bg-zinc-800" />
         {[1, 2].map(i => (
-          <Skeleton key={i} className="h-48 w-full bg-zinc-800 rounded-2xl" />
+          <Skeleton key={i} className="h-72 w-full bg-zinc-800 rounded-2xl" />
         ))}
       </div>
     );
@@ -96,81 +129,22 @@ export default function PortalCards() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {policies.map((policy) => (
-            <div
-              key={policy.id}
-              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 p-5 shadow-2xl border border-white/5"
-            >
-              {/* Card Background Pattern */}
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-[#D4AF37]/30" />
-                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-[#D4AF37]/20" />
-              </div>
-
-              {/* Card Content */}
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-6 h-6 text-[#D4AF37]" />
-                    <span className="font-light text-white/90 text-sm">
-                      {policy.type || 'Seguro'}
-                    </span>
-                  </div>
-                  <CreditCard className="w-8 h-8 text-[#D4AF37]/40" />
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-zinc-500 text-xs uppercase tracking-wide">Segurado</p>
-                  <p className="text-white font-medium text-lg truncate">{clientName}</p>
-                </div>
-
-                {policy.policy_number && (
-                  <div className="mb-4">
-                    <p className="text-zinc-500 text-xs uppercase tracking-wide">Nº Apólice</p>
-                    <p className="text-white font-mono text-sm">{policy.policy_number}</p>
-                  </div>
-                )}
-
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-zinc-500 text-xs uppercase tracking-wide flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> Vigência
-                    </p>
-                    <p className="text-white text-sm font-light">
-                      {policy.start_date && format(new Date(policy.start_date), 'dd/MM/yy', { locale: ptBR })}
-                      {' - '}
-                      {format(new Date(policy.expiration_date), 'dd/MM/yy', { locale: ptBR })}
-                    </p>
-                  </div>
-                  
-                  {policy.insurance_company && companies[policy.insurance_company] && (
-                    <div className="text-right">
-                      <p className="text-zinc-500 text-xs uppercase tracking-wide flex items-center gap-1 justify-end">
-                        <Building2 className="w-3 h-3" /> Seguradora
-                      </p>
-                      <p className="text-white text-sm font-light truncate max-w-[120px]">
-                        {companies[policy.insurance_company]}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-white/10">
-                  <div className="flex items-center gap-2 text-zinc-400">
-                    <Phone className="w-4 h-4" />
-                    <span className="text-sm font-light">Assistência 24h: Consulte sua apólice</span>
-                  </div>
-                </div>
-
-                {policy.insured_asset && (
-                  <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/5">
-                    <p className="text-zinc-400 text-xs">{policy.insured_asset}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="space-y-6">
+          {policies.map((policy) => {
+            const company = policy.insurance_company ? companies[policy.insurance_company] : null;
+            
+            return (
+              <VirtualCard
+                key={policy.id}
+                policy={policy}
+                clientName={clientData?.name || ''}
+                clientCpf={clientData?.cpf_cnpj || null}
+                companyName={company?.name || null}
+                assistancePhone={getAssistancePhone(policy)}
+                canDownload={canDownload}
+              />
+            );
+          })}
         </div>
       )}
 
