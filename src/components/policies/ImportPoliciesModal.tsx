@@ -54,6 +54,17 @@ interface ExtendedBulkOCRResponse extends BulkOCRResponse {
   metrics?: ProcessingMetrics;
 }
 
+// Sanitize premio value - ensure it's a number
+const sanitizePremio = (value: unknown): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    // Remove R$, pontos de milhar e troca vírgula por ponto
+    const clean = value.replace(/[R$\s.]/g, '').replace(',', '.');
+    return parseFloat(clean) || 0;
+  }
+  return 0;
+};
+
 export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalProps) {
   const { user } = useAuth();
   const { companies } = useSupabaseCompanies();
@@ -260,6 +271,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       
       const allPolicies: BulkOCRExtractedPolicy[] = data.data || [];
       
+      // Log AI response for debugging
+      console.log('🤖 [IA] Dados extraídos:', JSON.stringify(allPolicies, null, 2));
+      
       const processedItems: PolicyImportItem[] = await Promise.all(
         allPolicies.map(async (policy) => {
           const file = fileMap.get(policy.arquivo_origem) || files[0];
@@ -284,8 +298,8 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               descricao_bem: policy.descricao_bem || policy.objeto_segurado || '',
             },
             valores: {
-              premio_liquido: policy.premio_liquido || 0,
-              premio_total: policy.premio_total || 0,
+              premio_liquido: sanitizePremio(policy.premio_liquido),
+              premio_total: sanitizePremio(policy.premio_total),
             },
           };
           
@@ -322,15 +336,15 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             dataInicio: policy.data_inicio,
             dataFim: policy.data_fim,
             objetoSegurado: objetoCompleto,
-            premioLiquido: policy.premio_liquido || 0,
-            premioTotal: policy.premio_total || 0,
+            premioLiquido: sanitizePremio(policy.premio_liquido),
+            premioTotal: sanitizePremio(policy.premio_total),
             // NOVOS CAMPOS v3.0
             tipoDocumento: policy.tipo_documento || null,
             tipoOperacao: policy.tipo_operacao || null,
             endossoMotivo: policy.endosso_motivo || null,
             tituloSugerido: policy.titulo_sugerido || '',
             identificacaoAdicional: policy.identificacao_adicional || null,
-            estimatedCommission: (policy.premio_liquido || 0) * 0.15,
+            estimatedCommission: sanitizePremio(policy.premio_liquido) * 0.15,
             isValid: false,
             validationErrors: [],
             isProcessing: false,
@@ -472,7 +486,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           startDate: item.dataInicio,
           expirationDate: item.dataFim,
           producerId: item.producerId!,
-          status: isOrcamento ? 'Orçamento' : isProposta ? 'Pendente' : 'Ativa',
+          status: isOrcamento ? 'Orçamento' : isProposta ? 'Aguardando Apólice' : 'Ativa',
           automaticRenewal: !isOrcamento && !isProposta,
           isBudget: isOrcamento,
           pdfUrl,
