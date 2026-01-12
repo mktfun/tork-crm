@@ -142,7 +142,12 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
+        // Debug logging para verificar base64
+        console.log(`📁 [DEBUG] ${file.name}: base64 total length = ${result.length}`);
+        console.log(`📁 [DEBUG] ${file.name}: starts with = ${result.substring(0, 50)}`);
+        // Enviar base64 completo - a edge function limpa o prefixo
         const base64Data = result.split(',')[1];
+        console.log(`📁 [DEBUG] ${file.name}: clean base64 length = ${base64Data.length}`);
         resolve(base64Data);
       };
       reader.onerror = reject;
