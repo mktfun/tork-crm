@@ -7,6 +7,42 @@ const corsHeaders = {
 
 const OCR_SPACE_KEY = 'K82045193188957';
 
+// Keywords para filtrar texto essencial (incluindo dados de veículos e imóveis)
+const KEYWORDS = [
+  'NOME', 'CPF', 'CNPJ', 'APOLICE', 'SEGURADO', 'VIGENCIA', 'PREMIO', 
+  'LIQUIDO', 'RAMO', 'ENDOSSO', 'RENOVACAO', 'CIA', 'SEGURADORA', 
+  'EMAIL', 'INICIO', 'TERMINO', 'VALOR', 'COBERTURA',
+  'PLACA', 'MARCA', 'MODELO', 'VEICULO', 'CHASSI', 'ANO', 'FABRICACAO', 'RENAVAM', // Auto
+  'CASA', 'APARTAMENTO', 'CONDOMINIO', 'ENDERECO', 'LOGRADOURO', 'RESIDENCIAL', 'IMÓVEL', // Residencial
+  'VIDA', 'PESSOA', 'BENEFICIARIO', 'CAPITAL', 'SEGURADA' // Vida/Pessoas
+];
+
+// Função para filtrar apenas linhas essenciais do texto (reduz tokens para IA)
+function filterEssentialText(text: string, maxChars: number = 15000): string {
+  const lines = text.split('\n');
+  const relevantLines: string[] = [];
+  let totalChars = 0;
+  
+  for (const line of lines) {
+    const upperLine = line.toUpperCase();
+    // Verifica se a linha contém alguma keyword importante
+    const hasKeyword = KEYWORDS.some(kw => upperLine.includes(kw));
+    // Ou se contém padrões importantes (CPF, datas, valores)
+    const hasPattern = /\d{3}[.\-]\d{3}[.\-]\d{3}[.\-]\d{2}|\d{2}[.\-]\d{3}[.\-]\d{3}[\/]\d{4}[.\-]\d{2}|\d{2}\/\d{2}\/\d{4}|R\$\s*[\d.,]+|\d{1,3}[.]\d{3}[,]\d{2}/.test(line);
+    // Ou se parece com placa de veículo
+    const hasPlaca = /[A-Z]{3}[\-\s]?\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4}/i.test(line);
+    
+    if (hasKeyword || hasPattern || hasPlaca) {
+      if (totalChars + line.length <= maxChars) {
+        relevantLines.push(line);
+        totalChars += line.length;
+      }
+    }
+  }
+  
+  return relevantLines.join('\n');
+}
+
 // Função para extrair texto de PDF digital usando regex patterns
 // (fallback rápido antes do OCR)
 function extractTextFromPdfBuffer(buffer: Uint8Array): string {
@@ -137,9 +173,12 @@ serve(async (req) => {
           }
         }
 
-        // Adiciona texto se suficiente
+        // Adiciona texto filtrado se suficiente
         if (extractedText && extractedText.trim().length > 10) {
-          allTexts.push({ fileName: file.fileName, text: extractedText });
+          // Filtra apenas linhas essenciais para economizar tokens da IA
+          const filteredText = filterEssentialText(extractedText);
+          console.log(`🔎 [FILTRO] ${file.fileName}: ${extractedText.length} → ${filteredText.length} chars (${Math.round(100 * filteredText.length / extractedText.length)}%)`);
+          allTexts.push({ fileName: file.fileName, text: filteredText });
         }
 
       } catch (err: any) {
@@ -179,7 +218,19 @@ REGRAS IMPORTANTES:
 5. Valores numéricos: sem R$, pontos de milhar. Use ponto como decimal
 6. Se não encontrar um campo, use null
 7. Para ramo_seguro, normalize para: "Auto", "Residencial", "Vida", "Empresarial", "Saúde", "Viagem", "Transporte", etc.
-8. arquivo_origem deve conter o nome do arquivo do documento de onde os dados foram extraídos`;
+8. arquivo_origem deve conter o nome do arquivo do documento de onde os dados foram extraídos
+
+EXTRAÇÃO DO OBJETO SEGURADO (MUITO IMPORTANTE):
+- Para AUTO: extraia marca, modelo e PLACA do veículo (Ex: "Toyota Corolla", placa "ABC-1D23")
+- Para RESIDENCIAL: extraia tipo do imóvel e endereço resumido (Ex: "Apartamento - Rua X, 123")
+- Para VIDA/PESSOAS: extraia tipo de cobertura (Ex: "Vida Individual", "Vida em Grupo")
+
+CAMPOS ADICIONAIS:
+- objeto_segurado: descrição do bem (carro, casa, pessoa)
+- identificacao_adicional: para AUTO = placa; para RESIDENCIAL = número/complemento do endereço; para VIDA = null
+- tipo_operacao: 'RENOVACAO', 'NOVA' ou 'ENDOSSO' (inferir do texto)
+- titulo_sugerido: formato "[NOME_CLIENTE] - [RAMO] ([OBJETO_SEGURADO] - [IDENTIFICACAO])" 
+  Ex: "João Silva - Auto (Toyota Corolla - ABC1D23)"`;
 
     const tool = {
       type: 'function',
@@ -202,13 +253,17 @@ REGRAS IMPORTANTES:
                   nome_seguradora: { type: 'string' },
                   ramo_seguro: { type: 'string' },
                   descricao_bem: { type: 'string', nullable: true },
+                  objeto_segurado: { type: 'string', nullable: true, description: 'Ex: Toyota Corolla, Apartamento, Vida Individual' },
+                  identificacao_adicional: { type: 'string', nullable: true, description: 'Placa do veículo ou endereço do imóvel' },
+                  tipo_operacao: { type: 'string', enum: ['RENOVACAO', 'NOVA', 'ENDOSSO'], nullable: true },
+                  titulo_sugerido: { type: 'string', description: 'Formato: NOME - RAMO (OBJETO - IDENTIFICACAO)' },
                   data_inicio: { type: 'string' },
                   data_fim: { type: 'string' },
                   premio_liquido: { type: 'number' },
                   premio_total: { type: 'number' },
                   arquivo_origem: { type: 'string' }
                 },
-                required: ['nome_cliente', 'numero_apolice', 'nome_seguradora', 'ramo_seguro', 'arquivo_origem']
+                required: ['nome_cliente', 'numero_apolice', 'nome_seguradora', 'ramo_seguro', 'arquivo_origem', 'titulo_sugerido']
               }
             }
           },
@@ -242,8 +297,12 @@ Retorne um array JSON com os seguintes campos para cada documento:
   "telefone": "string | null",
   "numero_apolice": "string",
   "nome_seguradora": "string",
-  "ramo_seguro": "string",
+  "ramo_seguro": "string (normalizado: Auto, Residencial, Vida, etc)",
   "descricao_bem": "string | null",
+  "objeto_segurado": "string | null (marca/modelo do carro, tipo de imóvel, etc)",
+  "identificacao_adicional": "string | null (placa do veículo ou endereço resumido)",
+  "tipo_operacao": "RENOVACAO | NOVA | ENDOSSO",
+  "titulo_sugerido": "NOME - RAMO (OBJETO - IDENTIFICACAO)",
   "data_inicio": "YYYY-MM-DD",
   "data_fim": "YYYY-MM-DD",
   "premio_liquido": number,

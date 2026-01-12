@@ -101,6 +101,10 @@ export interface BulkOCRExtractedPolicy {
   nome_seguradora: string;
   ramo_seguro: string;
   descricao_bem: string | null;
+  objeto_segurado: string | null;          // Ex: Toyota Corolla, Apartamento
+  identificacao_adicional: string | null;  // Placa do veículo ou endereço
+  tipo_operacao: 'RENOVACAO' | 'NOVA' | 'ENDOSSO' | null;
+  titulo_sugerido: string;                 // NOME - RAMO (OBJETO - ID)
   data_inicio: string;
   data_fim: string;
   premio_liquido: number;
