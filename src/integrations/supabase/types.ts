@@ -283,6 +283,8 @@ export type Database = {
           id: number
           logo_url: string | null
           name: string
+          portal_allow_card_download: boolean | null
+          portal_allow_policy_download: boolean | null
           portal_allow_profile_edit: boolean | null
           portal_enabled: boolean | null
           portal_show_cards: boolean | null
@@ -300,6 +302,8 @@ export type Database = {
           id?: never
           logo_url?: string | null
           name: string
+          portal_allow_card_download?: boolean | null
+          portal_allow_policy_download?: boolean | null
           portal_allow_profile_edit?: boolean | null
           portal_enabled?: boolean | null
           portal_show_cards?: boolean | null
@@ -317,6 +321,8 @@ export type Database = {
           id?: never
           logo_url?: string | null
           name?: string
+          portal_allow_card_download?: boolean | null
+          portal_allow_policy_download?: boolean | null
           portal_allow_profile_edit?: boolean | null
           portal_enabled?: boolean | null
           portal_show_cards?: boolean | null
@@ -447,6 +453,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          assistance_phone: string | null
           created_at: string
           id: string
           name: string
@@ -454,6 +461,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assistance_phone?: string | null
           created_at?: string
           id?: string
           name: string
@@ -461,6 +469,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assistance_phone?: string | null
           created_at?: string
           id?: string
           name?: string

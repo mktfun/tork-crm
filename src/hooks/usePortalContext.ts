@@ -10,6 +10,8 @@ interface BrokerageData {
   show_policies: boolean;
   show_cards: boolean;
   allow_profile_edit: boolean;
+  allow_policy_download: boolean;
+  allow_card_download: boolean;
 }
 
 interface PortalContextData {
