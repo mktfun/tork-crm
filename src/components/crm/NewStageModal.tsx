@@ -17,18 +17,19 @@ import { useCRMStages, PRESET_COLORS } from '@/hooks/useCRMDeals';
 interface NewStageModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  pipelineId?: string | null;
 }
 
-export function NewStageModal({ open, onOpenChange }: NewStageModalProps) {
+export function NewStageModal({ open, onOpenChange, pipelineId }: NewStageModalProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
-  const { createStage } = useCRMStages();
+  const { createStage } = useCRMStages(pipelineId);
 
   const handleCreate = () => {
     if (!name.trim()) return;
     
     createStage.mutate(
-      { name: name.trim(), color },
+      { name: name.trim(), color, pipeline_id: pipelineId || undefined },
       {
         onSuccess: () => {
           onOpenChange(false);

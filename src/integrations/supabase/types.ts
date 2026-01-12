@@ -627,6 +627,39 @@ export type Database = {
           },
         ]
       }
+      crm_pipelines: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       crm_settings: {
         Row: {
           chatwoot_account_id: string | null
@@ -667,6 +700,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          pipeline_id: string | null
           position: number
           user_id: string
         }
@@ -676,6 +710,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          pipeline_id?: string | null
           position?: number
           user_id: string
         }
@@ -685,10 +720,19 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          pipeline_id?: string | null
           position?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_metrics: {
         Row: {

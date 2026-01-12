@@ -22,9 +22,13 @@ import { StageEditModal } from './StageEditModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, Sparkles } from 'lucide-react';
 
-export function KanbanBoard() {
-  const { stages, isLoading: stagesLoading, initializeStages, reorderStages, deleteStage } = useCRMStages();
-  const { deals, isLoading: dealsLoading, moveDeal } = useCRMDeals();
+interface KanbanBoardProps {
+  pipelineId: string | null;
+}
+
+export function KanbanBoard({ pipelineId }: KanbanBoardProps) {
+  const { stages, isLoading: stagesLoading, initializeStages, reorderStages, deleteStage } = useCRMStages(pipelineId);
+  const { deals, isLoading: dealsLoading, moveDeal } = useCRMDeals(pipelineId);
   
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<'deal' | 'column' | null>(null);
@@ -179,11 +183,37 @@ export function KanbanBoard() {
     deleteStage.mutate(stageId);
   };
 
+  const handleInitializeStages = () => {
+    if (pipelineId) {
+      initializeStages.mutate(pipelineId);
+    }
+  };
+
   if (stagesLoading || dealsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  if (!pipelineId) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center h-64 text-center"
+      >
+        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
+          <Sparkles className="h-8 w-8 text-blue-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Selecione um Funil
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6 max-w-md">
+          Selecione ou crie um funil para começar a gerenciar seus negócios.
+        </p>
+      </motion.div>
     );
   }
 
@@ -203,7 +233,7 @@ export function KanbanBoard() {
         <p className="text-sm text-muted-foreground mb-6 max-w-md">
           Crie as etapas do seu funil para começar a gerenciar seus negócios no Kanban.
         </p>
-        <Button onClick={() => initializeStages.mutate()} disabled={initializeStages.isPending}>
+        <Button onClick={handleInitializeStages} disabled={initializeStages.isPending}>
           {initializeStages.isPending ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
@@ -323,6 +353,7 @@ export function KanbanBoard() {
       <NewStageModal
         open={showNewStageModal}
         onOpenChange={setShowNewStageModal}
+        pipelineId={pipelineId}
       />
 
       <StageEditModal
