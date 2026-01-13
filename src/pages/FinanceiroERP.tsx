@@ -13,7 +13,8 @@ import {
   CalendarClock,
   Landmark,
   Clock,
-  Info
+  Info,
+  LineChart
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +32,7 @@ import { DateRangeFilter } from '@/components/financeiro/DateRangeFilter';
 import { ReceitasTab } from '@/components/financeiro/ReceitasTab';
 import { DespesasTab } from '@/components/financeiro/DespesasTab';
 import { CaixaTab } from '@/components/financeiro/CaixaTab';
+import { ProvisoesTab } from '@/components/financeiro/ProvisoesTab';
 import { TransactionDetailsSheet } from '@/components/financeiro/TransactionDetailsSheet';
 import { 
   useFinancialAccountsWithDefaults, 
@@ -475,6 +477,10 @@ export default function FinanceiroERP() {
             <TrendingDown className="w-4 h-4" />
             Despesas
           </TabsTrigger>
+          <TabsTrigger value="provisoes" className="gap-2">
+            <LineChart className="w-4 h-4" />
+            Provisões
+          </TabsTrigger>
           <TabsTrigger value="dre" className="gap-2">
             <FileSpreadsheet className="w-4 h-4" />
             DRE
@@ -502,6 +508,10 @@ export default function FinanceiroERP() {
 
         <TabsContent value="despesas">
           <DespesasTab dateRange={dateRange} />
+        </TabsContent>
+
+        <TabsContent value="provisoes">
+          <ProvisoesTab dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="dre">
