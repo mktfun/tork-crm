@@ -85,24 +85,41 @@ function extractTextFromPdfBuffer(buffer: Uint8Array): string {
   }
 }
 
-// Gera título inteligente para a apólice
+// 🔴 NOMENCLATURA ELITE: [Primeiro Nome] - [Ramo] ([Objeto]) - [Placa] - [Cia] - [Tipo]
 function generateSmartTitle(policy: any): string {
+  // Primeiro nome do cliente (limpa "NÃO IDENTIFICADO")
   const clientName = policy.nome_cliente || 'Cliente';
   const firstName = clientName.split(' ')[0].replace(/NÃO|IDENTIFICADO/gi, '').trim() || 'Cliente';
+  
+  // Ramo do seguro
   const ramo = policy.ramo_seguro || 'Seguro';
+  
+  // Objeto resumido (primeiras 3 palavras, máx 25 chars)
   let objeto = '';
   if (policy.objeto_segurado) {
-    objeto = policy.objeto_segurado.split(' ').slice(0, 2).join(' ').substring(0, 20);
+    objeto = policy.objeto_segurado.split(' ').slice(0, 3).join(' ').substring(0, 25);
   }
-  const identificacao = policy.identificacao_adicional || '';
-  const seguradora = policy.nome_seguradora || 'Seguradora';
-  const tipo = policy.tipo_documento && policy.tipo_documento !== 'APOLICE' ? ` - ${policy.tipo_documento}` : '';
   
+  // Placa ou identificação
+  const identificacao = policy.identificacao_adicional || '';
+  
+  // Sigla da seguradora (primeira palavra, uppercase)
+  const seguradora = (policy.nome_seguradora || 'CIA').split(' ')[0].toUpperCase();
+  
+  // Tipo de documento no formato esperado
+  const tipo = policy.tipo_documento === 'ENDOSSO' 
+    ? 'ENDOSSO' 
+    : policy.tipo_operacao === 'RENOVACAO'
+      ? 'RENOVACAO'
+      : policy.tipo_documento === 'ORCAMENTO' 
+        ? 'ORCAMENTO' 
+        : 'NOVA';
+  
+  // Montar título: Luis - Auto (Golf GTI) - ABC1234 - HDI - NOVA
   let titulo = `${firstName} - ${ramo}`;
   if (objeto) titulo += ` (${objeto})`;
   if (identificacao) titulo += ` - ${identificacao}`;
-  titulo += ` - ${seguradora}`;
-  titulo += tipo;
+  titulo += ` - ${seguradora} - ${tipo}`;
   
   return titulo.substring(0, 100);
 }

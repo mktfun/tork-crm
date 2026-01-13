@@ -581,22 +581,40 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
 
         // Determinar status - BULK IMPORT sempre cria como ATIVA (exceto orçamento)
         const isOrcamento = item.tipoDocumento === 'ORCAMENTO';
-        // 🔴 FIX: Propostas agora também viram ATIVA para gerar comissão automaticamente
         const finalStatus = isOrcamento ? 'Orçamento' : 'Ativa';
         
-        // Construir insuredAsset com objeto + placa editados pelo usuário
-        const insuredAssetFinal = item.identificacaoAdicional 
-          ? `${item.objetoSegurado || item.tituloSugerido} - ${item.identificacaoAdicional}`
-          : item.objetoSegurado || item.tituloSugerido || 'Não especificado';
+        // 🔴 NOMENCLATURA ELITE: [Primeiro Nome] - [Ramo] ([Objeto]) - [Placa] - [Cia] - [Tipo]
+        const primeiroNome = item.clientName?.split(' ')[0]?.replace(/NÃO|IDENTIFICADO/gi, '').trim() || 'Cliente';
+        const objetoResumo = item.objetoSegurado 
+          ? item.objetoSegurado.split(' ').slice(0, 3).join(' ').substring(0, 25)
+          : '';
+        const placa = item.identificacaoAdicional || '';
+        const seguradoraSigla = item.seguradoraNome?.split(' ')[0]?.toUpperCase() || 'CIA';
+        const tipoDoc = item.tipoDocumento === 'ENDOSSO' 
+          ? 'ENDOSSO' 
+          : item.tipoOperacao === 'RENOVACAO' 
+            ? 'RENOVACAO' 
+            : 'NOVA';
         
-        console.log('💾 [SAVE] Salvando apólice:', {
+        // Montar nomenclatura: Luis - Auto (Golf GTI) - ABC1234 - HDI - NOVA
+        let nomenclaturaElite = `${primeiroNome} - ${item.ramoNome || 'Seguro'}`;
+        if (objetoResumo) nomenclaturaElite += ` (${objetoResumo})`;
+        if (placa) nomenclaturaElite += ` - ${placa}`;
+        nomenclaturaElite += ` - ${seguradoraSigla} - ${tipoDoc}`;
+        const insuredAssetFinal = nomenclaturaElite.substring(0, 100);
+        
+        // 🔗 LOG DE SEGURANÇA: Confirmar vínculo do PDF antes de salvar
+        console.log('🔗 [VÍNCULO] URL do PDF para apólice:', item.numeroApolice);
+        console.log('🔗 [VÍNCULO] pdfUrl final:', pdfUrl);
+        
+        console.log('💾 [SAVE] Salvando apólice com nomenclatura elite:', {
+          nomenclatura: insuredAssetFinal,
           clientId,
           clientName: item.clientName,
           policyNumber: item.numeroApolice,
           premiumValue: item.premioLiquido,
-          insuredAsset: insuredAssetFinal,
           status: finalStatus,
-          pdfUrl: pdfUrl ? '✅ Vinculado' : '❌ Falhou',
+          pdfUrl: pdfUrl ? '✅ Vinculado' : '❌ CRÍTICO - FALHOU',
           brokerageId: activeBrokerageId
         });
         
@@ -1105,7 +1123,12 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                                       }}
                                       className={cn(
                                         "h-7 bg-slate-700 border-slate-600 text-sm",
-                                        !item.objetoSegurado && "border-yellow-500/50 bg-yellow-900/10",
+                                        // 🔴 Destaque VERMELHO PULSANTE se for AUTO e não tiver objeto
+                                        !item.objetoSegurado && item.ramoNome?.toUpperCase().includes('AUTO') 
+                                          && "border-red-500 bg-red-900/20 animate-pulse",
+                                        // Destaque amarelo para outros ramos sem objeto
+                                        !item.objetoSegurado && !item.ramoNome?.toUpperCase().includes('AUTO') 
+                                          && "border-yellow-500/50 bg-yellow-900/10",
                                         isFieldEdited(item.id, 'objetoSegurado') && "text-sky-400 border-sky-500/50"
                                       )}
                                       placeholder="VW Golf GTI 2024"
