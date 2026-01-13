@@ -399,10 +399,11 @@ export default function Policies() {
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-lg font-semibold text-white">
-                      {policy.policyNumber || `Orçamento #${policy.id.slice(0, 8)}`}
-                    </h3>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="text-lg font-semibold text-white">
+                        {client?.name?.split(' ')[0] || 'Cliente'} - {(policy as typeof policy & { ramos?: { nome: string } }).ramos?.nome || policy.type || 'Seguro'}
+                        {policy.insuredAsset && ` (${policy.insuredAsset.split(' ').slice(0, 3).join(' ')})`} - {policy.companies?.name?.split(' ')[0] || 'Cia'}
+                      </h3>
                     <Badge
                       className={getStatusColor(policy.status) + " text-white"}
                     >
