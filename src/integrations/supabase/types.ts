@@ -2026,6 +2026,7 @@ export type Database = {
         Returns: Json
       }
       diagnose_ledger_gaps: { Args: never; Returns: Json }
+      diagnose_ledger_health: { Args: never; Returns: Json }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
       fix_backfill_dates: { Args: never; Returns: Json }
@@ -2478,19 +2479,14 @@ export type Database = {
             }
             Returns: Json
           }
-      settle_commission_transaction:
-        | {
-            Args: { p_bank_account_id?: string; p_transaction_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_bank_account_id: string
-              p_settlement_date?: string
-              p_transaction_id: string
-            }
-            Returns: Json
-          }
+      settle_commission_transaction: {
+        Args: {
+          p_bank_account_id: string
+          p_settlement_date?: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
       settle_due_commissions: { Args: never; Returns: string }
       settle_due_commissions_v2: { Args: never; Returns: string }
       show_limit: { Args: never; Returns: number }
