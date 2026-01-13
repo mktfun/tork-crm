@@ -2508,16 +2508,14 @@ export type Database = {
           transaction_id: string
         }[]
       }
-      settle_commission_transaction:
-        | { Args: { p_transaction_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_bank_account_id: string
-              p_settlement_date?: string
-              p_transaction_id: string
-            }
-            Returns: Json
-          }
+      settle_commission_transaction: {
+        Args: {
+          p_bank_account_id: string
+          p_settlement_date?: string
+          p_transaction_id: string
+        }
+        Returns: Json
+      }
       settle_due_commissions: { Args: never; Returns: string }
       settle_due_commissions_v2: { Args: never; Returns: string }
       show_limit: { Args: never; Returns: number }
