@@ -33,7 +33,8 @@ export function useAccountBalances() {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase.rpc('get_account_balances_from_date', {
+      // Usar a nova função com filtro de data
+      const { data, error } = await supabase.rpc('get_account_balances_from_date' as any, {
         p_start_date: FINANCIAL_SYSTEM_START_DATE
       });
 
@@ -129,7 +130,8 @@ export function useTotalPendingReceivablesFrom2026() {
     queryFn: async () => {
       if (!user) return { total_amount: 0, pending_count: 0 };
 
-      const { data, error } = await supabase.rpc('get_pending_receivables_from_date', {
+      // Usar a nova função com filtro de data
+      const { data, error } = await supabase.rpc('get_pending_receivables_from_date' as any, {
         p_start_date: FINANCIAL_SYSTEM_START_DATE
       });
 
@@ -143,15 +145,15 @@ export function useTotalPendingReceivablesFrom2026() {
         }
         const row = Array.isArray(fallbackData) ? fallbackData[0] : fallbackData;
         return {
-          total_amount: Number(row?.total_amount || 0),
-          pending_count: Number(row?.pending_count || 0)
+          total_amount: Number((row as any)?.total_amount || 0),
+          pending_count: Number((row as any)?.pending_count || 0)
         };
       }
 
       const row = Array.isArray(data) ? data[0] : data;
       return {
-        total_amount: Number(row?.total_amount || 0),
-        pending_count: Number(row?.pending_count || 0)
+        total_amount: Number((row as any)?.total_amount || 0),
+        pending_count: Number((row as any)?.pending_count || 0)
       };
     },
     enabled: !!user,
