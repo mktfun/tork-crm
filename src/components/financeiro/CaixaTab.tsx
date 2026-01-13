@@ -10,8 +10,8 @@ import {
   RotateCcw,
   CreditCard,
   ChevronRight,
-  Loader2,
   Building2,
+  Clock,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ import {
 
 import { TransactionDetailsSheet } from './TransactionDetailsSheet';
 import { useAccountBalances, useAccountStatement, AccountBalance } from '@/hooks/useCaixaData';
+import { useTotalPendingReceivables } from '@/hooks/useFinanceiro';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 function formatCurrency(value: number | null | undefined): string {
@@ -160,6 +161,41 @@ function TotalBalanceCard({ accounts, isLoading }: TotalBalanceCardProps) {
   );
 }
 
+// ============ PENDING RECEIVABLES CARD ============
+
+interface PendingReceivablesCardProps {
+  totalAmount: number;
+  pendingCount: number;
+  isLoading: boolean;
+}
+
+function PendingReceivablesCard({ totalAmount, pendingCount, isLoading }: PendingReceivablesCardProps) {
+  return (
+    <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-amber-500/20">
+            <Clock className="w-6 h-6 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Comissões a Receber</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32 mt-1" />
+            ) : (
+              <p className="text-2xl font-bold text-amber-500">
+                {formatCurrency(totalAmount)}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {pendingCount} parcela(s) pendente(s)
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ============ STATEMENT TABLE ============
 
 interface StatementTableProps {
@@ -265,6 +301,7 @@ export function CaixaTab({ dateRange }: CaixaTabProps) {
   const [detailsId, setDetailsId] = useState<string | null>(null);
 
   const { data: accounts = [], isLoading: accountsLoading } = useAccountBalances();
+  const { data: pendingData, isLoading: pendingLoading } = useTotalPendingReceivables();
 
   // Datas normalizadas
   const { startDate, endDate } = useMemo(() => {
@@ -294,8 +331,15 @@ export function CaixaTab({ dateRange }: CaixaTabProps) {
         </div>
       </div>
 
-      {/* Saldo Total */}
-      <TotalBalanceCard accounts={accounts} isLoading={accountsLoading} />
+      {/* Cards de Saldo e Pendentes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TotalBalanceCard accounts={accounts} isLoading={accountsLoading} />
+        <PendingReceivablesCard 
+          totalAmount={pendingData?.total_amount ?? 0}
+          pendingCount={pendingData?.pending_count ?? 0}
+          isLoading={pendingLoading}
+        />
+      </div>
 
       {/* Cards de Contas */}
       {accountsLoading ? (
