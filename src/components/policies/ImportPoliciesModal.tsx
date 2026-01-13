@@ -562,33 +562,43 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           clientId = newClient.id;
         }
 
-        // Upload PDF with structured naming - PASSA BROKERAGE ID
+        // Upload PDF with structured naming - userId first for RLS compliance
+        console.log('📤 [UPLOAD] Iniciando upload do PDF:', item.fileName);
         const pdfUrl = await uploadPolicyPdf(
           item.file, 
           user.id,
           item.clientCpfCnpj || undefined,
           item.numeroApolice || undefined,
-          activeBrokerageId                              // Agora passa o brokerageId!
+          activeBrokerageId
         );
 
-        // Create policy using existing hook (which handles commission generation)
-        // Use titulo_sugerido as insuredAsset if available
-        // Handle ORCAMENTO/PROPOSTA with specific status
+        // 🔴 VALIDAÇÃO CRÍTICA: Não criar apólice sem PDF vinculado
+        if (!pdfUrl) {
+          console.error('❌ [SAVE] Upload do PDF falhou para:', item.fileName);
+          toast.error(`Falha no upload do PDF: ${item.fileName}. Verifique as permissões.`);
+          throw new Error(`Upload do PDF falhou para ${item.fileName}`);
+        }
+
+        // Determinar status - BULK IMPORT sempre cria como ATIVA (exceto orçamento)
         const isOrcamento = item.tipoDocumento === 'ORCAMENTO';
-        const isProposta = item.tipoDocumento === 'PROPOSTA';
+        // 🔴 FIX: Propostas agora também viram ATIVA para gerar comissão automaticamente
+        const finalStatus = isOrcamento ? 'Orçamento' : 'Ativa';
+        
+        // Construir insuredAsset com objeto + placa editados pelo usuário
+        const insuredAssetFinal = item.identificacaoAdicional 
+          ? `${item.objetoSegurado || item.tituloSugerido} - ${item.identificacaoAdicional}`
+          : item.objetoSegurado || item.tituloSugerido || 'Não especificado';
         
         console.log('💾 [SAVE] Salvando apólice:', {
           clientId,
+          clientName: item.clientName,
           policyNumber: item.numeroApolice,
           premiumValue: item.premioLiquido,
-          pdfUrl,
+          insuredAsset: insuredAssetFinal,
+          status: finalStatus,
+          pdfUrl: pdfUrl ? '✅ Vinculado' : '❌ Falhou',
           brokerageId: activeBrokerageId
         });
-        
-        // Construir insuredAsset com objeto + placa editados
-        const insuredAssetFinal = item.identificacaoAdicional 
-          ? `${item.objetoSegurado || item.tituloSugerido} - ${item.identificacaoAdicional}`
-          : item.objetoSegurado || item.tituloSugerido;
         
         await addPolicy({
           clientId: clientId!,
@@ -601,16 +611,17 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           startDate: item.dataInicio,
           expirationDate: item.dataFim,
           producerId: item.producerId!,
-          status: isOrcamento ? 'Orçamento' : isProposta ? 'Aguardando Apólice' : 'Ativa',
-          automaticRenewal: !isOrcamento && !isProposta,
+          status: finalStatus,  // 🔴 SEMPRE ATIVA (exceto orçamento) para gerar comissão
+          automaticRenewal: !isOrcamento,
           isBudget: isOrcamento,
-          pdfUrl,
+          pdfUrl,  // ✅ Garantido não-nulo após validação
           brokerageId: activeBrokerageId ? Number(activeBrokerageId) : undefined,
         });
 
+        console.log('✅ [SAVE] Apólice criada com sucesso:', item.numeroApolice);
         success++;
       } catch (error) {
-        console.error('Error importing policy:', item.fileName, error);
+        console.error('❌ [ERROR] Falha ao importar:', item.fileName, error);
         errors++;
       }
     }
