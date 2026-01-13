@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Download, FileText, Upload, Calendar, DollarSign, Building2, User, Phone, Mail, MapPin, Edit, Calculator, ArrowRight, Ban, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Upload, Calendar, DollarSign, Building2, User, Phone, Mail, MapPin, Edit, Calculator, ArrowRight, Ban, RotateCcw, ExternalLink } from 'lucide-react';
 import { formatDate } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -146,16 +146,19 @@ export default function PolicyDetails() {
     );
   }
 
+  // Verificar se tem PDF (base64 OU URL do Storage)
+  const hasPdf = !!(policy.pdfAnexado || policy.pdfUrl);
+  
   // Determinar se deve mostrar o botão de upload
   const shouldShowUpload = policy.status === 'Aguardando Apólice' || 
-                          (policy.status === 'Ativa' && !policy.pdfAnexado);
+                          (policy.status === 'Ativa' && !hasPdf);
 
   // Texto do botão baseado no status
   const getUploadButtonText = () => {
     if (policy.status === 'Aguardando Apólice') {
       return 'Anexar PDF e Ativar';
     }
-    if (policy.status === 'Ativa' && !policy.pdfAnexado) {
+    if (policy.status === 'Ativa' && !hasPdf) {
       return 'Anexar PDF';
     }
     return 'Anexar PDF';
@@ -436,11 +439,32 @@ export default function PolicyDetails() {
                       </div>
                     )}
 
+                    {/* PDF Anexado (base64) */}
                     {policy.pdfAnexado && (
                       <Button variant="outline" className="w-full" onClick={handleDownloadPdf}>
                         <Download className="w-4 h-4 mr-2" />
                         Baixar PDF
                       </Button>
+                    )}
+
+                    {/* PDF via URL do Storage */}
+                    {policy.pdfUrl && !policy.pdfAnexado && (
+                      <div className="space-y-2">
+                        <Button 
+                          variant="outline" 
+                          className="w-full" 
+                          onClick={() => window.open(policy.pdfUrl, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Ver PDF Original
+                        </Button>
+                        <Button variant="outline" className="w-full" asChild>
+                          <a href={policy.pdfUrl} download>
+                            <Download className="w-4 h-4 mr-2" />
+                            Baixar PDF
+                          </a>
+                        </Button>
+                      </div>
                     )}
 
                     {(policy.status === 'Ativa' || policy.status === 'Aguardando Apólice') && (

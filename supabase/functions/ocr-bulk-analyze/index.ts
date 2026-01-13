@@ -85,7 +85,7 @@ function extractTextFromPdfBuffer(buffer: Uint8Array): string {
   }
 }
 
-// 🔴 NOMENCLATURA ELITE: [Primeiro Nome] - [Ramo] ([Objeto]) - [Placa] - [Cia] - [Tipo]
+// 🔴 NOMENCLATURA ELITE v4.1: [Primeiro Nome] - [Ramo] ([Objeto]) - [Placa] - [Cia] - [Tipo]
 function generateSmartTitle(policy: any): string {
   // Primeiro nome do cliente (limpa "NÃO IDENTIFICADO")
   const clientName = policy.nome_cliente || 'Cliente';
@@ -94,14 +94,29 @@ function generateSmartTitle(policy: any): string {
   // Ramo do seguro
   const ramo = policy.ramo_seguro || 'Seguro';
   
-  // Objeto resumido (primeiras 3 palavras, máx 25 chars)
+  // 🔴 LIMPAR objeto_segurado (remover código numérico no início - formato HDI)
   let objeto = '';
   if (policy.objeto_segurado) {
-    objeto = policy.objeto_segurado.split(' ').slice(0, 3).join(' ').substring(0, 25);
+    // Remove "0002866 - " ou "0002866 ‑ " ou similar do início (código HDI)
+    const cleanObj = policy.objeto_segurado
+      .replace(/^\d+\s*[\-‑–—]\s*/, '') // Remove código numérico inicial
+      .replace(/^VW\s*/i, 'VW ') // Normaliza VW
+      .trim();
+    objeto = cleanObj.split(' ').slice(0, 3).join(' ').substring(0, 25);
   }
   
-  // Placa ou identificação
-  const identificacao = policy.identificacao_adicional || '';
+  // 🔴 LIMPAR identificacao_adicional (remover UF - formato HDI "CNS0059 - SP")
+  let identificacao = '';
+  if (policy.identificacao_adicional) {
+    // Extrai apenas a placa (7 caracteres antes do " - UF" ou padrão de placa)
+    const placaMatch = policy.identificacao_adicional.match(/([A-Z]{3}[0-9][A-Z0-9][0-9]{2})/i);
+    if (placaMatch) {
+      identificacao = placaMatch[1].toUpperCase();
+    } else {
+      // Fallback: pega a parte antes do traço (que pode ser a UF)
+      identificacao = policy.identificacao_adicional.split(/[\-‑–—]/)[0].trim();
+    }
+  }
   
   // Sigla da seguradora (primeira palavra, uppercase)
   const seguradora = (policy.nome_seguradora || 'CIA').split(' ')[0].toUpperCase();
@@ -287,15 +302,17 @@ Analise os documentos e extraia os dados com MÁXIMA PRECISÃO.
 - Se só achar Total: premio_liquido = total / 1.0738
 - Se achar parcela (ex: "4x R$ 500"): premio_liquido = parcela × qtd × 0.93
 
-## EXTRAÇÃO DE VEÍCULOS E IMÓVEIS (AGRESSIVO!)
+## EXTRAÇÃO DE VEÍCULOS E IMÓVEIS (AGRESSIVO!) - FORMATO HDI ESPECIAL
 Para ramo AUTO/AUTOMÓVEL/VEÍCULO:
-- SEMPRE procure seção "Dados do Veículo", "Veículo Segurado", "Objeto Segurado"
+- SEMPRE procure seção "Dados do Veículo", "Veículo Segurado", "Objeto Segurado" (geralmente página 2!)
 - PLACA: formato ABC-1234 ou ABC1D23 (Mercosul) - OBRIGATÓRIO extrair!
-- MARCA/MODELO: Ex: "VOLKSWAGEN GOLF GTI 2.0 TSI" 
+  - HDI formato: "PLACA/UF: CNS0059 - SP" → extrair APENAS "CNS0059"
+- MARCA/MODELO: Ex: "VOLKSWAGEN GOLF GTI 2.0 TSI"
+  - HDI formato: "0002866 ‑ Volkswagen Polo Highline" → REMOVER código, usar "Volkswagen Polo Highline"
 - ANO: Geralmente ao lado do modelo
 - CHASSI: 17 caracteres alfanuméricos
-- objeto_segurado = MARCA + MODELO + ANO (ex: "VW Golf GTI 2024")
-- identificacao_adicional = PLACA (ex: "ABC1D23")
+- objeto_segurado = MARCA + MODELO (SEM código numérico!) ex: "Volkswagen Polo Highline"
+- identificacao_adicional = APENAS A PLACA (7 chars, ex: "CNS0059", SEM a UF!)
 
 Para ramo RESIDENCIAL/EMPRESARIAL/CONDOMÍNIO:
 - Procure endereço do IMÓVEL segurado (pode diferir do cliente!)

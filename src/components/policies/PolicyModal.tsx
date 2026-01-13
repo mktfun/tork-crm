@@ -16,7 +16,8 @@ import {
   Edit3,
   RotateCcw,
   CheckCircle,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { Policy } from '@/types';
 import { useSupabaseClients } from '@/hooks/useSupabaseClients';
@@ -281,7 +282,7 @@ export function PolicyModal({ policy, isOpen, onClose, onEdit, onRenew }: Policy
               </div>
             </div>
 
-            {/* PDF Anexado */}
+            {/* PDF Anexado (base64) */}
             {policy.pdfAnexado && (
               <div className="bg-slate-800 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-slate-300 mb-3">PDF da Apólice</h3>
@@ -299,6 +300,41 @@ export function PolicyModal({ policy, isOpen, onClose, onEdit, onRenew }: Policy
                     >
                       <Download className="w-4 h-4 mr-1" />
                       Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PDF via URL do Storage */}
+            {policy.pdfUrl && !policy.pdfAnexado && (
+              <div className="bg-slate-800 p-4 rounded-lg">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">PDF da Apólice</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-red-400" />
+                    <span className="text-white">Documento PDF</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => window.open(policy.pdfUrl, '_blank')}
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-600 text-slate-300"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      Abrir
+                    </Button>
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-600 text-slate-300"
+                    >
+                      <a href={policy.pdfUrl} download>
+                        <Download className="w-4 h-4 mr-1" />
+                        Baixar
+                      </a>
                     </Button>
                   </div>
                 </div>
