@@ -15,6 +15,11 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        // BLACK & SILVER PREMIUM VARIANTS
+        silverSuccess: "bg-zinc-800/50 text-zinc-200 border border-zinc-600/50",
+        silverOutline: "bg-transparent text-zinc-400 border border-zinc-600/50",
+        chrome: "bg-gradient-to-r from-zinc-700 to-zinc-600 text-zinc-100 border-0",
+        metallic: "bg-zinc-900/50 text-zinc-400 border-zinc-700",
       },
     },
     defaultVariants: {

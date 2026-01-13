@@ -1,32 +1,58 @@
 import { HeroGeometric, SocialProofSection, FeaturesSection, BenefitsSection, PricingSection, FinalCTASection } from "@/components/ui/shape-landing-hero";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { Loader2, Shield } from "lucide-react";
+import { motion } from "framer-motion";
 
 function Landing() {
     const { user, loading } = useAuth();
 
+    // Premium BLACK & SILVER loading state
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#030303]">
-                {/* Mesh gradient background */}
-                <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-950/40 via-slate-950 to-indigo-950/40" />
-                    <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-                </div>
+            <div className="min-h-screen flex items-center justify-center bg-black">
+                {/* Gradiente radial sutil */}
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.2)_0%,_transparent_60%)]" />
                 
-                <div className="relative z-10 text-center">
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-lg animate-pulse" />
-                            <Shield className="relative h-10 w-10 text-blue-400" />
-                        </div>
-                        <h1 className="text-3xl font-bold text-white tracking-tight">Tork CRM</h1>
+                {/* Textura de linhas diagonais */}
+                <div 
+                    className="absolute inset-0 opacity-[0.015]"
+                    style={{
+                        backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+                        backgroundSize: '8px 8px'
+                    }}
+                />
+                
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="relative z-10 text-center"
+                >
+                    {/* Logo com brilho prateado */}
+                    <div className="flex items-center justify-center gap-3 mb-8">
+                        <img 
+                            src="/tork_symbol_favicon.png" 
+                            alt="Tork"
+                            className="h-12 w-12"
+                            style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.3))' }}
+                        />
+                        <h1 className="text-3xl font-semibold text-zinc-100 tracking-tight">
+                            Tork CRM
+                        </h1>
                     </div>
-                    <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto mb-3" />
-                    <p className="text-white/60 text-sm font-medium">Carregando...</p>
-                </div>
+                    
+                    {/* Barra de progresso metálica */}
+                    <div className="w-48 mx-auto mb-6">
+                        <div className="h-[2px] bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="h-full w-full progress-metallic" />
+                        </div>
+                    </div>
+                    
+                    {/* Texto espaçado */}
+                    <p className="text-zinc-500 text-xs font-medium tracking-[0.2em] uppercase">
+                        Aguarde...
+                    </p>
+                </motion.div>
             </div>
         );
     }

@@ -861,3 +861,85 @@ DEPENDÊNCIAS CRÍTICAS:
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: scale(1.1);
 }
+
+/* ============================================
+   BLACK & SILVER PREMIUM DESIGN SYSTEM
+   ============================================ */
+
+/* Silver Glow Effects */
+.silver-glow {
+  box-shadow: 0 0 40px -10px rgba(255,255,255,0.1);
+}
+
+.silver-glow-hover:hover {
+  box-shadow: 0 0 50px -8px rgba(255,255,255,0.2);
+}
+
+/* Metallic Border Effect */
+.metallic-border {
+  position: relative;
+}
+.metallic-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent 50%, rgba(255,255,255,0.05));
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Progress Bar Shimmer - Metallic */
+.progress-metallic {
+  background: linear-gradient(90deg, #71717a, #fafafa, #71717a);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Noise Texture - Subtle diagonal lines */
+.noise-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%);
+  background-size: 8px 8px;
+  opacity: 0.015;
+  pointer-events: none;
+}
+
+/* Premium Black Background with Radial Gradient */
+.premium-black-bg {
+  background-color: #000000;
+  position: relative;
+}
+.premium-black-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(39,39,42,0.25) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* Silver Button Glow */
+.silver-button-glow {
+  box-shadow: 0 0 20px -5px rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+}
+.silver-button-glow:hover {
+  box-shadow: 0 0 30px -5px rgba(255,255,255,0.5);
+}
+
+/* Premium Card Glass Effect - Black & Silver */
+.premium-glass-card {
+  background: rgba(0, 0, 0, 0.70);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 
+    0 0 60px -15px rgba(255,255,255,0.07),
+    inset 0 1px 0 0 rgba(255,255,255,0.05),
+    inset 1px 0 0 0 rgba(255,255,255,0.03);
+}
