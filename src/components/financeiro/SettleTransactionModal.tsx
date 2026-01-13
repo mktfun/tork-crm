@@ -53,6 +53,12 @@ export function SettleTransactionModal({
   const settleCommission = useSettleCommission();
 
   const handleSettle = async () => {
+    console.log('🏦 SETTLE MODAL - Iniciando baixa:', {
+      transactionIds,
+      selectedAccountId,
+      totalAmount
+    });
+
     if (!selectedAccountId) {
       toast.error('Selecione uma conta de destino');
       return;
@@ -65,14 +71,20 @@ export function SettleTransactionModal({
       let errorCount = 0;
 
       for (const transactionId of transactionIds) {
+        console.log('🏦 SETTLE MODAL - Processando transação:', transactionId);
         try {
-          await settleCommission.mutateAsync({
+          const result = await settleCommission.mutateAsync({
             transactionId,
             bankAccountId: selectedAccountId,
           });
+          console.log('✅ SETTLE MODAL - Sucesso:', { transactionId, result });
           successCount++;
         } catch (error: any) {
-          console.error(`Erro ao baixar transação ${transactionId}:`, error);
+          console.error('❌ SETTLE MODAL - Erro:', {
+            transactionId,
+            errorMessage: error?.message || error,
+            errorDetails: error
+          });
           errorCount++;
         }
       }

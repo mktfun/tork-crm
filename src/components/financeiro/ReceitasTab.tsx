@@ -470,11 +470,22 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
         onClose={() => setSettleModalOpen(false)}
         transactionIds={
           // Usar related_entity_id (ID legado) para comissões, pois a RPC busca na tabela transactions
-          Array.from(selectedIds).map(id => {
-            const tx = displayTransactions.find(t => t.id === id);
-            // Se for uma comissão (has related_entity_id), usar o ID legado
-            return tx?.related_entity_id || id;
-          })
+          (() => {
+            const ids = Array.from(selectedIds).map(id => {
+              const tx = displayTransactions.find(t => t.id === id);
+              console.log('🔍 SETTLE - Transação encontrada:', {
+                selectedId: id,
+                txEncontrada: !!tx,
+                related_entity_id: tx?.related_entity_id,
+                related_entity_type: tx?.related_entity_type,
+                idQueSeraUsado: tx?.related_entity_id || id
+              });
+              // Se for uma comissão (has related_entity_id), usar o ID legado
+              return tx?.related_entity_id || id;
+            });
+            console.log('🔍 SETTLE - IDs finais para modal:', ids);
+            return ids;
+          })()
         }
         totalAmount={selectedTotalAmount}
         onSuccess={handleSettleSuccess}
