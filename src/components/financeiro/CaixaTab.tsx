@@ -36,8 +36,7 @@ import {
 } from '@/components/ui/select';
 
 import { TransactionDetailsSheet } from './TransactionDetailsSheet';
-import { useAccountBalances, useAccountStatement, AccountBalance } from '@/hooks/useCaixaData';
-import { useTotalPendingReceivables } from '@/hooks/useFinanceiro';
+import { useAccountBalances, useAccountStatement, AccountBalance, useTotalPendingReceivablesFrom2026 } from '@/hooks/useCaixaData';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 function formatCurrency(value: number | null | undefined): string {
@@ -301,7 +300,7 @@ export function CaixaTab({ dateRange }: CaixaTabProps) {
   const [detailsId, setDetailsId] = useState<string | null>(null);
 
   const { data: accounts = [], isLoading: accountsLoading } = useAccountBalances();
-  const { data: pendingData, isLoading: pendingLoading } = useTotalPendingReceivables();
+  const { data: pendingData, isLoading: pendingLoading } = useTotalPendingReceivablesFrom2026();
 
   // Datas normalizadas
   const { startDate, endDate } = useMemo(() => {

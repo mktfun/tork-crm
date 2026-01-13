@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+// Data de corte: início do sistema financeiro (1 de janeiro de 2026)
+const FINANCIAL_SYSTEM_START_DATE = '2026-01-01';
+
 export interface AccountBalance {
   id: string;
   name: string;
@@ -21,19 +24,28 @@ export interface AccountStatement {
 }
 
 // Hook para buscar saldos de todas as contas de ativo (bancos)
+// Filtra apenas transações a partir de 2026-01-01
 export function useAccountBalances() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['account-balances', user?.id],
+    queryKey: ['account-balances', user?.id, FINANCIAL_SYSTEM_START_DATE],
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase.rpc('get_account_balances');
+      const { data, error } = await supabase.rpc('get_account_balances_from_date', {
+        p_start_date: FINANCIAL_SYSTEM_START_DATE
+      });
 
       if (error) {
-        console.error('Erro ao buscar saldos:', error);
-        throw error;
+        // Fallback para a função antiga se a nova não existir
+        console.warn('Função get_account_balances_from_date não existe, usando fallback');
+        const { data: fallbackData, error: fallbackError } = await supabase.rpc('get_account_balances');
+        if (fallbackError) {
+          console.error('Erro ao buscar saldos:', fallbackError);
+          throw fallbackError;
+        }
+        return (fallbackData || []) as AccountBalance[];
       }
 
       return (data || []) as AccountBalance[];
@@ -51,14 +63,19 @@ export function useAccountStatement(
 ) {
   const { user } = useAuth();
 
+  // Garantir que a data mínima seja 2026-01-01
+  const effectiveStartDate = startDate && startDate >= FINANCIAL_SYSTEM_START_DATE 
+    ? startDate 
+    : FINANCIAL_SYSTEM_START_DATE;
+
   return useQuery({
-    queryKey: ['account-statement', user?.id, accountId, startDate, endDate],
+    queryKey: ['account-statement', user?.id, accountId, effectiveStartDate, endDate],
     queryFn: async () => {
       if (!user || !accountId) return [];
 
       const { data, error } = await supabase.rpc('get_account_statement', {
         p_account_id: accountId,
-        p_start_date: startDate || null,
+        p_start_date: effectiveStartDate,
         p_end_date: endDate || null,
       });
 
@@ -100,5 +117,44 @@ export function useAssetAccounts() {
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutos
+  });
+}
+
+// Hook para buscar pendentes a receber a partir de 2026
+export function useTotalPendingReceivablesFrom2026() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['total-pending-receivables-2026', user?.id],
+    queryFn: async () => {
+      if (!user) return { total_amount: 0, pending_count: 0 };
+
+      const { data, error } = await supabase.rpc('get_pending_receivables_from_date', {
+        p_start_date: FINANCIAL_SYSTEM_START_DATE
+      });
+
+      if (error) {
+        // Fallback para a função antiga
+        console.warn('Função get_pending_receivables_from_date não existe, usando fallback');
+        const { data: fallbackData, error: fallbackError } = await supabase.rpc('get_total_pending_receivables');
+        if (fallbackError) {
+          console.error('Erro ao buscar pendentes:', fallbackError);
+          throw fallbackError;
+        }
+        const row = Array.isArray(fallbackData) ? fallbackData[0] : fallbackData;
+        return {
+          total_amount: Number(row?.total_amount || 0),
+          pending_count: Number(row?.pending_count || 0)
+        };
+      }
+
+      const row = Array.isArray(data) ? data[0] : data;
+      return {
+        total_amount: Number(row?.total_amount || 0),
+        pending_count: Number(row?.pending_count || 0)
+      };
+    },
+    enabled: !!user,
+    staleTime: 60 * 1000,
   });
 }
