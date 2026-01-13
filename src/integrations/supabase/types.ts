@@ -2038,6 +2038,16 @@ export type Database = {
       diagnose_ledger_health: { Args: never; Returns: Json }
       ensure_default_financial_accounts: { Args: never; Returns: undefined }
       execute_sql: { Args: { query: string }; Returns: Json }
+      find_unbalanced_transactions: {
+        Args: never
+        Returns: {
+          description: string
+          entry_count: number
+          total_amount: number
+          transaction_date: string
+          transaction_id: string
+        }[]
+      }
       fix_backfill_dates: { Args: never; Returns: Json }
       fix_ledger_descriptions: { Args: never; Returns: Json }
       get_account_balances: {
@@ -2230,7 +2240,7 @@ export type Database = {
         }
       }
       get_financial_summary: {
-        Args: { p_end_date: string; p_start_date: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
       get_monthly_commission_chart: {
@@ -2488,6 +2498,14 @@ export type Database = {
             }
             Returns: Json
           }
+      sanitize_orphan_transactions: {
+        Args: never
+        Returns: {
+          action_taken: string
+          description: string
+          transaction_id: string
+        }[]
+      }
       settle_commission_transaction: {
         Args: {
           p_bank_account_id: string
