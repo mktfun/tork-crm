@@ -105,7 +105,7 @@ export default function PortalLogin() {
 
     try {
       const { data, error: rpcError } = await supabase.rpc('verify_portal_login_scoped', {
-        p_slug: brokerageSlug,
+        p_brokerage_slug: brokerageSlug,
         p_identifier: identifier.trim(),
         p_password: password
       });
