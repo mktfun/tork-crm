@@ -2489,7 +2489,11 @@ export type Database = {
         Returns: Json
       }
       verify_portal_login_scoped: {
-        Args: { p_identifier: string; p_password: string; p_slug: string }
+        Args: {
+          p_brokerage_slug: string
+          p_identifier: string
+          p_password: string
+        }
         Returns: Json
       }
       void_financial_transaction: {

@@ -43,26 +43,28 @@ export default function PortalHome() {
       const client = JSON.parse(clientData);
       setClientName(client.name || '');
       setSlug(storedSlug);
-      fetchPolicies(client.id);
+      // Buscar por CPF normalizado para incluir apólices de clientes duplicados
+      fetchPoliciesByCpf(client.cpf_cnpj || '', client.user_id);
       fetchPortalConfig(client.user_id);
     }
   }, []);
 
-  const fetchPolicies = async (clientId: string) => {
+  // NOVA FUNÇÃO: Busca apólices por CPF normalizado (resolve problema de clientes duplicados)
+  const fetchPoliciesByCpf = async (cpf: string, userId: string) => {
     try {
+      // Usar RPC que busca por CPF normalizado - cast necessário pois types ainda não foram regenerados
       const { data, error } = await supabase
-        .from('apolices')
-        .select('id, insured_asset, expiration_date, status, premium_value, insurance_company')
-        .eq('client_id', clientId)
-        .in('status', ['Ativa', 'active'])
-        .order('expiration_date', { ascending: true });
+        .rpc('get_portal_policies_by_cpf' as any, {
+          p_user_id: userId,
+          p_cpf: cpf
+        });
 
       if (error) {
-        console.error('Error fetching policies:', error);
+        console.error('Error fetching policies by CPF:', error);
         return;
       }
 
-      setPolicies(data || []);
+      setPolicies((data as Policy[]) || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {
