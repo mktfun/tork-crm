@@ -314,15 +314,22 @@ export function useSettleCommission() {
       bankAccountId: string;
       settlementDate?: string;
     }) => financialService.settleCommission(params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-details'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['account-balances'] });
-      queryClient.invalidateQueries({ queryKey: ['account-statement'] });
+    onSuccess: async () => {
+      // Invalidar todos os caches relacionados
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['revenue-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['financial-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['transaction-details'] }),
+        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['cash-flow'] }),
+        queryClient.invalidateQueries({ queryKey: ['financial-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['account-balances'] }),
+        queryClient.invalidateQueries({ queryKey: ['account-statement'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-totals'] }),
+      ]);
+      
+      // Forçar refetch imediato dos saldos para garantir atualização
+      queryClient.refetchQueries({ queryKey: ['account-balances'] });
     }
   });
 }

@@ -650,6 +650,10 @@ export async function getTransactionDetails(
     const id = transactionId || legacyId;
     if (!id) throw new Error("ID da transação não fornecido");
     
+    // CORREÇÃO DE SEGURANÇA: Obter user_id do contexto de auth
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
+    
     const { data: tx, error: txError } = await supabase
       .from('financial_transactions')
       .select(`
@@ -660,6 +664,7 @@ export async function getTransactionDetails(
         )
       `)
       .eq('id', id)
+      .eq('user_id', user.id)  // CORREÇÃO: Filtrar por user_id
       .single();
     
     if (txError) throw txError;
