@@ -71,7 +71,7 @@ const sanitizePremio = (value: unknown): number => {
 };
 
 // =====================================================
-// PREMIUM STEPPER COMPONENT
+// PREMIUM STEPPER COMPONENT - BLACK & SILVER
 // =====================================================
 interface StepperProps {
   phase: BulkProcessingPhase;
@@ -79,9 +79,9 @@ interface StepperProps {
 
 const PremiumStepper = ({ phase }: StepperProps) => {
   const steps = [
-    { id: 'ocr', label: 'OCR', icon: '📄' },
-    { id: 'ai', label: 'IA', icon: '🧠' },
-    { id: 'reconciling', label: 'Vincular', icon: '🔗' },
+    { id: 'ocr', label: 'OCR' },
+    { id: 'ai', label: 'IA' },
+    { id: 'reconciling', label: 'Vincular' },
   ];
 
   const getStepStatus = (stepId: string) => {
@@ -105,25 +105,23 @@ const PremiumStepper = ({ phase }: StepperProps) => {
             )}>
               <div className={cn(
                 "w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300",
-                status === 'complete' && "border-green-400 bg-green-400/20 shadow-lg shadow-green-400/30",
-                status === 'active' && step.id === 'ocr' && "border-green-400 bg-green-400/20 shadow-lg shadow-green-400/30",
-                status === 'active' && step.id === 'ai' && "border-purple-400 bg-purple-400/20 shadow-lg shadow-purple-400/30",
-                status === 'active' && step.id === 'reconciling' && "border-blue-400 bg-blue-400/20 shadow-lg shadow-blue-400/30",
-                status === 'pending' && "border-slate-600 bg-slate-800/50",
+                status === 'complete' && "border-zinc-400 bg-zinc-400/20 shadow-lg shadow-zinc-400/20",
+                status === 'active' && "border-white bg-white/20 shadow-lg shadow-white/20",
+                status === 'pending' && "border-zinc-700 bg-zinc-800/50",
               )}>
                 {status === 'complete' ? (
-                  <Check className="w-4 h-4 text-green-400" />
+                  <Check className="w-4 h-4 text-zinc-300" />
                 ) : status === 'active' ? (
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : (
-                  <span className="text-slate-500 text-xs">{idx + 1}</span>
+                  <span className="text-zinc-600 text-xs">{idx + 1}</span>
                 )}
               </div>
               <span className={cn(
                 "text-sm font-medium transition-colors",
-                status === 'complete' && "text-green-400",
+                status === 'complete' && "text-zinc-400",
                 status === 'active' && "text-white",
-                status === 'pending' && "text-slate-500",
+                status === 'pending' && "text-zinc-600",
               )}>
                 {step.label}
               </span>
@@ -133,8 +131,8 @@ const PremiumStepper = ({ phase }: StepperProps) => {
               <div className={cn(
                 "w-12 h-0.5 mx-3 transition-all duration-500",
                 getStepStatus(steps[idx + 1].id) !== 'pending' 
-                  ? "bg-gradient-to-r from-green-400 to-purple-400" 
-                  : "bg-slate-700"
+                  ? "bg-gradient-to-r from-zinc-400 to-zinc-300" 
+                  : "bg-zinc-800"
               )} />
             )}
           </React.Fragment>
@@ -678,21 +676,21 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   };
 
   // =====================================================
-  // PDF PREVIEW PANEL COMPONENT (Reusable)
+  // PDF PREVIEW PANEL COMPONENT (BLACK & SILVER)
   // =====================================================
   const PdfPreviewPanel = ({ item, className }: { item: PolicyImportItem | null; className?: string }) => (
-    <div className={cn("h-full bg-slate-900/50 backdrop-blur-lg flex flex-col", className)}>
+    <div className={cn("h-full bg-zinc-950/50 backdrop-blur-lg flex flex-col", className)}>
       {item?.filePreviewUrl ? (
         <>
           <div className="flex-shrink-0 px-3 py-2 border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <FileText className="w-4 h-4 text-purple-400 flex-shrink-0" />
-              <span className="text-xs text-slate-300 truncate">{item.fileName}</span>
+              <FileText className="w-4 h-4 text-zinc-400 flex-shrink-0" />
+              <span className="text-xs text-zinc-400 truncate">{item.fileName}</span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 hover:bg-white/10"
+              className="h-7 px-2 hover:bg-white/10 text-zinc-400 hover:text-white"
               onClick={() => window.open(item.filePreviewUrl, '_blank')}
             >
               <ExternalLink className="w-3 h-3" />
@@ -707,7 +705,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           </div>
         </>
       ) : (
-        <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+        <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
           <div className="text-center">
             <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>Clique em uma linha para visualizar o PDF</p>
@@ -718,7 +716,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   );
 
   // =====================================================
-  // REVIEW TABLE ROW COMPONENT
+  // REVIEW TABLE ROW COMPONENT - BLACK & SILVER
   // =====================================================
   const ReviewTableRow = ({ item, isSelected }: { item: PolicyImportItem; isSelected: boolean }) => (
     <TableRow 
@@ -726,8 +724,8 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       className={cn(
         "border-b border-white/5 transition-all cursor-pointer group",
         isSelected 
-          ? "bg-purple-600/20 border-l-2 border-l-purple-400" 
-          : "hover:bg-white/5"
+          ? "bg-white/5 border-l-2 border-l-zinc-400" 
+          : "hover:bg-white/[0.02]"
       )}
     >
       {/* Cliente */}
@@ -741,10 +739,10 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 updateItem(item.id, { clientName: e.target.value });
               }}
               className={cn(
-                "h-8 bg-transparent border-white/10 text-sm font-medium transition-all",
-                "focus:bg-slate-800/80 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/30",
+                "h-8 bg-transparent border-zinc-700/50 text-sm font-medium transition-all",
+                "focus:bg-zinc-900/50 focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400/20",
                 !item.clientName && "border-red-500/50 bg-red-900/10",
-                isFieldEdited(item.id, 'clientName') && "text-sky-400 border-sky-500/50"
+                isFieldEdited(item.id, 'clientName') && "text-zinc-300 border-zinc-500/50"
               )}
               placeholder="Nome do Cliente"
             />
@@ -759,19 +757,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                   });
                 }}
                 className={cn(
-                  "h-6 text-xs bg-transparent border-white/10 px-2 w-36 transition-all",
-                  "focus:bg-slate-800/80 focus:border-purple-400",
-                  isFieldEdited(item.id, 'clientCpfCnpj') && "text-sky-400 border-sky-500/50"
+                  "h-6 text-xs bg-transparent border-zinc-700/50 px-2 w-36 transition-all",
+                  "focus:bg-zinc-900/50 focus:border-zinc-400",
+                  isFieldEdited(item.id, 'clientCpfCnpj') && "text-zinc-300 border-zinc-500/50"
                 )}
                 placeholder="CPF/CNPJ"
               />
               {item.clientStatus === 'matched' ? (
-                <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20 text-[10px] h-5">
+                <Badge className="bg-zinc-700/30 text-zinc-200 border border-zinc-500/40 text-[10px] h-5">
                   <UserCheck className="w-3 h-3 mr-1" />
                   Vinculado
                 </Badge>
               ) : (
-                <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/20 text-[10px] h-5">
+                <Badge className="bg-transparent text-zinc-400 border border-zinc-600/50 text-[10px] h-5">
                   <UserPlus className="w-3 h-3 mr-1" />
                   Novo
                 </Badge>
@@ -787,22 +785,22 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           <div className="space-y-1.5">
             <div className="flex items-center gap-1 flex-wrap">
               {item.tipoDocumento === 'PROPOSTA' && (
-                <Badge variant="outline" className="text-blue-400 border-blue-400/40 text-[10px] h-4 px-1">
+                <Badge variant="outline" className="text-zinc-400 border-zinc-600/40 text-[10px] h-4 px-1">
                   📋 Proposta
                 </Badge>
               )}
               {item.tipoDocumento === 'ORCAMENTO' && (
-                <Badge variant="outline" className="text-amber-400 border-amber-400/40 text-[10px] h-4 px-1">
+                <Badge variant="outline" className="text-zinc-400 border-zinc-600/40 text-[10px] h-4 px-1">
                   💰 Orçamento
                 </Badge>
               )}
               {item.tipoDocumento === 'ENDOSSO' && (
-                <Badge variant="outline" className="text-purple-400 border-purple-400/40 text-[10px] h-4 px-1">
+                <Badge variant="outline" className="text-zinc-400 border-zinc-600/40 text-[10px] h-4 px-1">
                   📝 Endosso
                 </Badge>
               )}
               {item.tipoOperacao === 'RENOVACAO' && (
-                <Badge variant="outline" className="text-cyan-400 border-cyan-400/40 text-[10px] h-4 px-1">
+                <Badge variant="outline" className="text-zinc-400 border-zinc-600/40 text-[10px] h-4 px-1">
                   🔄 Renovação
                 </Badge>
               )}
@@ -815,25 +813,25 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 updateItem(item.id, { numeroApolice: e.target.value });
               }}
               className={cn(
-                "h-7 bg-transparent border-white/10 text-sm font-medium transition-all",
-                "focus:bg-slate-800/80 focus:border-purple-400",
+                "h-7 bg-transparent border-zinc-700/50 text-sm font-medium transition-all",
+                "focus:bg-zinc-900/50 focus:border-zinc-400",
                 !item.numeroApolice && "border-red-500/50 bg-red-900/10",
-                isFieldEdited(item.id, 'numeroApolice') && "text-sky-400 border-sky-500/50"
+                isFieldEdited(item.id, 'numeroApolice') && "text-zinc-300 border-zinc-500/50"
               )}
               placeholder="Nº Apólice"
             />
             
             <div className="flex items-center gap-1">
-              <span className="text-slate-500 text-xs">R$</span>
+              <span className="text-zinc-600 text-xs">R$</span>
               <Input
                 type="text"
                 value={item.premioLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 onChange={(e) => handlePremioChange(item.id, e.target.value)}
                 className={cn(
-                  "h-6 w-24 bg-transparent border-white/10 text-xs px-2 transition-all",
-                  "focus:bg-slate-800/80 focus:border-purple-400",
+                  "h-6 w-24 bg-transparent border-zinc-700/50 text-xs px-2 transition-all",
+                  "focus:bg-zinc-900/50 focus:border-zinc-400",
                   item.premioLiquido === 0 && "border-red-500/50 bg-red-900/10 text-red-400",
-                  isFieldEdited(item.id, 'premioLiquido') && "text-sky-400 border-sky-500/50"
+                  isFieldEdited(item.id, 'premioLiquido') && "text-zinc-300 border-zinc-500/50"
                 )}
                 placeholder="0,00"
               />
@@ -856,11 +854,11 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                       updateItem(item.id, { objetoSegurado: e.target.value });
                     }}
                     className={cn(
-                      "h-7 bg-transparent border-white/10 text-sm transition-all",
-                      "focus:bg-slate-800/80 focus:border-purple-400",
+                      "h-7 bg-transparent border-zinc-700/50 text-sm transition-all",
+                      "focus:bg-zinc-900/50 focus:border-zinc-400",
                       !item.objetoSegurado && item.ramoNome?.toUpperCase().includes('AUTO') 
                         && "border-red-500/50 bg-red-900/10 animate-pulse",
-                      isFieldEdited(item.id, 'objetoSegurado') && "text-sky-400 border-sky-500/50"
+                      isFieldEdited(item.id, 'objetoSegurado') && "text-zinc-300 border-zinc-500/50"
                     )}
                     placeholder="VW Golf GTI 2024"
                   />
@@ -871,7 +869,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               </Tooltip>
               
               <div className="flex items-center gap-1">
-                <Car className="w-3 h-3 text-slate-500" />
+                <Car className="w-3 h-3 text-zinc-600" />
                 <Input
                   value={item.identificacaoAdicional || ''}
                   onChange={(e) => {
@@ -879,9 +877,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                     updateItem(item.id, { identificacaoAdicional: e.target.value.toUpperCase() });
                   }}
                   className={cn(
-                    "h-6 text-xs bg-transparent border-white/10 px-1 w-24 uppercase font-mono transition-all",
-                    "focus:bg-slate-800/80 focus:border-purple-400",
-                    isFieldEdited(item.id, 'identificacaoAdicional') && "text-sky-400 border-sky-500/50"
+                    "h-6 text-xs bg-transparent border-zinc-700/50 px-1 w-24 uppercase font-mono transition-all",
+                    "focus:bg-zinc-900/50 focus:border-zinc-400",
+                    isFieldEdited(item.id, 'identificacaoAdicional') && "text-zinc-300 border-zinc-500/50"
                   )}
                   placeholder="ABC-1D23"
                 />
@@ -900,19 +898,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               onValueChange={(v) => updateItem(item.id, { seguradoraId: v })}
             >
               <SelectTrigger className={cn(
-                "h-8 bg-transparent border-white/10 text-sm transition-all",
+                "h-8 bg-transparent border-zinc-700/50 text-sm transition-all",
                 !item.seguradoraId && "border-red-500/50"
               )}>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-white/10">
+              <SelectContent className="bg-zinc-900 border-zinc-700">
                 {companies.map(c => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {!item.seguradoraId && item.seguradoraNome && (
-              <div className="text-[10px] text-amber-400 truncate">
+              <div className="text-[10px] text-zinc-500 truncate">
                 IA: {item.seguradoraNome}
               </div>
             )}
@@ -929,19 +927,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               onValueChange={(v) => updateItem(item.id, { ramoId: v })}
             >
               <SelectTrigger className={cn(
-                "h-8 bg-transparent border-white/10 text-sm transition-all",
+                "h-8 bg-transparent border-zinc-700/50 text-sm transition-all",
                 !item.ramoId && "border-red-500/50"
               )}>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-white/10">
+              <SelectContent className="bg-zinc-900 border-zinc-700">
                 {ramos.map(r => (
                   <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {!item.ramoId && item.ramoNome && (
-              <div className="text-[10px] text-amber-400 truncate">
+              <div className="text-[10px] text-zinc-500 truncate">
                 IA: {item.ramoNome}
               </div>
             )}
@@ -957,12 +955,12 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             onValueChange={(v) => updateItem(item.id, { producerId: v })}
           >
             <SelectTrigger className={cn(
-              "h-8 bg-transparent border-white/10 text-sm transition-all",
+              "h-8 bg-transparent border-zinc-700/50 text-sm transition-all",
               !item.producerId && "border-red-500/50"
             )}>
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-white/10">
+            <SelectContent className="bg-zinc-900 border-zinc-700">
               {producers.map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
@@ -980,11 +978,11 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 type="number"
                 value={item.commissionRate}
                 onChange={(e) => updateItem(item.id, { commissionRate: parseFloat(e.target.value) || 0 })}
-                className="h-7 w-14 bg-transparent border-white/10 text-sm text-center"
+                className="h-7 w-14 bg-transparent border-zinc-700/50 text-sm text-center"
               />
-              <span className="text-slate-500 text-xs">%</span>
+              <span className="text-zinc-600 text-xs">%</span>
             </div>
-            <div className="text-xs text-emerald-400 font-medium">
+            <div className="text-xs text-zinc-400 font-medium">
               R$ {item.estimatedCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </div>
@@ -994,18 +992,18 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       {/* Status */}
       <TableCell className="py-3">
         {item.isProcessing ? (
-          <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+          <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
         ) : item.processError ? (
           <AlertTriangle className="w-5 h-5 text-red-400" />
         ) : item.isValid ? (
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-            <Check className="w-4 h-4 text-emerald-400" />
+          <div className="w-6 h-6 rounded-full bg-zinc-700/50 flex items-center justify-center">
+            <Check className="w-4 h-4 text-zinc-300" />
           </div>
         ) : (
           <Tooltip>
             <TooltipTrigger>
-              <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <AlertCircle className="w-4 h-4 text-amber-400" />
+              <div className="w-6 h-6 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                <AlertCircle className="w-4 h-4 text-zinc-400" />
               </div>
             </TooltipTrigger>
             <TooltipContent>
@@ -1023,34 +1021,42 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col bg-slate-900/80 backdrop-blur-xl border-white/10 shadow-2xl shadow-purple-900/20 p-0 gap-0">
-        {/* Header */}
+      <DialogContent 
+        className="max-w-7xl h-[90vh] flex flex-col bg-black/85 backdrop-blur-2xl border border-white/[0.06] p-0 gap-0"
+        style={{
+          boxShadow: `
+            0 0 80px -20px rgba(255,255,255,0.05),
+            inset 0 1px 0 0 rgba(255,255,255,0.04)
+          `
+        }}
+      >
+        {/* Header - BLACK & SILVER */}
         <DialogHeader className="flex-shrink-0 px-6 py-4 border-b border-white/5">
           <DialogTitle className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-600 to-zinc-800 flex items-center justify-center border border-white/10">
+              <Sparkles className="w-4 h-4 text-zinc-200" />
             </div>
             Importar Apólices via IA
           </DialogTitle>
         </DialogHeader>
 
-        {/* Step: Upload */}
+        {/* Step: Upload - BLACK & SILVER */}
         {step === 'upload' && (
           <div className="flex-1 overflow-auto p-6 space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-xl border border-green-500/30">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-green-400" />
+            <div className="flex items-center gap-3 p-4 bg-zinc-900/50 rounded-xl border border-zinc-700/30">
+              <div className="w-10 h-10 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-600/50">
+                <Zap className="w-5 h-5 text-zinc-300" />
               </div>
               <div>
-                <p className="text-green-300 font-medium text-sm">Importação em Lote Inteligente</p>
-                <p className="text-green-400/70 text-xs">
+                <p className="text-zinc-200 font-medium text-sm">Importação em Lote Inteligente</p>
+                <p className="text-zinc-500 text-xs">
                   OCR.space extrai o texto • IA mapeia todos os documentos de uma só vez
                 </p>
               </div>
             </div>
 
             <div
-              className="border-2 border-dashed border-white/10 rounded-xl p-10 text-center hover:border-purple-500/50 hover:bg-purple-500/5 transition-all cursor-pointer group"
+              className="border border-dashed border-zinc-700/50 rounded-xl p-10 text-center hover:border-zinc-500/70 hover:bg-white/[0.02] transition-all duration-300 cursor-pointer group"
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onClick={() => fileInputRef.current?.click()}
@@ -1063,32 +1069,32 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 className="hidden"
                 onChange={handleFileSelect}
               />
-              <div className="w-16 h-16 mx-auto bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-500/20 transition-colors">
-                <Upload className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors" />
+              <div className="w-16 h-16 mx-auto bg-zinc-900/50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-zinc-800/70 border border-zinc-700/50 group-hover:border-zinc-600 transition-all duration-300">
+                <Upload className="w-8 h-8 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
               </div>
               <p className="text-white font-medium">
                 Arraste PDFs de apólices aqui
               </p>
-              <p className="text-slate-500 text-sm mt-1">ou clique para selecionar arquivos</p>
-              <p className="text-amber-400/70 text-xs mt-3">
+              <p className="text-zinc-600 text-sm mt-1">ou clique para selecionar arquivos</p>
+              <p className="text-zinc-500 text-xs mt-3">
                 ⚠️ Limite: 5MB por arquivo • OCR lê as 3 primeiras páginas
               </p>
             </div>
 
             {files.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-slate-400 text-sm">Arquivos selecionados ({files.length})</Label>
-                <ScrollArea className="h-40 border border-white/10 rounded-xl bg-slate-800/30">
+                <Label className="text-zinc-500 text-sm">Arquivos selecionados ({files.length})</Label>
+                <ScrollArea className="h-40 border border-zinc-700/50 rounded-xl bg-zinc-900/30">
                   <div className="p-2 space-y-1">
                     {files.map((file, index) => (
                       <div key={index} className="flex items-center justify-between py-2 px-3 hover:bg-white/5 rounded-lg transition-colors">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                            <FileText className="w-4 h-4 text-purple-400" />
+                          <div className="w-8 h-8 rounded-lg bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
+                            <FileText className="w-4 h-4 text-zinc-400" />
                           </div>
                           <div>
                             <span className="text-white text-sm">{file.name}</span>
-                            <span className="text-slate-500 text-xs ml-2">
+                            <span className="text-zinc-600 text-xs ml-2">
                               ({(file.size / 1024).toFixed(0)} KB)
                             </span>
                           </div>
@@ -1112,13 +1118,17 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
             )}
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={handleClose} className="border-white/10 hover:bg-white/5">
+              <Button 
+                variant="outline" 
+                onClick={handleClose} 
+                className="border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white"
+              >
                 Cancelar
               </Button>
               <Button
                 onClick={processBulkOCR}
                 disabled={files.length === 0}
-                className="bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-lg shadow-green-500/20"
+                className="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.5)]"
               >
                 <Zap className="w-4 h-4 mr-2" />
                 Processar em Lote ({files.length})
@@ -1127,22 +1137,22 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           </div>
         )}
 
-        {/* Step: Processing (OCR/AI) */}
+        {/* Step: Processing (OCR/AI) - BLACK & SILVER */}
         {step === 'processing' && items.length === 0 && (
           <div className="flex-1 overflow-auto flex flex-col">
             <PremiumStepper phase={bulkPhase} />
             
             <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
               <div className="relative">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
-                  <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+                <div className="w-20 h-20 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
+                  <Loader2 className="w-10 h-10 text-zinc-300 animate-spin" />
                 </div>
-                <div className="absolute inset-0 rounded-full border-2 border-purple-400/30 animate-ping" />
+                <div className="absolute inset-0 rounded-full border-2 border-zinc-500/30 animate-ping" />
               </div>
               
               <div className="text-center">
                 <p className="text-white font-medium text-lg">{getPhaseLabel()}</p>
-                <p className="text-slate-400 text-sm mt-1">
+                <p className="text-zinc-500 text-sm mt-1">
                   {bulkPhase === 'ocr' && 'Extraindo texto dos PDFs...'}
                   {bulkPhase === 'ai' && 'Analisando documentos com IA...'}
                   {bulkPhase === 'reconciling' && 'Vinculando clientes existentes...'}
@@ -1151,7 +1161,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               
               <Progress value={getProgressValue()} className="w-full max-w-sm h-2" />
               
-              <ScrollArea className="h-40 w-full max-w-md border border-white/10 rounded-xl bg-slate-800/30">
+              <ScrollArea className="h-40 w-full max-w-md border border-zinc-700/50 rounded-xl bg-zinc-900/30">
                 <div className="p-3 space-y-2">
                   {files.map((file, index) => {
                     const status = processingStatus.get(index);
@@ -1159,9 +1169,9 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                       <div key={index} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5">
                         <span className="text-sm text-white truncate max-w-[200px]">{file.name}</span>
                         <div className="flex items-center gap-2">
-                          {status === 'pending' && <Clock className="w-4 h-4 text-slate-500" />}
-                          {status === 'processing' && <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />}
-                          {status === 'success' && <Check className="w-4 h-4 text-emerald-400" />}
+                          {status === 'pending' && <Clock className="w-4 h-4 text-zinc-600" />}
+                          {status === 'processing' && <Loader2 className="w-4 h-4 text-zinc-300 animate-spin" />}
+                          {status === 'success' && <Check className="w-4 h-4 text-zinc-300" />}
                           {status === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
                         </div>
                       </div>
@@ -1173,18 +1183,18 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           </div>
         )}
 
-        {/* Step: Processing (Saving to DB) */}
+        {/* Step: Processing (Saving to DB) - BLACK & SILVER */}
         {step === 'processing' && items.length > 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
-              <Loader2 className="w-10 h-10 text-green-400 animate-spin" />
+            <div className="w-20 h-20 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-700/50">
+              <Loader2 className="w-10 h-10 text-zinc-300 animate-spin" />
             </div>
             
             <div className="text-center">
               <p className="text-white font-medium text-lg">
                 Salvando {processingIndex + 1} de {items.filter(i => i.isValid).length}...
               </p>
-              <p className="text-slate-400 text-sm mt-1">
+              <p className="text-zinc-500 text-sm mt-1">
                 Criando clientes e apólices
               </p>
             </div>
@@ -1196,26 +1206,32 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           </div>
         )}
 
-        {/* Step: Review - SPLIT VIEW */}
+        {/* Step: Review - SPLIT VIEW - BLACK & SILVER */}
         {step === 'review' && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Batch Actions Bar */}
-            <div className="flex-shrink-0 px-4 py-3 border-b border-white/5 bg-slate-800/30">
+            <div className="flex-shrink-0 px-4 py-3 border-b border-white/5 bg-zinc-900/30">
               <div className="flex flex-wrap items-center gap-4">
-                <span className="text-slate-400 text-sm font-medium">Aplicar a todos:</span>
+                <span className="text-zinc-500 text-sm font-medium">Aplicar a todos:</span>
                 
                 <div className="flex items-center gap-2">
                   <Select value={batchProducerId} onValueChange={setBatchProducerId}>
-                    <SelectTrigger className="w-40 h-8 bg-transparent border-white/10 text-sm">
+                    <SelectTrigger className="w-40 h-8 bg-transparent border-zinc-700/50 text-sm">
                       <SelectValue placeholder="Produtor" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-white/10">
+                    <SelectContent className="bg-zinc-900 border-zinc-700">
                       {producers.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" variant="outline" onClick={applyBatchProducer} disabled={!batchProducerId} className="h-8 border-white/10">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={applyBatchProducer} 
+                    disabled={!batchProducerId} 
+                    className="h-8 border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white"
+                  >
                     Aplicar
                   </Button>
                 </div>
@@ -1226,20 +1242,26 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                     placeholder="% Comissão"
                     value={batchCommissionRate}
                     onChange={(e) => setBatchCommissionRate(e.target.value)}
-                    className="w-24 h-8 bg-transparent border-white/10 text-sm"
+                    className="w-24 h-8 bg-transparent border-zinc-700/50 text-sm"
                   />
-                  <Button size="sm" variant="outline" onClick={applyBatchCommission} disabled={!batchCommissionRate} className="h-8 border-white/10">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={applyBatchCommission} 
+                    disabled={!batchCommissionRate} 
+                    className="h-8 border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white"
+                  >
                     Aplicar
                   </Button>
                 </div>
 
                 {/* Summary */}
                 <div className="ml-auto flex items-center gap-3">
-                  <Badge variant="outline" className="text-emerald-400 border-emerald-500/40">
+                  <Badge variant="outline" className="text-zinc-300 border-zinc-500/40">
                     {validCount} válidas
                   </Badge>
                   {invalidCount > 0 && (
-                    <Badge variant="outline" className="text-amber-400 border-amber-500/40">
+                    <Badge variant="outline" className="text-zinc-500 border-zinc-600/40">
                       {invalidCount} pendentes
                     </Badge>
                   )}
@@ -1255,16 +1277,16 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                   <ScrollArea className="flex-1">
                     <TooltipProvider>
                       <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm">
+                        <TableHeader className="sticky top-0 z-10 bg-zinc-900/95 backdrop-blur-sm">
                           <TableRow className="border-b border-white/5 hover:bg-transparent">
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cliente</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Apólice</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Objeto</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cia</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Ramo</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Produtor</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Com.</TableHead>
-                            <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider w-12"></TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Cliente</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Apólice</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Objeto</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Cia</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Ramo</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Produtor</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Com.</TableHead>
+                            <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider w-12"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1284,12 +1306,12 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                   <Drawer open={mobilePreviewOpen} onOpenChange={setMobilePreviewOpen}>
                     <DrawerTrigger asChild>
                       <Button 
-                        className="fixed bottom-24 right-4 rounded-full w-14 h-14 shadow-xl bg-purple-600 hover:bg-purple-700"
+                        className="fixed bottom-24 right-4 rounded-full w-14 h-14 shadow-xl bg-zinc-700 hover:bg-zinc-600 border border-zinc-600"
                       >
                         <Eye className="w-6 h-6" />
                       </Button>
                     </DrawerTrigger>
-                    <DrawerContent className="h-[70vh] bg-slate-900 border-white/10">
+                    <DrawerContent className="h-[70vh] bg-zinc-950 border-zinc-700">
                       <DrawerHeader className="border-b border-white/5">
                         <DrawerTitle className="text-white">Preview do Documento</DrawerTitle>
                       </DrawerHeader>
@@ -1305,23 +1327,23 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                     <PdfPreviewPanel item={selectedItem} className="border-r border-white/5" />
                   </ResizablePanel>
 
-                  <ResizableHandle withHandle className="bg-white/5 hover:bg-purple-500/30 transition-colors" />
+                  <ResizableHandle withHandle className="bg-white/5 hover:bg-zinc-500/30 transition-colors" />
 
                   {/* Table Panel */}
                   <ResizablePanel defaultSize={70}>
                     <ScrollArea className="h-full">
                       <TooltipProvider>
                         <Table>
-                          <TableHeader className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm">
+                          <TableHeader className="sticky top-0 z-10 bg-zinc-900/95 backdrop-blur-sm">
                             <TableRow className="border-b border-white/5 hover:bg-transparent">
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cliente</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Apólice</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Objeto</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Cia</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Ramo</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Produtor</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider">Com.</TableHead>
-                              <TableHead className="text-slate-400 text-xs font-medium uppercase tracking-wider w-12"></TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Cliente</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Apólice</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Objeto</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Cia</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Ramo</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Produtor</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider">Com.</TableHead>
+                              <TableHead className="text-zinc-500 text-xs font-medium uppercase tracking-wider w-12"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1341,32 +1363,40 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               )}
             </div>
 
-            {/* Footer Actions */}
-            <div className="flex-shrink-0 px-4 py-3 border-t border-white/5 bg-slate-900/50 flex justify-between items-center">
+            {/* Footer Actions - BLACK & SILVER */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-white/5 bg-zinc-900/50 flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <Button variant="outline" onClick={() => setStep('upload')} className="border-white/10 hover:bg-white/5">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep('upload')} 
+                  className="border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white"
+                >
                   ← Voltar
                 </Button>
                 
                 {processingMetrics && (
-                  <Badge variant="outline" className="bg-slate-800/50 text-slate-400 border-slate-700">
-                    <Zap className="w-3 h-3 mr-1 text-green-400" />
+                  <Badge variant="outline" className="bg-zinc-900/50 text-zinc-400 border-zinc-700">
+                    <Zap className="w-3 h-3 mr-1 text-zinc-400" />
                     {processingMetrics.totalDurationSec}s
-                    <span className="text-slate-600 mx-2">|</span>
-                    <span className="text-slate-500 text-xs">IA Tork v2.0</span>
+                    <span className="text-zinc-600 mx-2">|</span>
+                    <span className="text-zinc-500 text-xs">IA Tork v2.0</span>
                   </Badge>
                 )}
               </div>
               
               <div className="flex gap-3">
-                <Button variant="outline" onClick={handleClose} className="border-white/10 hover:bg-white/5">
+                <Button 
+                  variant="outline" 
+                  onClick={handleClose} 
+                  className="border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white"
+                >
                   Cancelar
                 </Button>
                 <Button
                   onClick={processImport}
                   disabled={validCount === 0 || !activeBrokerageId}
                   className={cn(
-                    "bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 shadow-lg shadow-green-500/20",
+                    "bg-zinc-100 hover:bg-white text-zinc-950 font-semibold shadow-[0_0_25px_-5px_rgba(255,255,255,0.4)] hover:shadow-[0_0_35px_-5px_rgba(255,255,255,0.6)]",
                     !activeBrokerageId && "opacity-50 cursor-not-allowed"
                   )}
                 >
@@ -1378,30 +1408,30 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           </div>
         )}
 
-        {/* Step: Complete */}
+        {/* Step: Complete - BLACK & SILVER */}
         {step === 'complete' && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center shadow-lg shadow-green-500/20">
-              <Check className="w-10 h-10 text-green-400" />
+            <div className="w-20 h-20 rounded-full bg-zinc-800/50 flex items-center justify-center border border-zinc-600/50 shadow-lg shadow-zinc-500/10">
+              <Check className="w-10 h-10 text-zinc-200" />
             </div>
             
             <div className="text-center">
               <h3 className="text-2xl font-semibold text-white">Importação Concluída!</h3>
-              <p className="text-slate-400 mt-2">
+              <p className="text-zinc-500 mt-2">
                 {importResults.success} apólice(s) importada(s) com sucesso
                 {importResults.errors > 0 && `, ${importResults.errors} erro(s)`}
               </p>
             </div>
 
             {processingMetrics && (
-              <Badge variant="outline" className="text-green-400 border-green-400/50 px-4 py-2">
+              <Badge variant="outline" className="text-zinc-300 border-zinc-500/50 px-4 py-2">
                 ⚡ Tempo total: {processingMetrics.totalDurationSec}s
               </Badge>
             )}
 
             <Button 
               onClick={handleClose} 
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-500/20 px-8"
+              className="bg-zinc-100 hover:bg-white text-zinc-950 font-semibold shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] px-8"
             >
               Fechar
             </Button>

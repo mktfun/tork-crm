@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff, Shield } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
@@ -88,66 +89,101 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  // Premium loading state
+  // Premium BLACK & SILVER loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#030303]">
-        {/* Mesh gradient background */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-950/40 via-slate-950 to-indigo-950/40" />
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        {/* Gradiente radial sutil */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.2)_0%,_transparent_60%)]" />
         
-        <div className="relative z-10 text-center space-y-4">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-lg animate-pulse" />
-              <Shield className="relative h-10 w-10 text-blue-400" />
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Tork CRM</h1>
+        {/* Textura de linhas diagonais */}
+        <div 
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+            backgroundSize: '8px 8px'
+          }}
+        />
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative z-10 text-center"
+        >
+          {/* Logo com brilho prateado */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <img 
+              src="/tork_symbol_favicon.png" 
+              alt="Tork"
+              className="h-12 w-12"
+              style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.3))' }}
+            />
+            <h1 className="text-3xl font-semibold text-zinc-100 tracking-tight">
+              Tork CRM
+            </h1>
           </div>
-          <Loader2 className="h-6 w-6 animate-spin text-blue-400 mx-auto" />
-          <p className="text-white/60 text-sm font-medium">Carregando...</p>
-        </div>
+          
+          {/* Barra de progresso metálica */}
+          <div className="w-48 mx-auto mb-6">
+            <div className="h-[2px] bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full w-full progress-metallic" />
+            </div>
+          </div>
+          
+          {/* Texto espaçado */}
+          <p className="text-zinc-500 text-xs font-medium tracking-[0.2em] uppercase">
+            Aguarde...
+          </p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#030303]">
-      {/* Premium mesh gradient background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-950/40 via-slate-950 to-indigo-950/40" />
-        
-        {/* Floating gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-3xl animate-blob" />
-        <div className="absolute top-1/2 right-1/4 w-[400px] h-[400px] bg-indigo-600/15 rounded-full blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-slate-600/10 rounded-full blur-3xl animate-blob animation-delay-4000" />
-        
-        {/* Subtle grid overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-black">
+      {/* Gradiente radial cinza */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.25)_0%,_transparent_55%)]" />
+      
+      {/* Textura de linhas diagonais sutis */}
+      <div 
+        className="absolute inset-0 opacity-[0.012]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+          backgroundSize: '8px 8px'
+        }}
+      />
       
       <div className="relative z-10 w-full max-w-md">
-        {/* Premium Glass Card */}
+        {/* Premium Glass Card - Black & Silver */}
         <div className="relative">
-          {/* Glow effect behind card */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-slate-600/20 rounded-2xl blur-xl" />
+          {/* Glow prateado atrás */}
+          <div className="absolute -inset-[1px] bg-gradient-to-br from-white/8 via-transparent to-white/4 rounded-2xl blur-sm" />
           
-          <div className="relative bg-black/40 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.05]">
+          <div 
+            className="relative bg-black/70 backdrop-blur-2xl border border-white/[0.06] rounded-2xl"
+            style={{
+              boxShadow: `
+                0 0 60px -15px rgba(255,255,255,0.07),
+                inset 0 1px 0 0 rgba(255,255,255,0.05),
+                inset 1px 0 0 0 rgba(255,255,255,0.03)
+              `
+            }}
+          >
             <CardHeader className="text-center pt-8 pb-6">
               <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-lg" />
-                  <Shield className="relative h-10 w-10 text-blue-400" />
-                </div>
+                <img 
+                  src="/tork_symbol_favicon.png" 
+                  alt="Tork"
+                  className="h-10 w-10"
+                  style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.3))' }}
+                />
                 <h1 className="text-3xl font-bold text-white tracking-tight">Tork CRM</h1>
               </div>
               <CardTitle className="text-white text-xl font-semibold">
                 {showResetForm ? 'Recuperar Senha' : 'Bem-vindo'}
               </CardTitle>
-              <CardDescription className="text-white/50 text-sm font-medium mt-2">
+              <CardDescription className="text-zinc-500 text-sm font-medium mt-2">
                 {showResetForm 
                   ? 'Digite seu email para recuperar sua senha'
                   : 'Gestão Inteligente para Corretoras de Elite'
@@ -159,13 +195,13 @@ export default function Auth() {
               {showResetForm ? (
                 <form onSubmit={handleResetPassword} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-white/80 text-sm font-medium">Email</Label>
+                    <Label htmlFor="reset-email" className="text-zinc-400 text-sm font-medium">Email</Label>
                     <Input
                       id="reset-email"
                       type="email"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                      className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                       placeholder="seu@email.com"
                       required
                     />
@@ -174,7 +210,7 @@ export default function Auth() {
                   <div className="space-y-3 pt-2">
                     <Button
                       type="submit"
-                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300"
+                      className="w-full h-12 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-xl shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.5)] transition-all duration-300"
                       disabled={isLoading}
                     >
                       {isLoading ? (
@@ -190,7 +226,7 @@ export default function Auth() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="w-full text-white/60 hover:text-white hover:bg-white/[0.06] rounded-xl h-11"
+                      className="w-full text-zinc-500 hover:text-white hover:bg-white/[0.06] rounded-xl h-11"
                       onClick={() => setShowResetForm(false)}
                     >
                       Voltar ao Login
@@ -199,16 +235,16 @@ export default function Auth() {
                 </form>
               ) : (
                 <Tabs defaultValue="login" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 bg-white/[0.06] border border-white/[0.08] rounded-xl p-1 h-12">
+                  <TabsList className="grid w-full grid-cols-2 bg-zinc-900/50 border border-zinc-800 rounded-xl p-1 h-12">
                     <TabsTrigger 
                       value="login" 
-                      className="text-white/70 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-medium transition-all"
+                      className="text-zinc-500 data-[state=active]:bg-zinc-800 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg font-medium transition-all"
                     >
                       Login
                     </TabsTrigger>
                     <TabsTrigger 
                       value="signup"
-                      className="text-white/70 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg font-medium transition-all"
+                      className="text-zinc-500 data-[state=active]:bg-zinc-800 data-[state=active]:text-white data-[state=active]:shadow-sm rounded-lg font-medium transition-all"
                     >
                       Cadastro
                     </TabsTrigger>
@@ -217,13 +253,13 @@ export default function Auth() {
                   <TabsContent value="login" className="space-y-5 mt-8">
                     <form onSubmit={handleLogin} className="space-y-5">
                       <div className="space-y-2">
-                        <Label htmlFor="login-email" className="text-white/80 text-sm font-medium">Email</Label>
+                        <Label htmlFor="login-email" className="text-zinc-400 text-sm font-medium">Email</Label>
                         <Input
                           id="login-email"
                           type="email"
                           value={loginEmail}
                           onChange={(e) => setLoginEmail(e.target.value)}
-                          className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                          className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                           placeholder="seu@email.com"
                           required
                           autoComplete="email"
@@ -231,14 +267,14 @@ export default function Auth() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="login-password" className="text-white/80 text-sm font-medium">Senha</Label>
+                        <Label htmlFor="login-password" className="text-zinc-400 text-sm font-medium">Senha</Label>
                         <div className="relative">
                           <Input
                             id="login-password"
                             type={showPassword ? 'text' : 'password'}
                             value={loginPassword}
                             onChange={(e) => setLoginPassword(e.target.value)}
-                            className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 pr-12 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                            className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 pr-12 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                             placeholder="••••••••"
                             required
                             autoComplete="current-password"
@@ -251,9 +287,9 @@ export default function Auth() {
                             onClick={() => setShowPassword(!showPassword)}
                           >
                             {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-white/40" />
+                              <EyeOff className="h-4 w-4 text-zinc-500" />
                             ) : (
-                              <Eye className="h-4 w-4 text-white/40" />
+                              <Eye className="h-4 w-4 text-zinc-500" />
                             )}
                           </Button>
                         </div>
@@ -261,7 +297,7 @@ export default function Auth() {
 
                       <Button
                         type="submit"
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 glow-button"
+                        className="w-full h-12 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-xl shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.5)] transition-all duration-300"
                         disabled={isLoading}
                       >
                         {isLoading ? (
@@ -277,7 +313,7 @@ export default function Auth() {
                       <Button
                         type="button"
                         variant="ghost"
-                        className="w-full text-white/50 hover:text-white/80 hover:bg-transparent text-sm"
+                        className="w-full text-zinc-600 hover:text-zinc-400 hover:bg-transparent text-sm"
                         onClick={() => setShowResetForm(true)}
                       >
                         Esqueci minha senha
@@ -288,13 +324,13 @@ export default function Auth() {
                   <TabsContent value="signup" className="space-y-5 mt-8">
                     <form onSubmit={handleSignup} className="space-y-5">
                       <div className="space-y-2">
-                        <Label htmlFor="nome-completo" className="text-white/80 text-sm font-medium">Nome Completo</Label>
+                        <Label htmlFor="nome-completo" className="text-zinc-400 text-sm font-medium">Nome Completo</Label>
                         <Input
                           id="nome-completo"
                           type="text"
                           value={nomeCompleto}
                           onChange={(e) => setNomeCompleto(e.target.value)}
-                          className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                          className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                           placeholder="Seu nome completo"
                           required
                           autoComplete="name"
@@ -302,13 +338,13 @@ export default function Auth() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="signup-email" className="text-white/80 text-sm font-medium">Email</Label>
+                        <Label htmlFor="signup-email" className="text-zinc-400 text-sm font-medium">Email</Label>
                         <Input
                           id="signup-email"
                           type="email"
                           value={signupEmail}
                           onChange={(e) => setSignupEmail(e.target.value)}
-                          className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                          className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                           placeholder="seu@email.com"
                           required
                           autoComplete="email"
@@ -316,14 +352,14 @@ export default function Auth() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="signup-password" className="text-white/80 text-sm font-medium">Senha</Label>
+                        <Label htmlFor="signup-password" className="text-zinc-400 text-sm font-medium">Senha</Label>
                         <div className="relative">
                           <Input
                             id="signup-password"
                             type={showPassword ? 'text' : 'password'}
                             value={signupPassword}
                             onChange={(e) => setSignupPassword(e.target.value)}
-                            className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 pr-12 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                            className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 pr-12 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                             placeholder="••••••••"
                             required
                             autoComplete="new-password"
@@ -336,23 +372,23 @@ export default function Auth() {
                             onClick={() => setShowPassword(!showPassword)}
                           >
                             {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-white/40" />
+                              <EyeOff className="h-4 w-4 text-zinc-500" />
                             ) : (
-                              <Eye className="h-4 w-4 text-white/40" />
+                              <Eye className="h-4 w-4 text-zinc-500" />
                             )}
                           </Button>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="confirm-password" className="text-white/80 text-sm font-medium">Confirmar Senha</Label>
+                        <Label htmlFor="confirm-password" className="text-zinc-400 text-sm font-medium">Confirmar Senha</Label>
                         <div className="relative">
                           <Input
                             id="confirm-password"
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/30 pr-12 h-12 rounded-xl focus:border-blue-500/50 focus:ring-blue-500/20 transition-all"
+                            className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 pr-12 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20 focus:bg-black/80 transition-all"
                             placeholder="••••••••"
                             required
                             autoComplete="new-password"
@@ -365,9 +401,9 @@ export default function Auth() {
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           >
                             {showConfirmPassword ? (
-                              <EyeOff className="h-4 w-4 text-white/40" />
+                              <EyeOff className="h-4 w-4 text-zinc-500" />
                             ) : (
-                              <Eye className="h-4 w-4 text-white/40" />
+                              <Eye className="h-4 w-4 text-zinc-500" />
                             )}
                           </Button>
                         </div>
@@ -375,7 +411,7 @@ export default function Auth() {
 
                       <Button
                         type="submit"
-                        className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all duration-300"
+                        className="w-full h-12 bg-transparent border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white font-semibold rounded-xl transition-all duration-300"
                         disabled={isLoading}
                       >
                         {isLoading ? (
@@ -396,7 +432,7 @@ export default function Auth() {
         </div>
         
         {/* Footer text */}
-        <p className="text-center text-white/30 text-xs mt-6">
+        <p className="text-center text-zinc-600 text-xs mt-6">
           Ao continuar, você concorda com os Termos de Uso e Política de Privacidade
         </p>
       </div>
