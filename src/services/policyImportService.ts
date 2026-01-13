@@ -262,7 +262,8 @@ export async function createClientFromEdited(
 }
 
 // Upload do PDF para o Storage com nome estruturado
-// Suporta organização por brokerage_id (preferido) ou user_id
+// 🔴 FIX RLS: userId DEVE ser o primeiro segmento do path para passar na política de RLS
+// Estrutura: userId/brokerageId/cpf/timestamp_arquivo.pdf
 export async function uploadPolicyPdf(
   file: File,
   userId: string,
@@ -278,15 +279,15 @@ export async function uploadPolicyPdf(
   
   // Limpar nome do arquivo original para usar no path
   const originalName = file.name.replace(/[^\w.\-]/g, '_').substring(0, 50);
-  const fileExt = file.name.split('.').pop() || 'pdf';
   
-  // Padrão: brokerage_id/cpf_cnpj/timestamp_nome.pdf (ou userId se não houver brokerage)
-  const basePath = brokerageId ? String(brokerageId) : userId;
-  const fileName = `${basePath}/${cleanCpf}/${timestamp}_${originalName}`;
+  // 🔴 FIX CRÍTICO: userId DEVE ser o primeiro segmento para passar na RLS
+  // A política exige: (auth.uid())::text = (storage.foldername(name))[1]
+  // Estrutura: userId/brokerageId/cpf/timestamp_arquivo.pdf
+  const brokerageSegment = brokerageId ? `/${brokerageId}` : '';
+  const fileName = `${userId}${brokerageSegment}/${cleanCpf}/${timestamp}_${originalName}`;
   
-  console.log(`📁 [UPLOAD] Path: ${fileName}`);
+  console.log(`📁 [UPLOAD] Path: ${fileName} (userId first for RLS compliance)`);
 
-  // Tentar primeiro o bucket policy-docs (que já existe e é público)
   const { data, error } = await supabase.storage
     .from('policy-docs')
     .upload(fileName, file, {
@@ -295,7 +296,7 @@ export async function uploadPolicyPdf(
     });
 
   if (error) {
-    console.error('Error uploading PDF:', error);
+    console.error('❌ [UPLOAD] Erro no Storage:', error.message, error);
     return null;
   }
 
@@ -303,7 +304,7 @@ export async function uploadPolicyPdf(
     .from('policy-docs')
     .getPublicUrl(data.path);
 
-  console.log('📎 [UPLOAD] PDF salvo:', urlData.publicUrl);
+  console.log('✅ [UPLOAD] PDF salvo com sucesso:', urlData.publicUrl);
   return urlData.publicUrl;
 }
 
