@@ -271,7 +271,10 @@ export async function uploadPolicyPdf(
   brokerageId?: number | string | null
 ): Promise<string | null> {
   const timestamp = Date.now();
-  const cleanCpf = cpfCnpj?.replace(/[^\d]/g, '') || 'sem-cpf';
+  
+  // Limpar CPF/CNPJ - usar fallback único se não tiver
+  const rawCpf = cpfCnpj?.replace(/[^\d]/g, '');
+  const cleanCpf = rawCpf && rawCpf.length >= 11 ? rawCpf : `novo-${timestamp}`;
   
   // Limpar nome do arquivo original para usar no path
   const originalName = file.name.replace(/[^\w.\-]/g, '_').substring(0, 50);
@@ -280,6 +283,8 @@ export async function uploadPolicyPdf(
   // Padrão: brokerage_id/cpf_cnpj/timestamp_nome.pdf (ou userId se não houver brokerage)
   const basePath = brokerageId ? String(brokerageId) : userId;
   const fileName = `${basePath}/${cleanCpf}/${timestamp}_${originalName}`;
+  
+  console.log(`📁 [UPLOAD] Path: ${fileName}`);
 
   // Tentar primeiro o bucket policy-docs (que já existe e é público)
   const { data, error } = await supabase.storage
