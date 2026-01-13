@@ -23,6 +23,14 @@ interface Company {
   assistance_phone: string | null;
 }
 
+interface ClientData {
+  id: string;
+  name: string;
+  cpf_cnpj: string | null;
+  email: string | null;
+  user_id: string;
+}
+
 export default function PortalCards() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [companies, setCompanies] = useState<Record<string, Company>>({});
@@ -33,13 +41,13 @@ export default function PortalCards() {
   useEffect(() => {
     const storedClient = sessionStorage.getItem('portal_client');
     if (storedClient) {
-      const client = JSON.parse(storedClient);
+      const client: ClientData = JSON.parse(storedClient);
       setClientData({
         name: client.name || '',
         cpf_cnpj: client.cpf_cnpj || null,
       });
-      // Buscar por CPF normalizado para incluir apólices de clientes duplicados
-      fetchDataByCpf(client.cpf_cnpj || '', client.user_id);
+      // Busca híbrida: client_id + CPF + email (apenas apólices ativas)
+      fetchCardsHybrid(client);
       fetchPortalConfig(client.user_id);
     }
   }, []);
@@ -61,25 +69,26 @@ export default function PortalCards() {
     }
   };
 
-  // NOVA FUNÇÃO: Busca apólices por CPF normalizado (resolve problema de clientes duplicados)
-  const fetchDataByCpf = async (cpf: string, userId: string) => {
+  // BUSCA HÍBRIDA PARA CARTEIRINHAS: client_id + CPF + email (apenas ativas)
+  const fetchCardsHybrid = async (client: ClientData) => {
     try {
-      // Usar RPC que busca por CPF normalizado - cast necessário pois types ainda não foram regenerados
       const { data: policiesData, error: policiesError } = await supabase
-        .rpc('get_portal_policies_by_cpf' as any, {
-          p_user_id: userId,
-          p_cpf: cpf
+        .rpc('get_portal_cards_hybrid' as any, {
+          p_user_id: client.user_id,
+          p_client_id: client.id,
+          p_cpf: client.cpf_cnpj || null,
+          p_email: client.email || null
         });
 
       if (policiesError) {
-        console.error('Error fetching policies by CPF:', policiesError);
+        console.error('Error fetching cards hybrid:', policiesError);
         return;
       }
 
       const { data: companiesData } = await supabase
         .from('companies')
         .select('id, name, assistance_phone')
-        .eq('user_id', userId);
+        .eq('user_id', client.user_id);
 
       const companiesMap: Record<string, Company> = {};
       companiesData?.forEach((c: Company) => {
@@ -121,10 +130,10 @@ export default function PortalCards() {
       <h2 className="text-xl font-light text-white tracking-wide">Minhas Carteirinhas</h2>
 
       {policies.length === 0 ? (
-        <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
+        <Card className="bg-black/70 border-white/[0.06] backdrop-blur-2xl">
           <CardContent className="p-8 text-center">
             <CreditCard className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-            <p className="text-zinc-500">Nenhuma carteirinha disponível.</p>
+            <p className="text-zinc-500 font-light">Nenhuma carteirinha disponível.</p>
             <p className="text-zinc-600 text-sm mt-1">
               Suas carteirinhas aparecerão aqui quando houver seguros ativos.
             </p>
@@ -150,13 +159,13 @@ export default function PortalCards() {
         </div>
       )}
 
-      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
+      <Card className="bg-black/70 border-white/[0.06] backdrop-blur-2xl">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/5">
-              <AlertCircle className="w-4 h-4 text-zinc-400" />
+            <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/[0.06]">
+              <AlertCircle className="w-4 h-4 text-zinc-500" />
             </div>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-500 font-light">
               Apresente esta carteirinha digital em caso de sinistro ou quando solicitado.
             </p>
           </div>
