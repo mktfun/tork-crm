@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,15 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, Zap, Eye, ExternalLink } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Loader2, UserCheck, UserPlus, X, Sparkles, Clock, AlertTriangle, RefreshCw, Zap, Eye, ExternalLink, Car, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseCompanies } from '@/hooks/useSupabaseCompanies';
 import { useSupabaseProducers } from '@/hooks/useSupabaseProducers';
 import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
+import { useSupabaseBrokerages } from '@/hooks/useSupabaseBrokerages';
 import { usePolicies } from '@/hooks/useAppData';
 import { cn } from '@/lib/utils';
 import { 
@@ -74,8 +76,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
   const { companies } = useSupabaseCompanies();
   const { producers } = useSupabaseProducers();
   const { data: ramos = [] } = useSupabaseRamos();
+  const { brokerages } = useSupabaseBrokerages();
   const { addPolicy } = usePolicies();
   const activeBrokerageId = useAppStore(state => state.activeBrokerageId);
+  const setActiveBrokerage = useAppStore(state => state.setActiveBrokerage);
+  
+  // Auto-select primeira corretora se nenhuma selecionada
+  useEffect(() => {
+    if (!activeBrokerageId && brokerages.length > 0 && open) {
+      console.log('🏢 [AUTO] Selecionando primeira corretora:', brokerages[0].id);
+      setActiveBrokerage(brokerages[0].id.toString());
+      toast.info(`Corretora "${brokerages[0].name}" selecionada automaticamente`);
+    }
+  }, [activeBrokerageId, brokerages, setActiveBrokerage, open]);
   
   const [step, setStep] = useState<Step>('upload');
   const [files, setFiles] = useState<File[]>([]);
@@ -572,12 +585,17 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
           brokerageId: activeBrokerageId
         });
         
+        // Construir insuredAsset com objeto + placa editados
+        const insuredAssetFinal = item.identificacaoAdicional 
+          ? `${item.objetoSegurado || item.tituloSugerido} - ${item.identificacaoAdicional}`
+          : item.objetoSegurado || item.tituloSugerido;
+        
         await addPolicy({
           clientId: clientId!,
           policyNumber: item.numeroApolice,
           insuranceCompany: item.seguradoraId!,
           type: item.ramoId!,
-          insuredAsset: item.tituloSugerido || item.objetoSegurado,
+          insuredAsset: insuredAssetFinal,
           premiumValue: item.premioLiquido,
           commissionRate: item.commissionRate,
           startDate: item.dataInicio,
@@ -838,6 +856,19 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
               </div>
 
               <div className="ml-auto flex items-center gap-2">
+                {/* Alerta de corretora não selecionada */}
+                {!activeBrokerageId && (
+                  <Badge className="bg-red-600/20 text-red-400 border-red-600/40 animate-pulse">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    Selecione uma corretora
+                  </Badge>
+                )}
+                {activeBrokerageId && brokerages.length > 0 && (
+                  <Badge variant="outline" className="text-slate-400 border-slate-600/50">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {brokerages.find(b => b.id.toString() === activeBrokerageId)?.name || 'Corretora'}
+                  </Badge>
+                )}
                 <Badge variant="outline" className="text-green-400 border-green-400/50">
                   {validCount} válidas
                 </Badge>
@@ -863,6 +894,7 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                       <TableHead className="w-12">Doc</TableHead>
                       <TableHead className="w-56">Cliente</TableHead>
                       <TableHead className="w-48">Apólice / Prêmio</TableHead>
+                      <TableHead className="w-40">Objeto / Placa</TableHead>
                       <TableHead>Seguradora</TableHead>
                       <TableHead>Ramo</TableHead>
                       <TableHead>Produtor</TableHead>
@@ -1046,6 +1078,62 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                           )}
                         </TableCell>
 
+                        {/* Objeto Segurado / Placa - NOVOS CAMPOS EDITÁVEIS */}
+                        <TableCell>
+                          {!item.processError && (
+                            <TooltipProvider>
+                              <div className="space-y-1">
+                                {/* Objeto Segurado - Veículo, Imóvel, etc */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Input
+                                      value={item.objetoSegurado || ''}
+                                      onChange={(e) => {
+                                        markFieldEdited(item.id, 'objetoSegurado');
+                                        updateItem(item.id, { objetoSegurado: e.target.value });
+                                      }}
+                                      className={cn(
+                                        "h-7 bg-slate-700 border-slate-600 text-sm",
+                                        !item.objetoSegurado && "border-yellow-500/50 bg-yellow-900/10",
+                                        isFieldEdited(item.id, 'objetoSegurado') && "text-sky-400 border-sky-500/50"
+                                      )}
+                                      placeholder="VW Golf GTI 2024"
+                                    />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Veículo, imóvel ou bem segurado</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                
+                                {/* Placa / Identificação Adicional */}
+                                <div className="flex items-center gap-1">
+                                  <Car className="w-3 h-3 text-slate-500" />
+                                  <Input
+                                    value={item.identificacaoAdicional || ''}
+                                    onChange={(e) => {
+                                      markFieldEdited(item.id, 'identificacaoAdicional');
+                                      updateItem(item.id, { identificacaoAdicional: e.target.value.toUpperCase() });
+                                    }}
+                                    className={cn(
+                                      "h-6 text-xs bg-transparent border-slate-600/30 px-1 w-28 uppercase font-mono",
+                                      isFieldEdited(item.id, 'identificacaoAdicional') && "text-sky-400 border-sky-500/50"
+                                    )}
+                                    placeholder="ABC-1D23"
+                                  />
+                                </div>
+                                
+                                {/* Badge indicando se foi extraído pela IA */}
+                                {(item.objetoSegurado || item.identificacaoAdicional) && !isFieldEdited(item.id, 'objetoSegurado') && !isFieldEdited(item.id, 'identificacaoAdicional') && (
+                                  <Badge variant="outline" className="text-purple-400 border-purple-400/30 text-[9px] h-4 px-1">
+                                    <Sparkles className="w-2 h-2 mr-1" />
+                                    IA
+                                  </Badge>
+                                )}
+                              </div>
+                            </TooltipProvider>
+                          )}
+                        </TableCell>
+
                         {/* Seguradora */}
                         <TableCell>
                           {!item.processError && (
@@ -1170,9 +1258,14 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
                 </Button>
                 <Button
                   onClick={processImport}
-                  disabled={validCount === 0}
-                  className="bg-green-600 hover:bg-green-700"
+                  disabled={validCount === 0 || !activeBrokerageId}
+                  className={cn(
+                    "bg-green-600 hover:bg-green-700",
+                    !activeBrokerageId && "opacity-50 cursor-not-allowed"
+                  )}
+                  title={!activeBrokerageId ? 'Selecione uma corretora primeiro' : undefined}
                 >
+                  {!activeBrokerageId && <AlertCircle className="w-4 h-4 mr-2 text-yellow-400" />}
                   <Check className="w-4 h-4 mr-2" />
                   Importar {validCount} Apólice(s)
                 </Button>
