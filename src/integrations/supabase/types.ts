@@ -2336,18 +2336,18 @@ export type Database = {
         }[]
       }
       get_revenue_transactions: {
-        Args: { p_end_date: string; p_limit?: number; p_start_date: string }
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
         Returns: {
-          account_name: string
           amount: number
+          category: string
           client_name: string
+          created_at: string
           description: string
           id: string
-          is_confirmed: boolean
-          legacy_status: string
+          is_synced: boolean
+          legacy_id: string
           policy_number: string
-          related_entity_id: string
-          related_entity_type: string
+          status: string
           transaction_date: string
         }[]
       }
