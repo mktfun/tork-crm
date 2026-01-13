@@ -1987,6 +1987,7 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: boolean
       }
+      audit_financial_divergence: { Args: never; Returns: Json }
       audit_ledger_integrity: { Args: never; Returns: Json }
       backfill_legacy_transactions: { Args: never; Returns: Json }
       batch_update_transactions: {
@@ -2145,6 +2146,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_dashboard_financial_kpis: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
       get_dre_data: {
         Args: { p_year?: number }
         Returns: {
@@ -2217,6 +2222,15 @@ export type Database = {
       get_financial_summary: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
+      }
+      get_monthly_commission_chart: {
+        Args: { p_months?: number }
+        Returns: {
+          confirmed_amount: number
+          month_date: string
+          month_label: string
+          pending_amount: number
+        }[]
       }
       get_or_create_ledger_sync_accounts: {
         Args: { p_user_id: string }

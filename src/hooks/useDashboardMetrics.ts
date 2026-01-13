@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from 'react';
-import { useClients, usePolicies, useTransactions, useAppointments } from '@/hooks/useAppData';
+import { useClients, usePolicies, useAppointments } from '@/hooks/useAppData';
 import { useCompanyNames } from '@/hooks/useCompanyNames';
 import { useProfile } from '@/hooks/useProfile';
 import { useBirthdayGreetings } from '@/hooks/useBirthdayGreetings';
@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { isBirthdayToday, isWithinDays, isInMonth, isToday } from '@/utils/dateUtils';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { format, differenceInDays, eachDayOfInterval, parseISO, isWithinInterval, isSameMonth, isSameYear, startOfDay, endOfDay, isAfter, isBefore } from 'date-fns';
+import { format, differenceInDays, eachDayOfInterval, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useRealCommissionRates } from '@/hooks/useRealCommissionRates';
 
@@ -30,7 +30,6 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   const { policies, loading: policiesLoading } = usePolicies();
   const { appointments } = useAppointments();
   const { clients, loading: clientsLoading } = useClients();
-  const { transactions, loading: transactionsLoading } = useTransactions();
   const { getCompanyName, companies, loading: companiesLoading } = useCompanyNames();
   const { data: ramos = [], isLoading: ramosLoading } = useSupabaseRamos();
 
@@ -75,11 +74,61 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     enabled: !!user
   });
 
+  // 🆕 QUERY PARA KPIS FINANCEIROS - VIA LEDGER (FONTE ÚNICA DE VERDADE)
+  const { data: financialKpis, isLoading: financialKpisLoading } = useQuery({
+    queryKey: ['dashboard-financial-kpis', user?.id, dateRange],
+    queryFn: async () => {
+      if (!user) return null;
+
+      const startDate = dateRange?.from?.toISOString().split('T')[0] || null;
+      const endDate = dateRange?.to?.toISOString().split('T')[0] || null;
+
+      const { data, error } = await supabase.rpc('get_dashboard_financial_kpis', {
+        p_start_date: startDate,
+        p_end_date: endDate
+      });
+
+      if (error) {
+        console.error('Erro ao buscar KPIs financeiros do ledger:', error);
+        return { totalCommission: 0, pendingCommission: 0, netCommission: 0 };
+      }
+
+      return data as { totalCommission: number; pendingCommission: number; netCommission: number };
+    },
+    enabled: !!user
+  });
+
+  // 🆕 QUERY PARA GRÁFICO MENSAL DE COMISSÕES - VIA LEDGER
+  const { data: monthlyCommissionFromLedger = [], isLoading: monthlyCommissionLoading } = useQuery({
+    queryKey: ['monthly-commission-chart', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      const { data, error } = await supabase.rpc('get_monthly_commission_chart', {
+        p_months: 6
+      });
+
+      if (error) {
+        console.error('Erro ao buscar gráfico de comissões do ledger:', error);
+        return [];
+      }
+
+      // Transformar para o formato esperado pelo componente
+      return (data || []).map((item: any) => ({
+        mes: item.month_label,
+        comissao: Number(item.confirmed_amount) + Number(item.pending_amount),
+        confirmado: Number(item.confirmed_amount),
+        pendente: Number(item.pending_amount)
+      }));
+    },
+    enabled: !!user
+  });
+
   // 🛡️ GUARD CLAUSE CENTRAL - Dados prontos para cálculos
   const isDataReady = useMemo(() =>
-    !transactionsLoading && !ramosLoading && !companiesLoading &&
-    Array.isArray(transactions) && Array.isArray(ramos) && Array.isArray(companies),
-    [transactionsLoading, ramosLoading, companiesLoading, transactions, ramos, companies]
+    !ramosLoading && !companiesLoading &&
+    Array.isArray(ramos) && Array.isArray(companies),
+    [ramosLoading, companiesLoading, ramos, companies]
   );
 
   // 🔥 KPI 1: CLIENTES ATIVOS - MEMOIZAÇÃO INDIVIDUAL
@@ -129,46 +178,22 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     return renewalsCount;
   }, [policies, policiesLoading, dateRange]);
 
-  // 🔥 KPI 4: COMISSÃO DO MÊS ATUAL OU PERÍODO FILTRADO
+  // 🔥 KPI 4: COMISSÃO DO MÊS ATUAL OU PERÍODO FILTRADO - AGORA VIA LEDGER!
   const comissaoMesAtual = useMemo(() => {
-    if (transactionsLoading) return 0;
+    // ✅ CORREÇÃO: Usar dados do Ledger (fonte única de verdade)
+    return financialKpis?.totalCommission ?? 0;
+  }, [financialKpis]);
 
-    let filteredTransactions = transactions;
+  // 🔥 KPI 5: COMISSÃO PENDENTE - AGORA VIA LEDGER!
+  const comissaoPendente = useMemo(() => {
+    return financialKpis?.pendingCommission ?? 0;
+  }, [financialKpis]);
 
-    // Se há filtro de data, usar o filtro; senão, usar mês atual
-    if (dateRange?.from && dateRange?.to) {
-      filteredTransactions = transactions.filter(t => isDateInRange(t.date));
-    } else {
-      filteredTransactions = transactions.filter(t => isInMonth(t.date, 0));
-    }
-
-    const comissaoTotal = filteredTransactions
-      .filter(t => {
-        const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
-        const isGanho = ['GANHO', 'RECEITA'].includes(t.nature);
-        return isRealizado && isGanho;
-      })
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return comissaoTotal;
-  }, [transactions, transactionsLoading, dateRange]);
-
-  // 🔥 KPI 5: COMISSÃO DO MÊS ANTERIOR - CORREÇÃO CRÍTICA
+  // 🔥 KPI LEGADO: COMISSÃO DO MÊS ANTERIOR (para comparação)
+  // TODO: Implementar via Ledger no futuro
   const comissaoMesAnterior = useMemo(() => {
-    if (transactionsLoading) return 0;
-
-    const comissaoTotal = transactions
-      .filter(t => {
-        const isLastMonth = isInMonth(t.date, -1);
-        const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
-        const isReceita = t.nature === 'RECEITA';
-
-        return isLastMonth && isRealizado && isReceita;
-      })
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return comissaoTotal;
-  }, [transactions, transactionsLoading]);
+    return 0; // Temporariamente desabilitado - comparação será recalculada via Ledger
+  }, []);
 
   // 🔥 KPI 6: APÓLICES NOVAS DO PERÍODO (BASEADO EM VIGÊNCIA - start_date)
   const apolicesNovasMes = useMemo(() => {
@@ -222,44 +247,11 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     return aniversariantesHoje; // Simplificado - usar os mesmos dados
   }, [aniversariantesHoje]);
 
-  // 🔥 DADOS PARA GRÁFICOS COM FILTRO DE DATA
+  // 🔥 DADOS PARA GRÁFICOS COM FILTRO DE DATA - AGORA VIA LEDGER!
   const monthlyCommissionData = useMemo(() => {
-    if (transactionsLoading) return [];
-
-    let filteredTransactions = transactions;
-
-    // Se há filtro de data, aplicar filtro
-    if (dateRange?.from && dateRange?.to) {
-      filteredTransactions = transactions.filter(t => isDateInRange(t.date));
-    }
-
-    const months = [];
-    const today = new Date();
-
-    for (let i = 5; i >= 0; i--) {
-      const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthStr = month.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-
-      const monthlyCommission = filteredTransactions
-        .filter(t => {
-          const transactionDate = new Date(t.date);
-          const sameMonth = transactionDate.getMonth() === month.getMonth();
-          const sameYear = transactionDate.getFullYear() === month.getFullYear();
-          const isRealizado = t.status === 'REALIZADO' || t.status === 'PAGO';
-          const isReceita = t.nature === 'RECEITA';
-
-          return sameMonth && sameYear && isRealizado && isReceita;
-        })
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      months.push({
-        mes: monthStr,
-        comissao: monthlyCommission
-      });
-    }
-
-    return months;
-  }, [transactions, transactionsLoading, dateRange]);
+    // ✅ CORREÇÃO: Usar dados do Ledger (fonte única de verdade)
+    return monthlyCommissionFromLedger;
+  }, [monthlyCommissionFromLedger]);
 
   // 🆕 GRÁFICO DE CRESCIMENTO COM DADOS REAIS PROCESSADOS POR DIA OU MÊS
   const monthlyGrowthData = useMemo(() => {
@@ -429,33 +421,28 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   // Usar os dados da RPC ou array vazio
   const branchDistributionData = branchDistributionFromRPC || [];
 
-  // 📊 DISTRIBUIÇÃO POR SEGURADORAS COM FILTRO DE DATA - BASEADO EM TRANSAÇÕES PAGAS
+  // 📊 DISTRIBUIÇÃO POR SEGURADORAS COM FILTRO DE DATA - BASEADO EM POLÍTICAS ATIVAS
   const companyDistributionData = useMemo(() => {
-    if (!isDataReady) return []; // 🛡️ GUARD CLAUSE: Aguardar todos os dados
+    if (!isDataReady || policiesLoading) return [];
 
-    // ✅ USAR TRANSAÇÕES ao invés de apólices (mesma lógica dos Relatórios)
-    let filteredTransactions = transactions;
+    let filteredPolicies = policies;
 
-    // Aplicar filtro de data se fornecido
+    // Aplicar filtro de data se fornecido (usando start_date)
     if (dateRange?.from && dateRange?.to) {
-      filteredTransactions = transactions.filter(t => isDateInRange(t.date));
+      filteredPolicies = policies.filter(p => p.startDate && isDateInRange(p.startDate));
     }
 
-    // Filtrar apenas transações PAGAS de RECEITA
-    const paidTransactions = filteredTransactions.filter(t =>
-      t.nature === 'RECEITA' &&
-      (t.status === 'PAGO' || t.status === 'REALIZADO')
-    );
+    // Filtrar apenas apólices ativas
+    const activePolicies = filteredPolicies.filter(p => p.status === 'Ativa');
 
-    // Agrupar por company_id COM SUPORTE A PRÊMIO E COMISSÃO
+    // Agrupar por insurance_company
     const companyData: { [key: string]: { count: number; premium: number; commission: number } } = {};
 
-    paidTransactions.forEach(transaction => {
-      const companyId = transaction.companyId || 'Não informado';
-
-      // ✅ SOLUÇÃO CORRETA: Usar premiumValue e commissionValue
-      const premiumValue = transaction.premiumValue || transaction.amount || 0;
-      const commissionValue = transaction.commissionValue || transaction.amount || 0;
+    activePolicies.forEach(policy => {
+      const companyId = policy.insuranceCompany || 'Não informado';
+      const premiumValue = policy.premiumValue || 0;
+      const commissionRate = policy.commissionRate || 0;
+      const commissionValue = (premiumValue * commissionRate) / 100;
 
       if (!companyData[companyId]) {
         companyData[companyId] = { count: 0, premium: 0, commission: 0 };
@@ -465,14 +452,14 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
       companyData[companyId].commission += commissionValue;
     });
 
-    // Converter para array e ordenar por valor COM PRÊMIO E COMISSÃO
+    // Converter para array e ordenar por valor
     let distribution = Object.entries(companyData).map(([companyId, data]) => {
       const avgCommissionRate = data.premium > 0 ? (data.commission / data.premium) * 100 : 0;
 
       return {
         seguradora: companyId === 'Não informado' ? 'Não informado' : getCompanyName(companyId),
         total: data.count,
-        valor: data.premium, // Valor TOTAL é o prêmio
+        valor: data.premium,
         valorComissao: data.commission,
         taxaMediaComissao: avgCommissionRate
       };
@@ -505,7 +492,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     }
 
     return distribution;
-  }, [isDataReady, transactions, getCompanyName, dateRange]);
+  }, [isDataReady, policiesLoading, policies, getCompanyName, dateRange]);
 
   // 🆕 INSIGHTS DINÂMICOS - ANÁLISE INTELIGENTE DOS DADOS
   const insightRamoPrincipal = useMemo(() => {
@@ -592,7 +579,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
 
   // 🆕 INSIGHT GLOBAL - RESUMO ESTRATÉGICO INTELIGENTE
   const dashboardGlobalInsight = useMemo(() => {
-    if (policiesLoading || clientsLoading || transactionsLoading) {
+    if (policiesLoading || clientsLoading || financialKpisLoading) {
       return 'Carregando análise estratégica...';
     }
 
@@ -626,17 +613,17 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     // Juntar os insights com separador
     return insights.join('. ') + '.';
   }, [
-    policiesLoading, clientsLoading, transactionsLoading,
+    policiesLoading, clientsLoading, financialKpisLoading,
     apolicesNovasMes, comissaoMesAtual, renewals30Days, renewals90Days, aniversariantesHoje, dateRange
   ]);
 
   // 🔥 ESTADO DE LOADING GERAL
-  const isLoading = policiesLoading || clientsLoading || transactionsLoading || greetingsLoading || ramosLoading || companiesLoading;
+  const isLoading = policiesLoading || clientsLoading || financialKpisLoading || monthlyCommissionLoading || greetingsLoading || ramosLoading || companiesLoading;
 
   // ====================== INÍCIO DO BLOCO DE DIAGNÓSTICO ======================
   useEffect(() => {
     // Logs removidos para limpeza
-  }, [isDataReady, transactions, ramos, companies]);
+  }, [isDataReady, ramos, companies]);
   // ======================= FIM DO BLOCO DE DIAGNÓSTICO ========================
 
   return {
@@ -645,6 +632,7 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
     todaysAppointments,
     activeClients,
     comissaoMesAtual,
+    comissaoPendente,
     comissaoMesAnterior,
     apolicesNovasMes,
     aniversariantesSemana,
