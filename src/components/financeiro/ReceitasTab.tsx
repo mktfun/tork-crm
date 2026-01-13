@@ -95,8 +95,17 @@ function KpiCard({ title, value, variant, icon: Icon }: KpiProps) {
 // ============ TRANSACTIONS TABLE ============
 
 interface TransactionsTableProps {
-  startDate: string;
-  endDate: string;
+  transactions: Array<{
+    id: string;
+    transaction_date: string | null;
+    description: string;
+    client_name?: string | null;
+    account_name?: string | null;
+    amount: number | null;
+    is_confirmed: boolean;
+    legacy_status: string | null;
+  }>;
+  isLoading: boolean;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectAll: (checked: boolean) => void;
@@ -105,27 +114,14 @@ interface TransactionsTableProps {
 }
 
 function TransactionsTable({ 
-  startDate, 
-  endDate, 
+  transactions,
+  isLoading,
   selectedIds, 
   onToggleSelect, 
   onSelectAll,
   onViewDetails,
   viewMode
 }: TransactionsTableProps) {
-  const { data: allTransactions = [], isLoading } = useRevenueTransactions(startDate, endDate);
-
-  // Filtrar por viewMode
-  const transactions = useMemo(() => {
-    return allTransactions.filter(tx => {
-      if (viewMode === 'efetivado') {
-        return tx.is_confirmed;
-      } else {
-        return !tx.is_confirmed;
-      }
-    });
-  }, [allTransactions, viewMode]);
-
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -143,7 +139,7 @@ function TransactionsTable({
         <p>
           {viewMode === 'efetivado' 
             ? 'Nenhuma receita confirmada no período.'
-            : 'Nenhuma receita pendente no período.'}
+            : 'Nenhuma receita pendente.'}
         </p>
       </div>
     );
@@ -291,25 +287,43 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
     };
   }, [dateRange]);
 
-  const { data: allTransactions = [] } = useRevenueTransactions(startDate, endDate);
+  // Transações do período (para aba Efetivado)
+  const { data: periodTransactions = [], isLoading: loadingPeriod } = useRevenueTransactions(startDate, endDate);
+  
+  // TODAS as transações pendentes (para aba A Receber) - sem filtro de data
+  const { data: allHistoricalTransactions = [], isLoading: loadingAll } = useRevenueTransactions('2000-01-01', '2100-12-31');
+  
   const { data: summary } = useFinancialSummary(startDate, endDate);
+
+  // Transações a exibir conforme a aba selecionada
+  const displayTransactions = useMemo(() => {
+    if (viewMode === 'a_receber') {
+      // Aba "A Receber": mostrar TODAS as pendentes (sem filtro de data)
+      return allHistoricalTransactions.filter(tx => !tx.is_confirmed);
+    } else {
+      // Aba "Efetivado": mostrar confirmadas do período
+      return periodTransactions.filter(tx => tx.is_confirmed);
+    }
+  }, [viewMode, periodTransactions, allHistoricalTransactions]);
+
+  const isLoading = viewMode === 'a_receber' ? loadingAll : loadingPeriod;
 
   // Calcular KPIs
   const kpis = useMemo(() => {
-    const confirmadas = allTransactions.filter(tx => tx.is_confirmed);
+    const confirmadas = periodTransactions.filter(tx => tx.is_confirmed);
     
     return {
       recebido: confirmadas.reduce((sum, tx) => sum + (tx.amount || 0), 0),
       // Usa o total histórico do summary (sem filtro de data)
       aReceber: summary?.pendingIncome ?? 0
     };
-  }, [allTransactions, summary]);
+  }, [periodTransactions, summary]);
 
-  // Filtrar transações que podem ser selecionadas
-  const selectableTransactions = allTransactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
+  // Filtrar transações que podem ser selecionadas (pendentes na aba atual)
+  const selectableTransactions = displayTransactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
 
   const handleToggleSelect = (id: string) => {
-    const tx = allTransactions.find(t => t.id === id);
+    const tx = displayTransactions.find(t => t.id === id);
     if (tx?.is_confirmed || tx?.legacy_status !== null) return;
     
     setSelectedIds(prev => {
@@ -342,13 +356,13 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
 
   // Calcular valor total selecionado
   const selectedTotalAmount = useMemo(() => {
-    return allTransactions
+    return displayTransactions
       .filter(tx => selectedIds.has(tx.id))
       .reduce((sum, tx) => sum + (tx.amount || 0), 0);
-  }, [allTransactions, selectedIds]);
+  }, [displayTransactions, selectedIds]);
 
   // Contar transações sincronizadas para info
-  const syncedCount = allTransactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
+  const syncedCount = displayTransactions.filter(tx => tx.legacy_status !== null && !tx.is_confirmed).length;
 
   return (
     <div className="space-y-6">
@@ -428,8 +442,8 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
         <CardContent>
           <ScrollArea className="h-[400px]">
             <TransactionsTable 
-              startDate={startDate}
-              endDate={endDate}
+              transactions={displayTransactions}
+              isLoading={isLoading}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
               onSelectAll={handleSelectAll}
