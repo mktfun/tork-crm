@@ -39,7 +39,8 @@ import { NovaReceitaModal } from './NovaReceitaModal';
 import { TransactionDetailsSheet } from './TransactionDetailsSheet';
 import { SettleTransactionModal } from './SettleTransactionModal';
 import { 
-  useRevenueTransactions
+  useRevenueTransactions,
+  useFinancialSummary
 } from '@/hooks/useFinanceiro';
 import { parseLocalDate } from '@/utils/dateUtils';
 
@@ -291,17 +292,18 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
   }, [dateRange]);
 
   const { data: allTransactions = [] } = useRevenueTransactions(startDate, endDate);
+  const { data: summary } = useFinancialSummary(startDate, endDate);
 
   // Calcular KPIs
   const kpis = useMemo(() => {
     const confirmadas = allTransactions.filter(tx => tx.is_confirmed);
-    const pendentes = allTransactions.filter(tx => !tx.is_confirmed);
     
     return {
       recebido: confirmadas.reduce((sum, tx) => sum + (tx.amount || 0), 0),
-      aReceber: pendentes.reduce((sum, tx) => sum + (tx.amount || 0), 0)
+      // Usa o total histórico do summary (sem filtro de data)
+      aReceber: summary?.pendingIncome ?? 0
     };
-  }, [allTransactions]);
+  }, [allTransactions, summary]);
 
   // Filtrar transações que podem ser selecionadas
   const selectableTransactions = allTransactions.filter(tx => !tx.is_confirmed && tx.legacy_status === null);
