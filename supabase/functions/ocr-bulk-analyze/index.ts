@@ -270,6 +270,25 @@ Analise os documentos e extraia os dados com MÁXIMA PRECISÃO.
 - Se só achar Total: premio_liquido = total / 1.0738
 - Se achar parcela (ex: "4x R$ 500"): premio_liquido = parcela × qtd × 0.93
 
+## EXTRAÇÃO DE VEÍCULOS E IMÓVEIS (AGRESSIVO!)
+Para ramo AUTO/AUTOMÓVEL/VEÍCULO:
+- SEMPRE procure seção "Dados do Veículo", "Veículo Segurado", "Objeto Segurado"
+- PLACA: formato ABC-1234 ou ABC1D23 (Mercosul) - OBRIGATÓRIO extrair!
+- MARCA/MODELO: Ex: "VOLKSWAGEN GOLF GTI 2.0 TSI" 
+- ANO: Geralmente ao lado do modelo
+- CHASSI: 17 caracteres alfanuméricos
+- objeto_segurado = MARCA + MODELO + ANO (ex: "VW Golf GTI 2024")
+- identificacao_adicional = PLACA (ex: "ABC1D23")
+
+Para ramo RESIDENCIAL/EMPRESARIAL/CONDOMÍNIO:
+- Procure endereço do IMÓVEL segurado (pode diferir do cliente!)
+- objeto_segurado = "Imóvel Residencial" ou endereço curto
+- identificacao_adicional = CEP do imóvel (ex: "01310-100")
+
+Para ramo VIDA/SAÚDE:
+- objeto_segurado = Nome do plano ou "Vida Individual"
+- identificacao_adicional = null
+
 ## TIPO DE DOCUMENTO
 - APOLICE: Documento emitido oficial
 - PROPOSTA: Antes da emissão
