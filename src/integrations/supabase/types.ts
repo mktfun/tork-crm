@@ -2260,6 +2260,13 @@ export type Database = {
         }[]
       }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
+      get_pending_this_month: {
+        Args: never
+        Returns: {
+          pending_count: number
+          total_amount: number
+        }[]
+      }
       get_pending_totals: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
@@ -2352,6 +2359,13 @@ export type Database = {
         }[]
       }
       get_schema_info: { Args: never; Returns: Json }
+      get_total_pending_receivables: {
+        Args: never
+        Returns: {
+          pending_count: number
+          total_amount: number
+        }[]
+      }
       get_transaction_details:
         | { Args: { p_transaction_id: string }; Returns: Json }
         | {

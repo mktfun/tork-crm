@@ -795,6 +795,42 @@ export async function getCashFlowWithProjection(
   }>;
 }
 
+// ============ NOVOS KPIs: TOTAL GERAL E MÊS ATUAL ============
+
+/**
+ * Busca total geral de receitas pendentes (TODAS as datas)
+ */
+export async function getTotalPendingReceivables(): Promise<{
+  total_amount: number;
+  pending_count: number;
+}> {
+  const { data, error } = await supabase.rpc('get_total_pending_receivables');
+
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    total_amount: Number(row?.total_amount || 0),
+    pending_count: Number(row?.pending_count || 0)
+  };
+}
+
+/**
+ * Busca total de receitas pendentes vencendo no mês atual
+ */
+export async function getPendingThisMonth(): Promise<{
+  total_amount: number;
+  pending_count: number;
+}> {
+  const { data, error } = await supabase.rpc('get_pending_this_month');
+
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    total_amount: Number(row?.total_amount || 0),
+    pending_count: Number(row?.pending_count || 0)
+  };
+}
+
 // ============ AUDITORIA CONTÁBIL ============
 
 export interface LedgerIntegrityIssue {

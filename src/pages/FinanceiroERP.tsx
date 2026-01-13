@@ -13,8 +13,6 @@ import {
   CalendarClock,
   Landmark,
   Clock,
-  ArrowDownToLine,
-  Banknote,
   Info
 } from 'lucide-react';
 
@@ -22,11 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
 
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
@@ -42,26 +36,23 @@ import {
   useFinancialAccountsWithDefaults, 
   useRecentTransactions,
   useCashFlowData,
-  useFinancialSummary
+  useFinancialSummary,
+  useTotalPendingReceivables,
+  usePendingThisMonth
 } from '@/hooks/useFinanceiro';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { parseLocalDate } from '@/utils/dateUtils';
 import { cn } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 
-// ============ KPI CONFIGURATION ============
+// ============ KPI CONFIGURATION - 4 KPIS SIMPLES ============
 
-const ALL_KPIS = [
-  { id: 'cashBalance', label: 'Saldo em Caixa' },
-  { id: 'netResult', label: 'Resultado Líquido' },
-  { id: 'totalIncome', label: 'Receita Confirmada' },
-  { id: 'totalExpense', label: 'Despesas' },
-  { id: 'pendingIncome', label: 'Saldo em Aberto' },
-  { id: 'pendingExpense', label: 'Projeção (A Pagar)' },
+const FIXED_KPIS = [
+  { id: 'totalIncome', label: 'Recebido no Mês' },
+  { id: 'totalExpense', label: 'Despesas do Mês' },
+  { id: 'pendingThisMonth', label: 'Vencendo este Mês' },
+  { id: 'totalPending', label: 'Total Geral a Receber' },
 ] as const;
-
-const DEFAULT_VISIBLE_KPIS = ['totalIncome', 'totalExpense', 'pendingIncome', 'pendingExpense'];
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -155,134 +146,66 @@ function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle,
   return cardContent;
 }
 
-// ============ KPI SECTION WITH CONFIGURATOR ============
+// ============ SIMPLE 4 KPI SECTION ============
 
 interface KpiSectionProps {
   summary: {
-    cashBalance?: number;
-    netResult?: number;
     totalIncome?: number;
     totalExpense?: number;
-    pendingIncome?: number;
-    pendingExpense?: number;
   } | null | undefined;
+  pendingThisMonth: { total_amount: number; pending_count: number } | undefined;
+  totalPending: { total_amount: number; pending_count: number } | undefined;
   isLoading: boolean;
 }
 
-function KpiSection({ summary, isLoading }: KpiSectionProps) {
-  const [visibleKpis, setVisibleKpis] = useLocalStorage<string[]>(
-    'financeiro-kpis-visible',
-    DEFAULT_VISIBLE_KPIS
-  );
-
-  const gridCols = useMemo(() => {
-    const count = visibleKpis.length;
-    if (count <= 2) return 'grid-cols-1 sm:grid-cols-2';
-    if (count <= 4) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
-    return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6';
-  }, [visibleKpis.length]);
-
-  const handleToggleKpi = (kpiId: string, checked: boolean) => {
-    if (checked) {
-      setVisibleKpis([...visibleKpis, kpiId]);
-    } else {
-      setVisibleKpis(visibleKpis.filter(id => id !== kpiId));
-    }
-  };
-
-  const kpiConfigs: Record<string, { title: string; icon: React.ElementType; variant: 'primary' | 'success' | 'danger' | 'warning' | 'info'; value: number; subtitle?: string; tooltip: string }> = {
-    cashBalance: {
-      title: 'Saldo em Caixa',
-      icon: Banknote,
-      variant: 'info',
-      value: summary?.cashBalance ?? 0,
-      tooltip: 'Saldo acumulado de todas as contas bancárias (histórico completo)',
-    },
-    netResult: {
-      title: 'Resultado Líquido',
-      icon: Landmark,
-      variant: 'primary',
-      value: summary?.netResult ?? 0,
-      subtitle: 'Período selecionado',
-      tooltip: 'Diferença entre receitas e despesas confirmadas no período selecionado',
-    },
-    totalIncome: {
-      title: 'Receita do Período',
-      icon: TrendingUp,
-      variant: 'success',
+function KpiSection({ summary, pendingThisMonth, totalPending, isLoading }: KpiSectionProps) {
+  const kpis = [
+    {
+      title: 'Recebido no Mês',
       value: summary?.totalIncome ?? 0,
-      tooltip: 'Total de receitas confirmadas (status = completed) no período selecionado',
+      icon: TrendingUp,
+      variant: 'success' as const,
+      tooltip: 'Receitas confirmadas (status = completed) no mês selecionado',
     },
-    totalExpense: {
-      title: 'Despesa do Período',
-      icon: TrendingDown,
-      variant: 'danger',
+    {
+      title: 'Despesas do Mês',
       value: summary?.totalExpense ?? 0,
-      tooltip: 'Total de despesas confirmadas (status = completed) no período selecionado',
+      icon: TrendingDown,
+      variant: 'danger' as const,
+      tooltip: 'Despesas confirmadas (status = completed) no mês selecionado',
     },
-    pendingIncome: {
-      title: 'A Receber',
+    {
+      title: 'Vencendo este Mês',
+      value: pendingThisMonth?.total_amount ?? 0,
+      icon: CalendarClock,
+      variant: 'warning' as const,
+      subtitle: pendingThisMonth?.pending_count ? `${pendingThisMonth.pending_count} parcelas` : undefined,
+      tooltip: 'Receitas pendentes com vencimento no mês atual',
+    },
+    {
+      title: 'Total Geral a Receber',
+      value: totalPending?.total_amount ?? 0,
       icon: Clock,
-      variant: 'warning',
-      value: summary?.pendingIncome ?? 0,
-      subtitle: 'Total pendente',
-      tooltip: 'Total acumulado de receitas pendentes (todas as datas)',
+      variant: 'info' as const,
+      subtitle: totalPending?.pending_count ? `${totalPending.pending_count} parcelas` : undefined,
+      tooltip: 'TODAS as receitas pendentes de todas as datas (sem filtro)',
     },
-    pendingExpense: {
-      title: 'A Pagar',
-      icon: ArrowDownToLine,
-      variant: 'danger',
-      value: summary?.pendingExpense ?? 0,
-      subtitle: 'Total pendente',
-      tooltip: 'Total acumulado de despesas pendentes (todas as datas)',
-    },
-  };
+  ];
 
   return (
-    <div className="relative">
-      {/* Botão de configuração */}
-      <div className="absolute -top-1 right-0 z-10">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-56">
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Exibir KPIs:</p>
-              {ALL_KPIS.map((kpi) => (
-                <label key={kpi.id} className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={visibleKpis.includes(kpi.id)}
-                    onCheckedChange={(checked) => handleToggleKpi(kpi.id, !!checked)}
-                  />
-                  <span className="text-sm">{kpi.label}</span>
-                </label>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Grid de KPIs */}
-      <div className={cn('grid gap-4', gridCols)}>
-        {ALL_KPIS.filter(kpi => visibleKpis.includes(kpi.id)).map((kpi) => {
-          const config = kpiConfigs[kpi.id];
-          return (
-            <GlobalKpiCard
-              key={kpi.id}
-              title={config.title}
-              value={config.value}
-              icon={config.icon}
-              variant={config.variant}
-              isLoading={isLoading}
-              subtitle={config.subtitle}
-              tooltip={config.tooltip}
-            />
-          );
-        })}
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {kpis.map((kpi) => (
+        <GlobalKpiCard
+          key={kpi.title}
+          title={kpi.title}
+          value={kpi.value}
+          icon={kpi.icon}
+          variant={kpi.variant}
+          isLoading={isLoading}
+          subtitle={kpi.subtitle}
+          tooltip={kpi.tooltip}
+        />
+      ))}
     </div>
   );
 }
@@ -470,6 +393,10 @@ export default function FinanceiroERP() {
 
   // KPIs globais - apenas transações EFETIVADAS (completed)
   const { data: summary, isLoading: summaryLoading } = useFinancialSummary(startDate, endDate);
+  
+  // KPIs adicionais - pendentes
+  const { data: pendingThisMonth, isLoading: pendingThisMonthLoading } = usePendingThisMonth();
+  const { data: totalPending, isLoading: totalPendingLoading } = useTotalPendingReceivables();
 
   // Deep link: verificar parâmetros da URL ao carregar
   useEffect(() => {
@@ -523,13 +450,13 @@ export default function FinanceiroERP() {
         </div>
       </div>
 
-      {/* KPIs Globais Configuráveis */}
+      {/* KPIs Fixos - 4 Cards Simples */}
       <KpiSection 
         summary={summary} 
-        isLoading={summaryLoading} 
+        pendingThisMonth={pendingThisMonth}
+        totalPending={totalPending}
+        isLoading={summaryLoading || pendingThisMonthLoading || totalPendingLoading} 
       />
-
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="bg-muted/50">
           <TabsTrigger value="visao-geral" className="gap-2">

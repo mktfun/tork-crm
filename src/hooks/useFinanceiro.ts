@@ -374,3 +374,23 @@ export function useCashFlowWithProjection(
     enabled: !!startDate && !!endDate
   });
 }
+
+/**
+ * Hook para buscar total geral de pendentes a receber (sem filtro de data)
+ */
+export function useTotalPendingReceivables() {
+  return useQuery({
+    queryKey: ['total-pending-receivables'],
+    queryFn: () => financialService.getTotalPendingReceivables()
+  });
+}
+
+/**
+ * Hook para buscar pendentes vencendo no mês atual
+ */
+export function usePendingThisMonth() {
+  return useQuery({
+    queryKey: ['pending-this-month'],
+    queryFn: () => financialService.getPendingThisMonth()
+  });
+}
