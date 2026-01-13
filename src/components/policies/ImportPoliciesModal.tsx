@@ -493,6 +493,32 @@ export function ImportPoliciesModal({ open, onOpenChange }: ImportPoliciesModalP
       return;
     }
 
+    // ========== VALIDAÇÃO ANTI-ERRO: Bloquear se nome = "Não Identificado" ==========
+    const invalidClients = validItems.filter(item => 
+      !item.clientName?.trim() ||
+      item.clientName === 'Não Identificado' || 
+      item.clientName.toUpperCase().includes('NÃO IDENTIFICADO') ||
+      item.clientName.toUpperCase().includes('NAO IDENTIFICADO')
+    );
+
+    if (invalidClients.length > 0) {
+      toast.error(`${invalidClients.length} item(s) com nome de cliente inválido. Edite o nome antes de salvar!`, {
+        description: 'Clique no campo "Cliente" e digite o nome correto.',
+        duration: 6000,
+      });
+      console.warn('❌ [VALIDAÇÃO] Clientes com nome inválido:', invalidClients.map(i => i.clientName));
+      return;
+    }
+
+    // ========== VALIDAÇÃO: brokerageId obrigatório ==========
+    if (!activeBrokerageId) {
+      toast.error('Erro de configuração: corretora não selecionada.', {
+        description: 'Verifique suas configurações antes de importar.',
+      });
+      console.error('❌ [ERROR] activeBrokerageId está null!');
+      return;
+    }
+
     setStep('processing');
     setProcessingIndex(0);
     
