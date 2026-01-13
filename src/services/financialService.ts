@@ -304,7 +304,8 @@ export async function getFinancialSummary(params: {
     netResult: Number(row.netResult) || 0,
     pendingIncome: Number(row.pendingIncome) || 0,
     pendingExpense: Number(row.pendingExpense) || 0,
-    transactionCount: Number(row.transactionCount) || 0
+    transactionCount: Number(row.transactionCount) || 0,
+    cashBalance: Number(row.cashBalance) || 0
   };
 }
 
@@ -778,4 +779,32 @@ export async function getCashFlowWithProjection(
     net: number;
     projected_net: number;
   }>;
+}
+
+// ============ AUDITORIA CONTÁBIL ============
+
+export interface LedgerIntegrityIssue {
+  issue_type: 'UNBALANCED_TRANSACTION' | 'NEGATIVE_ASSET_BALANCE' | 'ORPHAN_TRANSACTION';
+  transaction_id: string | null;
+  account_id: string | null;
+  description: string;
+  amount: number;
+}
+
+/**
+ * Executa auditoria de integridade contábil
+ * Retorna lista de problemas encontrados no ledger
+ */
+export async function auditLedgerIntegrity(): Promise<LedgerIntegrityIssue[]> {
+  const { data, error } = await supabase.rpc('audit_ledger_integrity');
+
+  if (error) throw error;
+  
+  return (data || []).map((row: any) => ({
+    issue_type: row.issue_type,
+    transaction_id: row.transaction_id,
+    account_id: row.account_id,
+    description: row.description,
+    amount: Number(row.amount) || 0
+  }));
 }

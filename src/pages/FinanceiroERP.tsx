@@ -13,7 +13,9 @@ import {
   CalendarClock,
   Landmark,
   Clock,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Banknote,
+  Info
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { CashFlowChart } from '@/components/financeiro/CashFlowChart';
 import { DreTable } from '@/components/financeiro/DreTable';
@@ -56,32 +59,36 @@ interface GlobalKpiCardProps {
   title: string;
   value: number;
   icon: React.ElementType;
-  variant: 'primary' | 'success' | 'danger' | 'warning';
+  variant: 'primary' | 'success' | 'danger' | 'warning' | 'info';
   isLoading?: boolean;
   subtitle?: string;
+  tooltip?: string;
 }
 
-function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle }: GlobalKpiCardProps) {
+function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle, tooltip }: GlobalKpiCardProps) {
   const styles = {
     primary: 'from-primary/10 to-primary/5 border-primary/20',
     success: 'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
     danger: 'from-rose-500/10 to-rose-600/5 border-rose-500/20',
     warning: 'from-amber-500/10 to-amber-600/5 border-amber-500/20',
+    info: 'from-sky-500/10 to-sky-600/5 border-sky-500/20',
   };
   const iconStyles = {
     primary: 'bg-primary/20 text-primary',
     success: 'bg-emerald-500/20 text-emerald-500',
     danger: 'bg-rose-500/20 text-rose-500',
     warning: 'bg-amber-500/20 text-amber-500',
+    info: 'bg-sky-500/20 text-sky-500',
   };
   const valueStyles = {
     primary: 'text-foreground',
     success: 'text-emerald-500',
     danger: 'text-rose-500',
     warning: 'text-amber-500',
+    info: 'text-sky-500',
   };
 
-  return (
+  const cardContent = (
     <Card className={cn('bg-gradient-to-br border', styles[variant])}>
       <CardContent className="p-5">
         <div className="flex items-center gap-4">
@@ -89,7 +96,12 @@ function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle 
             <Icon className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-sm text-muted-foreground">{title}</p>
+              {tooltip && (
+                <Info className="w-3.5 h-3.5 text-muted-foreground/50" />
+              )}
+            </div>
             {isLoading ? (
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
@@ -107,6 +119,23 @@ function GlobalKpiCard({ title, value, icon: Icon, variant, isLoading, subtitle 
       </CardContent>
     </Card>
   );
+
+  if (tooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {cardContent}
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p className="text-sm">{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return cardContent;
 }
 
 // ============ VISÃO GERAL (APENAS GRÁFICO) ============
@@ -345,29 +374,40 @@ export default function FinanceiroERP() {
         </div>
       </div>
 
-      {/* 5 KPIs Globais - Efetivados + Pendentes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* 6 KPIs Globais - Efetivados + Pendentes + Saldo em Caixa */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <GlobalKpiCard
+          title="Saldo em Caixa"
+          value={summary?.cashBalance ?? 0}
+          icon={Banknote}
+          variant="info"
+          isLoading={summaryLoading}
+          tooltip="Saldo acumulado de todas as contas bancárias (histórico completo)"
+        />
         <GlobalKpiCard
           title="Resultado Líquido"
           value={summary?.netResult ?? 0}
           icon={Landmark}
           variant="primary"
           isLoading={summaryLoading}
-          subtitle="Apenas confirmados"
+          subtitle="Período selecionado"
+          tooltip="Diferença entre receitas e despesas confirmadas no período selecionado"
         />
         <GlobalKpiCard
-          title="Receita Efetivada"
+          title="Receita do Período"
           value={summary?.totalIncome ?? 0}
           icon={TrendingUp}
           variant="success"
           isLoading={summaryLoading}
+          tooltip="Total de receitas confirmadas (status = completed) no período selecionado"
         />
         <GlobalKpiCard
-          title="Despesa Efetivada"
+          title="Despesa do Período"
           value={summary?.totalExpense ?? 0}
           icon={TrendingDown}
           variant="danger"
           isLoading={summaryLoading}
+          tooltip="Total de despesas confirmadas (status = completed) no período selecionado"
         />
         <GlobalKpiCard
           title="A Receber"
@@ -376,6 +416,7 @@ export default function FinanceiroERP() {
           variant="warning"
           isLoading={summaryLoading}
           subtitle="Comissões pendentes"
+          tooltip="Receitas com status = pending no período selecionado"
         />
         <GlobalKpiCard
           title="A Pagar"
@@ -384,6 +425,7 @@ export default function FinanceiroERP() {
           variant="danger"
           isLoading={summaryLoading}
           subtitle="Despesas pendentes"
+          tooltip="Despesas com status = pending no período selecionado"
         />
       </div>
 
