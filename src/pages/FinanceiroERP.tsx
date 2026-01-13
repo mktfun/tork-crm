@@ -225,16 +225,16 @@ function KpiSection({ summary, isLoading }: KpiSectionProps) {
       icon: Clock,
       variant: 'warning',
       value: summary?.pendingIncome ?? 0,
-      subtitle: 'Comissões pendentes',
-      tooltip: 'Receitas com status = pending no período selecionado',
+      subtitle: 'Total pendente',
+      tooltip: 'Total acumulado de receitas pendentes (todas as datas)',
     },
     pendingExpense: {
       title: 'A Pagar',
       icon: ArrowDownToLine,
       variant: 'danger',
       value: summary?.pendingExpense ?? 0,
-      subtitle: 'Despesas pendentes',
-      tooltip: 'Despesas com status = pending no período selecionado',
+      subtitle: 'Total pendente',
+      tooltip: 'Total acumulado de despesas pendentes (todas as datas)',
     },
   };
 
