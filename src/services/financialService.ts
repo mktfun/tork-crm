@@ -588,12 +588,22 @@ export async function settleCommission(params: {
   bankAccountId: string;
   settlementDate?: string;
 }): Promise<SettleCommissionResult> {
+  console.log('📡 SERVICE - Chamando RPC settle_commission_transaction:', {
+    p_transaction_id: params.transactionId,
+    p_bank_account_id: params.bankAccountId
+  });
+
   const { data, error } = await supabase.rpc('settle_commission_transaction', {
     p_transaction_id: params.transactionId,
     p_bank_account_id: params.bankAccountId
   });
 
-  if (error) throw error;
+  console.log('📡 SERVICE - Resposta RPC:', { data, error });
+
+  if (error) {
+    console.error('📡 SERVICE - Erro RPC:', error);
+    throw error;
+  }
   
   const result = data as any;
   return {
