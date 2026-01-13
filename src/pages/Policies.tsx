@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle, Download, Upload, Sparkles } from 'lucide-react';
+import { Calendar, Plus, FileText, DollarSign, TrendingUp, AlertCircle, Download, Sparkles, SlidersHorizontal, X } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { formatDate, parseLocalDate } from '@/utils/dateUtils';
 import { PolicyFilters } from '@/hooks/useFilteredPolicies';
@@ -22,20 +22,25 @@ import { exportPoliciesCSV } from '@/utils/exportPoliciesCSV';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { PaginationControls } from '@/components/ui/PaginationControls';
-import { AggerImportModal } from '@/components/import/AggerImportModal';
 import { ExportPoliciesModal } from '@/components/policies/ExportPoliciesModal';
 import { ImportPoliciesModal } from '@/components/policies/ImportPoliciesModal';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger, DrawerClose } from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useSupabaseRamos } from '@/hooks/useSupabaseRamos';
 
 export default function Policies() {
   const { clients } = useClients();
   const { producers } = useSupabaseProducers();
   const { companies } = useSupabaseCompanies();
+  const { data: ramos = [] } = useSupabaseRamos();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [isNewPolicyModalOpen, setIsNewPolicyModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAIImportModalOpen, setIsAIImportModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
 
   // Estado de paginação e filtros
   const [page, setPage] = useState(1);
@@ -109,8 +114,17 @@ export default function Policies() {
     });
   };
 
-
-
+  // Contagem de filtros avançados ativos
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.insuranceCompany !== 'todas') count++;
+    if (filters.producerId !== 'todos') count++;
+    if (filters.ramo !== 'todos') count++;
+    if (filters.period !== 'todos') count++;
+    if (filters.customStart) count++;
+    if (filters.customEnd) count++;
+    return count;
+  }, [filters]);
 
   const handleCloseNewPolicyModal = () => {
     setIsNewPolicyModalOpen(false);
@@ -134,7 +148,6 @@ export default function Policies() {
     }
   };
 
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Ativa': return 'bg-green-600';
@@ -145,6 +158,156 @@ export default function Policies() {
       default: return 'bg-gray-600';
     }
   };
+
+  // Componente de Filtros Avançados (reutilizável)
+  const AdvancedFiltersContent = () => (
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="font-medium text-white">Filtros Avançados</h4>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={resetFilters} className="text-slate-400 hover:text-white">
+            <X className="w-4 h-4 mr-1" />
+            Limpar ({activeFilterCount})
+          </Button>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Seguradora */}
+        <div>
+          <Label htmlFor="insuranceCompany" className="text-slate-300 text-sm">Seguradora</Label>
+          <Select
+            value={filters.insuranceCompany}
+            onValueChange={(value) => setFilters({ ...filters, insuranceCompany: value })}
+          >
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white mt-1">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas</SelectItem>
+              {companies.map(company => (
+                <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Ramo */}
+        <div>
+          <Label htmlFor="ramo" className="text-slate-300 text-sm">Ramo</Label>
+          <Select
+            value={filters.ramo}
+            onValueChange={(value) => setFilters({ ...filters, ramo: value })}
+          >
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white mt-1">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {ramos.map(ramo => (
+                <SelectItem key={ramo.id} value={ramo.id}>{ramo.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Produtor */}
+        <div>
+          <Label htmlFor="producer" className="text-slate-300 text-sm">Produtor</Label>
+          <Select
+            value={filters.producerId}
+            onValueChange={(value) => setFilters({ ...filters, producerId: value })}
+          >
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white mt-1">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {producers.map(producer => (
+                <SelectItem key={producer.id} value={producer.id}>{producer.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Período de Vencimento */}
+        <div>
+          <Label htmlFor="period" className="text-slate-300 text-sm">Vencimento</Label>
+          <Select
+            value={filters.period}
+            onValueChange={(value) => setFilters({
+              ...filters,
+              period: value,
+              customStart: value !== 'custom' ? null : filters.customStart,
+              customEnd: value !== 'custom' ? null : filters.customEnd
+            })}
+          >
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white mt-1">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="current-month">Mês Corrente</SelectItem>
+              <SelectItem value="next-30-days">Próximos 30 dias</SelectItem>
+              <SelectItem value="next-90-days">Próximos 90 dias</SelectItem>
+              <SelectItem value="expired">Expiradas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Data Início */}
+        <div>
+          <Label htmlFor="customStart" className="text-slate-300 text-sm">Vencimento (Início)</Label>
+          <Input
+            type="date"
+            id="customStart"
+            className="bg-slate-800 border-slate-700 text-white mt-1"
+            value={filters.customStart || ''}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              customStart: e.target.value || null,
+              period: e.target.value || prev.customEnd ? 'custom' : 'todos'
+            }))}
+          />
+        </div>
+
+        {/* Data Fim */}
+        <div>
+          <Label htmlFor="customEnd" className="text-slate-300 text-sm">Vencimento (Fim)</Label>
+          <Input
+            type="date"
+            id="customEnd"
+            className="bg-slate-800 border-slate-700 text-white mt-1"
+            value={filters.customEnd || ''}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              customEnd: e.target.value || null,
+              period: e.target.value || prev.customStart ? 'custom' : 'todos'
+            }))}
+          />
+        </div>
+
+        {/* Itens por página */}
+        <div className="md:col-span-2">
+          <Label htmlFor="limit" className="text-slate-300 text-sm">Itens por página</Label>
+          <Select
+            value={String(limit)}
+            onValueChange={(value) => setLimit(Number(value))}
+          >
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+              <SelectItem value="100">100</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 p-6">
@@ -185,69 +348,74 @@ export default function Policies() {
       </div>
 
       {/* Header e Filtros */}
-      <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
-        <div className="text-2xl font-bold text-white">
-          Apólices <span className="text-sm text-slate-400">({totalCount} total)</span>
+      <div className="flex flex-col gap-4">
+        {/* Linha 1: Título e Ações */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="text-2xl font-bold text-white">
+            Apólices <span className="text-sm text-slate-400">({totalCount} total)</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Grupo de Export - menor destaque */}
+            <div className="flex gap-1">
+              <Button
+                onClick={handleExportCSV}
+                disabled={isExporting}
+                variant="outline"
+                size="sm"
+                className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden lg:inline ml-2">{isExporting ? 'Exportando...' : 'CSV'}</span>
+              </Button>
+              <ExportPoliciesModal filters={filters} disabled={isLoading} />
+            </div>
+            
+            {/* Separador visual */}
+            <div className="h-6 w-px bg-slate-700 hidden md:block" />
+            
+            {/* Ações Principais */}
+            <Button 
+              onClick={() => setIsAIImportModalOpen(true)}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Importar Lote (OCR)
+            </Button>
+            
+            <Button 
+              onClick={() => setIsNewPolicyModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Apólice
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Input
-            type="search"
-            placeholder="Buscar por apólice ou cliente..."
-            className="bg-slate-800 border-slate-700 text-white"
-            value={filters.searchTerm}
-            onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-          />
-          <Button
-            onClick={handleExportCSV}
-            disabled={isExporting}
-            variant="outline"
-            className="bg-green-700 hover:bg-green-600 text-white border-green-600"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {isExporting ? 'Exportando...' : 'CSV'}
-          </Button>
-          <ExportPoliciesModal filters={filters} disabled={isLoading} />
-          <Button
-            onClick={() => setIsAIImportModalOpen(true)}
-            variant="outline"
-            className="bg-purple-700 hover:bg-purple-600 text-white border-purple-600"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Importar via IA
-          </Button>
-          <Button
-            onClick={() => setIsImportModalOpen(true)}
-            variant="outline"
-            className="bg-slate-800 hover:bg-slate-700 text-white border-slate-700"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Importar Agger
-          </Button>
-          <Button
-            onClick={() => setIsNewPolicyModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Apólice
-          </Button>
-        </div>
-      </div>
+        {/* Linha 2: Busca + Status + Filtros Avançados */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Busca */}
+          <div className="flex-1 max-w-md">
+            <Input
+              type="search"
+              placeholder="Buscar por apólice ou cliente..."
+              className="bg-slate-800 border-slate-700 text-white w-full"
+              value={filters.searchTerm}
+              onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
+            />
+          </div>
 
-      {/* Filtros Avançados */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4">
-        {/* Status */}
-        <div>
-          <Label htmlFor="status" className="text-slate-300">Status</Label>
+          {/* Status - visível por padrão */}
           <Select
             value={filters.status}
             onValueChange={(value) => setFilters({ ...filters, status: value })}
           >
-            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-              <SelectValue placeholder="Todos" />
+            <SelectTrigger className="bg-slate-800 border-slate-700 text-white w-[180px]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="todos">Todos os Status</SelectItem>
               <SelectItem value="Orçamento">Orçamento</SelectItem>
               <SelectItem value="Aguardando Apólice">Aguardando Apólice</SelectItem>
               <SelectItem value="Ativa">Ativa</SelectItem>
@@ -255,132 +423,53 @@ export default function Policies() {
               <SelectItem value="Renovada">Renovada</SelectItem>
             </SelectContent>
           </Select>
-        </div>
 
-        {/* Seguradora */}
-        <div>
-          <Label htmlFor="insuranceCompany" className="text-slate-300">Seguradora</Label>
-          <Select
-            value={filters.insuranceCompany}
-            onValueChange={(value) => setFilters({ ...filters, insuranceCompany: value })}
-          >
-            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-              <SelectValue placeholder="Todas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              {companies.map(company => (
-                <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Produtor */}
-        <div>
-          <Label htmlFor="producer" className="text-slate-300">Produtor</Label>
-          <Select
-            value={filters.producerId}
-            onValueChange={(value) => setFilters({ ...filters, producerId: value })}
-          >
-            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {producers.map(producer => (
-                <SelectItem key={producer.id} value={producer.id}>{producer.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Período de Vencimento */}
-        <div>
-          <Label htmlFor="period" className="text-slate-300">Vencimento</Label>
-          <Select
-            value={filters.period}
-            onValueChange={(value) => setFilters({
-              ...filters,
-              period: value,
-              // Limpar datas customizadas se selecionar um preset
-              customStart: value !== 'custom' ? null : filters.customStart,
-              customEnd: value !== 'custom' ? null : filters.customEnd
-            })}
-          >
-            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="current-month">Mês Corrente</SelectItem>
-              <SelectItem value="next-30-days">Próximos 30 dias</SelectItem>
-              <SelectItem value="next-90-days">Próximos 90 dias</SelectItem>
-              <SelectItem value="expired">Expiradas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Data Início */}
-        <div>
-          <Label htmlFor="customStart" className="text-slate-300">Vencimento (Início)</Label>
-          <Input
-            type="date"
-            id="customStart"
-            className="bg-slate-800 border-slate-700 text-white"
-            value={filters.customStart || ''}
-            onChange={(e) => setFilters(prev => ({
-              ...prev,
-              customStart: e.target.value || null,
-              period: e.target.value || prev.customEnd ? 'custom' : 'todos'
-            }))}
-          />
-        </div>
-
-        {/* Data Fim */}
-        <div>
-          <Label htmlFor="customEnd" className="text-slate-300">Vencimento (Fim)</Label>
-          <Input
-            type="date"
-            id="customEnd"
-            className="bg-slate-800 border-slate-700 text-white"
-            value={filters.customEnd || ''}
-            onChange={(e) => setFilters(prev => ({
-              ...prev,
-              customEnd: e.target.value || null,
-              period: e.target.value || prev.customStart ? 'custom' : 'todos'
-            }))}
-          />
-        </div>
-
-        {/* Itens por página */}
-        <div>
-          <Label htmlFor="limit" className="text-slate-300">Itens por pág.</Label>
-          <Select
-            value={String(limit)}
-            onValueChange={(value) => setLimit(Number(value))}
-          >
-            <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Resetar Filtros */}
-        <div className="flex items-end">
-          <Button
-            onClick={resetFilters}
-            variant="outline"
-            className="w-full bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
-          >
-            Limpar Filtros
-          </Button>
+          {/* Filtros Avançados - Popover no Desktop, Drawer no Mobile */}
+          {isMobile ? (
+            <Drawer open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
+              <DrawerTrigger asChild>
+                <Button variant="outline" className="relative bg-slate-800 border-slate-700 text-white hover:bg-slate-700">
+                  <SlidersHorizontal className="w-4 h-4 mr-2" />
+                  Filtros
+                  {activeFilterCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-purple-500 text-white text-xs">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="bg-slate-900 border-slate-700">
+                <DrawerHeader>
+                  <DrawerTitle className="text-white">Filtros Avançados</DrawerTitle>
+                </DrawerHeader>
+                <AdvancedFiltersContent />
+                <div className="p-4 pt-0">
+                  <DrawerClose asChild>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      Aplicar Filtros
+                    </Button>
+                  </DrawerClose>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Popover open={isAdvancedFiltersOpen} onOpenChange={setIsAdvancedFiltersOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="relative bg-slate-800 border-slate-700 text-white hover:bg-slate-700">
+                  <SlidersHorizontal className="w-4 h-4 mr-2" />
+                  Filtros
+                  {activeFilterCount > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-purple-500 text-white text-xs">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[500px] bg-slate-900 border-slate-700 p-0" align="end">
+                <AdvancedFiltersContent />
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
       </div>
 
@@ -507,12 +596,6 @@ export default function Policies() {
           </div>
         </div>
       )}
-
-      {/* Modal Importação Agger */}
-      <AggerImportModal
-        open={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-      />
 
       {/* Modal Importação via IA */}
       <ImportPoliciesModal
