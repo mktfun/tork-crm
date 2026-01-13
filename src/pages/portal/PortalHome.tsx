@@ -23,6 +23,14 @@ interface PortalConfig {
   allow_profile_edit: boolean;
 }
 
+interface ClientData {
+  id: string;
+  name: string;
+  cpf_cnpj: string | null;
+  email: string | null;
+  user_id: string;
+}
+
 export default function PortalHome() {
   const navigate = useNavigate();
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -40,27 +48,28 @@ export default function PortalHome() {
     const storedSlug = sessionStorage.getItem('portal_brokerage_slug');
     
     if (clientData && storedSlug) {
-      const client = JSON.parse(clientData);
+      const client: ClientData = JSON.parse(clientData);
       setClientName(client.name || '');
       setSlug(storedSlug);
-      // Buscar por CPF normalizado para incluir apólices de clientes duplicados
-      fetchPoliciesByCpf(client.cpf_cnpj || '', client.user_id);
+      // Busca híbrida: client_id + CPF + email
+      fetchPoliciesHybrid(client);
       fetchPortalConfig(client.user_id);
     }
   }, []);
 
-  // NOVA FUNÇÃO: Busca apólices por CPF normalizado (resolve problema de clientes duplicados)
-  const fetchPoliciesByCpf = async (cpf: string, userId: string) => {
+  // BUSCA HÍBRIDA: client_id + CPF + email (resolve problema de clientes sem CPF)
+  const fetchPoliciesHybrid = async (client: ClientData) => {
     try {
-      // Usar RPC que busca por CPF normalizado - cast necessário pois types ainda não foram regenerados
       const { data, error } = await supabase
-        .rpc('get_portal_policies_by_cpf' as any, {
-          p_user_id: userId,
-          p_cpf: cpf
+        .rpc('get_portal_policies_hybrid' as any, {
+          p_user_id: client.user_id,
+          p_client_id: client.id,
+          p_cpf: client.cpf_cnpj || null,
+          p_email: client.email || null
         });
 
       if (error) {
-        console.error('Error fetching policies by CPF:', error);
+        console.error('Error fetching policies hybrid:', error);
         return;
       }
 
@@ -99,7 +108,7 @@ export default function PortalHome() {
     if (days < 0) {
       return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
-      return <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20">Vence em {days} dias</Badge>;
+      return <Badge className="bg-zinc-400/10 text-zinc-300 border-zinc-400/20">Vence em {days} dias</Badge>;
     } else {
       return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Vigente</Badge>;
     }
@@ -109,71 +118,71 @@ export default function PortalHome() {
 
   return (
     <div className="space-y-4">
-      {/* Welcome Card */}
-      <Card className="bg-gradient-to-br from-[#D4AF37]/10 to-[#C5A028]/5 border-[#D4AF37]/20">
+      {/* Welcome Card - Black & Silver */}
+      <Card className="bg-gradient-to-br from-zinc-900/80 to-zinc-950 border-white/[0.06]">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-[#D4AF37] to-[#C5A028] rounded-xl flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
-              <Shield className="w-6 h-6 text-black" />
+            <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center shadow-lg border border-white/[0.06]">
+              <Shield className="w-6 h-6 text-zinc-300" />
             </div>
             <div>
-              <h2 className="text-white font-light text-lg">Bem-vindo(a)!</h2>
+              <h2 className="text-white font-light text-lg tracking-wide">Bem-vindo(a)!</h2>
               <p className="text-zinc-500 text-sm">{clientName}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Black & Silver */}
       {hasQuickActions && (
         <div className="grid grid-cols-2 gap-3">
           {portalConfig.show_policies && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-[#0A0A0A] border-white/5 hover:bg-zinc-900 hover:border-[#D4AF37]/30"
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-black/70 border-white/[0.06] hover:bg-zinc-900/50 hover:border-zinc-600/30"
               onClick={() => navigate(`/${slug}/portal/policies`)}
             >
-              <FileText className="w-6 h-6 text-[#D4AF37]" />
+              <FileText className="w-6 h-6 text-zinc-400" />
               <span className="text-sm text-white font-light">Meus Seguros</span>
             </Button>
           )}
           {portalConfig.show_cards && (
             <Button 
               variant="outline" 
-              className="h-auto py-4 flex flex-col items-center gap-2 bg-[#0A0A0A] border-white/5 hover:bg-zinc-900 hover:border-[#D4AF37]/30"
+              className="h-auto py-4 flex flex-col items-center gap-2 bg-black/70 border-white/[0.06] hover:bg-zinc-900/50 hover:border-zinc-600/30"
               onClick={() => navigate(`/${slug}/portal/cards`)}
             >
-              <CreditCard className="w-6 h-6 text-[#D4AF37]" />
+              <CreditCard className="w-6 h-6 text-zinc-400" />
               <span className="text-sm text-white font-light">Carteirinhas</span>
             </Button>
           )}
         </div>
       )}
 
-      {/* Active Policies */}
-      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
+      {/* Active Policies - Black & Silver */}
+      <Card className="bg-black/70 border-white/[0.06] backdrop-blur-2xl">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-white font-light flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#D4AF37]" />
+          <CardTitle className="text-lg text-white font-light flex items-center gap-2 tracking-wide">
+            <Shield className="w-5 h-5 text-zinc-400" />
             Seguros Ativos
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-[#D4AF37] animate-spin" />
+              <Loader2 className="w-6 h-6 text-zinc-400 animate-spin" />
             </div>
           ) : policies.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
-              <p className="text-zinc-500">Nenhum seguro ativo encontrado.</p>
+              <p className="text-zinc-500 font-light">Nenhum seguro ativo encontrado.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {policies.slice(0, 3).map((policy) => (
                 <div 
                   key={policy.id} 
-                  className="flex justify-between items-center p-3 bg-zinc-950/50 rounded-lg border border-white/5"
+                  className="flex justify-between items-center p-3 bg-zinc-900/50 rounded-lg border border-white/[0.06]"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-light text-white truncate">
@@ -193,7 +202,7 @@ export default function PortalHome() {
               {policies.length > 3 && (
                 <Button 
                   variant="ghost" 
-                  className="w-full text-[#D4AF37] hover:text-[#E5C048] hover:bg-[#D4AF37]/10"
+                  className="w-full text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                   onClick={() => navigate(`/${slug}/portal/policies`)}
                 >
                   Ver todos ({policies.length})
@@ -204,12 +213,12 @@ export default function PortalHome() {
         </CardContent>
       </Card>
 
-      {/* Help Card */}
-      <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
+      {/* Help Card - Black & Silver */}
+      <Card className="bg-black/70 border-white/[0.06] backdrop-blur-2xl">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/5">
-              <AlertCircle className="w-5 h-5 text-zinc-400" />
+            <div className="w-10 h-10 bg-zinc-900 rounded-lg flex items-center justify-center flex-shrink-0 border border-white/[0.06]">
+              <AlertCircle className="w-5 h-5 text-zinc-500" />
             </div>
             <div>
               <h3 className="font-light text-white">Precisa de ajuda?</h3>

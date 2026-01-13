@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
   Home,
   Heart,
   Briefcase,
+  MessageSquare,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -156,7 +157,7 @@ export function PolicyDetailModal({
       return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
       return (
-        <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20">
+        <Badge className="bg-zinc-400/10 text-zinc-300 border-zinc-400/20">
           Vence em {days}d
         </Badge>
       );
@@ -174,14 +175,14 @@ export function PolicyDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#0A0A0A] border-white/10 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl bg-black/95 backdrop-blur-2xl border-white/[0.06] text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-lg flex items-center justify-center text-[#D4AF37] border border-[#D4AF37]/20">
+            <div className="w-10 h-10 bg-zinc-800/80 rounded-lg flex items-center justify-center text-zinc-400 border border-white/[0.06]">
               {getTypeIcon(policy.type)}
             </div>
             <div>
-              <span className="block">{policy.insured_asset || policy.type || 'Apólice'}</span>
+              <span className="block font-light">{policy.insured_asset || policy.type || 'Apólice'}</span>
               <span className="text-sm text-zinc-500 font-normal">
                 {policy.policy_number || 'Sem número'}
               </span>
@@ -196,11 +197,11 @@ export function PolicyDetailModal({
             <div className="space-y-3">
               {isExternalPdf ? (
                 // PDF externo - mostrar botão para abrir
-                <Card className="bg-zinc-800/50 border-zinc-700">
+                <Card className="bg-zinc-900/50 border-white/[0.06]">
                   <CardContent className="p-6 text-center">
                     <FileText className="w-12 h-12 text-zinc-500 mx-auto mb-3" />
-                    <p className="text-white mb-2">PDF disponível em link externo</p>
-                    <Button onClick={handleOpenExternal} className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black">
+                    <p className="text-white mb-2 font-light">PDF disponível em link externo</p>
+                    <Button onClick={handleOpenExternal} className="bg-zinc-100 hover:bg-white text-zinc-950">
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Abrir PDF
                     </Button>
@@ -209,7 +210,7 @@ export function PolicyDetailModal({
               ) : (
                 // PDF Base64 - mostrar preview
                 <div
-                  className="relative rounded-lg overflow-hidden border border-zinc-700"
+                  className="relative rounded-lg overflow-hidden border border-white/[0.06]"
                   onContextMenu={(e) => {
                     if (!canDownloadPdf) {
                       e.preventDefault();
@@ -227,11 +228,11 @@ export function PolicyDetailModal({
                 </div>
               )}
 
-              {/* Download Button */}
+              {/* Download Button - Silver */}
               {canDownloadPdf && hasPdf && (
                 <Button
                   onClick={handleDownload}
-                  className="w-full bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-black"
+                  className="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-medium"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Baixar PDF da Apólice
@@ -239,11 +240,28 @@ export function PolicyDetailModal({
               )}
 
               {!canDownloadPdf && hasPdf && (
-                <p className="text-center text-zinc-500 text-sm">
+                <p className="text-center text-zinc-500 text-sm font-light">
                   Download desabilitado pelo corretor
                 </p>
               )}
             </div>
+          )}
+
+          {/* No PDF Available Message */}
+          {!hasPdf && (
+            <Card className="bg-zinc-900/50 border-white/[0.06]">
+              <CardContent className="p-6 text-center">
+                <FileText className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
+                <p className="text-zinc-400 font-light">Documento original não disponível.</p>
+                <p className="text-zinc-500 text-sm mt-1">
+                  Entre em contato com seu corretor para obter a apólice.
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-3 text-zinc-500 text-sm">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Fale com sua corretora</span>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Detail Card Section */}
@@ -253,7 +271,7 @@ export function PolicyDetailModal({
                 <Card className="bg-amber-500/10 border-amber-500/20">
                   <CardContent className="p-4 flex items-center gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-400" />
-                    <p className="text-amber-400 text-sm">
+                    <p className="text-amber-400 text-sm font-light">
                       Não foi possível carregar o PDF. Veja os detalhes abaixo.
                     </p>
                   </CardContent>
@@ -261,17 +279,17 @@ export function PolicyDetailModal({
               )}
 
               {/* Dados Principais */}
-              <Card className="bg-zinc-800/50 border-zinc-700">
+              <Card className="bg-zinc-900/50 border-white/[0.06]">
                 <CardContent className="p-4 space-y-4">
-                  <h4 className="text-white font-medium flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#D4AF37]" />
+                  <h4 className="text-white font-light flex items-center gap-2 tracking-wide">
+                    <FileText className="w-4 h-4 text-zinc-400" />
                     Dados da Apólice
                   </h4>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-zinc-500 text-xs uppercase tracking-wide">Segurado</p>
-                      <p className="text-white">{clientName}</p>
+                      <p className="text-white font-light">{clientName}</p>
                     </div>
                     {clientCpf && (
                       <div>
@@ -284,14 +302,14 @@ export function PolicyDetailModal({
                         <p className="text-zinc-500 text-xs uppercase tracking-wide flex items-center gap-1">
                           <Building2 className="w-3 h-3" /> Seguradora
                         </p>
-                        <p className="text-white">{companyName}</p>
+                        <p className="text-white font-light">{companyName}</p>
                       </div>
                     )}
                     <div>
                       <p className="text-zinc-500 text-xs uppercase tracking-wide flex items-center gap-1">
                         <Calendar className="w-3 h-3" /> Vigência
                       </p>
-                      <p className="text-white text-sm">
+                      <p className="text-white text-sm font-light">
                         {policy.start_date
                           ? format(new Date(policy.start_date), 'dd/MM/yyyy', { locale: ptBR })
                           : '---'}
@@ -304,7 +322,7 @@ export function PolicyDetailModal({
                   {policy.insured_asset && (
                     <div>
                       <p className="text-zinc-500 text-xs uppercase tracking-wide">Bem Segurado</p>
-                      <p className="text-white">{policy.insured_asset}</p>
+                      <p className="text-white font-light">{policy.insured_asset}</p>
                     </div>
                   )}
                 </CardContent>
@@ -312,7 +330,7 @@ export function PolicyDetailModal({
 
               {/* Timeline de Histórico */}
               {policy.ramo_id && (
-                <Card className="bg-zinc-800/50 border-zinc-700">
+                <Card className="bg-zinc-900/50 border-white/[0.06]">
                   <CardContent className="p-4">
                     <PolicyHistoryTimeline
                       clientId={clientId}

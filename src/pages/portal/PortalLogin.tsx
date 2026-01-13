@@ -23,8 +23,8 @@ interface GetBrokerageResponse {
 
 interface PortalLoginResponse {
   success: boolean;
-  message?: string;
-  first_access?: boolean;
+  error?: string;
+  is_first_access?: boolean;
   client?: {
     id: string;
     name: string;
@@ -32,8 +32,6 @@ interface PortalLoginResponse {
     email: string | null;
     phone: string | null;
     user_id: string;
-    portal_first_access: boolean;
-    portal_password: string;
   };
   brokerage?: BrokerageData;
 }
@@ -104,7 +102,7 @@ export default function PortalLogin() {
     setError('');
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('verify_portal_login_scoped', {
+      const { data, error: rpcError } = await supabase.rpc('verify_portal_login_scoped' as any, {
         p_brokerage_slug: brokerageSlug,
         p_identifier: identifier.trim(),
         p_password: password
@@ -120,7 +118,7 @@ export default function PortalLogin() {
       const response = data as unknown as PortalLoginResponse;
 
       if (!response?.success) {
-        setError(response?.message || 'Credenciais inválidas');
+        setError(response?.error || 'Credenciais inválidas');
         setIsLoading(false);
         return;
       }
@@ -132,7 +130,7 @@ export default function PortalLogin() {
         sessionStorage.setItem('portal_brokerage', JSON.stringify(response.brokerage));
       }
       
-      if (response.first_access) {
+      if (response.is_first_access) {
         toast.success('Primeiro acesso! Complete seu cadastro.');
         navigate(`/${brokerageSlug}/portal/onboarding`, { replace: true });
       } else {
@@ -154,29 +152,34 @@ export default function PortalLogin() {
     }
   };
 
-  // Loading state
+  // Loading state - Black & Silver
   if (isLoadingBrokerage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin" />
-          <p className="text-zinc-500 tracking-wide">Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.25)_0%,_transparent_55%)]" />
+        <div className="relative flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+          <p className="text-zinc-500 tracking-widest text-sm font-light">CARREGANDO</p>
         </div>
       </div>
     );
   }
 
-  // Invalid brokerage
+  // Invalid brokerage - Black & Silver
   if (!isValidBrokerage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4">
-        <Card className="w-full max-w-md bg-[#0A0A0A] border-white/5 backdrop-blur-xl shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center bg-black p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.25)_0%,_transparent_55%)]" />
+        <Card 
+          className="relative w-full max-w-md bg-black/70 backdrop-blur-2xl border border-white/[0.06]"
+          style={{ boxShadow: '0 0 60px -15px rgba(255,255,255,0.07)' }}
+        >
           <CardContent className="p-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 border border-white/[0.06]">
               <Shield className="w-8 h-8 text-zinc-600" />
             </div>
-            <h2 className="text-xl text-white font-light mb-2">Portal não encontrado</h2>
-            <p className="text-zinc-500">
+            <h2 className="text-xl text-white font-light tracking-wide mb-2">Portal não encontrado</h2>
+            <p className="text-zinc-500 font-light">
               O portal solicitado não existe ou não está disponível.
             </p>
           </CardContent>
@@ -186,11 +189,14 @@ export default function PortalLogin() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#050505] p-4">
-      {/* Subtle radial gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900/20 via-transparent to-transparent pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center bg-black p-4">
+      {/* Subtle radial gradient - Silver */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.25)_0%,_transparent_55%)] pointer-events-none" />
       
-      <Card className="relative w-full max-w-md bg-[#0A0A0A] border-white/5 backdrop-blur-xl shadow-2xl">
+      <Card 
+        className="relative w-full max-w-md bg-black/70 backdrop-blur-2xl border border-white/[0.06]"
+        style={{ boxShadow: '0 0 60px -15px rgba(255,255,255,0.07)' }}
+      >
         <CardContent className="p-8 space-y-6">
           {/* Brokerage Logo/Name */}
           <div className="text-center space-y-4">
@@ -201,11 +207,11 @@ export default function PortalLogin() {
                 className="h-16 object-contain mx-auto"
               />
             ) : (
-              <h1 className="text-3xl font-light tracking-wide text-white">
-                {brokerage?.name || 'Portal do Segurado'}
+              <h1 className="text-3xl font-light tracking-widest text-white">
+                {brokerage?.name || 'PORTAL'}
               </h1>
             )}
-            <p className="text-zinc-500 text-sm tracking-wide">
+            <p className="text-zinc-500 text-sm tracking-wide font-light">
               Acesse suas apólices e informações
             </p>
           </div>
@@ -213,23 +219,27 @@ export default function PortalLogin() {
           {/* Login Form */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="identifier" className="text-zinc-400 text-sm font-light">CPF ou Nome</Label>
+              <Label htmlFor="identifier" className="text-zinc-400 text-sm font-light tracking-wide">
+                CPF, E-mail ou Nome
+              </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <Input
                   id="identifier"
                   type="text"
-                  placeholder="Digite seu CPF ou nome completo"
+                  placeholder="Digite seu CPF, e-mail ou nome"
                   value={identifier}
                   onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
                   onKeyPress={handleKeyPress}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pl-10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
+                  className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 pl-10 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-zinc-400 text-sm font-light">Senha</Label>
+              <Label htmlFor="password" className="text-zinc-400 text-sm font-light tracking-wide">
+                Senha
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <Input
@@ -239,20 +249,21 @@ export default function PortalLogin() {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   onKeyPress={handleKeyPress}
-                  className="bg-zinc-950/50 border-white/10 text-white placeholder:text-zinc-600 pl-10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20 h-12"
+                  className="bg-black/60 border-zinc-700/50 text-white placeholder:text-zinc-600 pl-10 h-12 rounded-xl focus:border-zinc-400/60 focus:ring-1 focus:ring-zinc-400/20"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                <p className="text-red-400 text-sm text-center">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                <p className="text-red-400 text-sm text-center font-light">{error}</p>
               </div>
             )}
 
+            {/* Silver Metallic Button */}
             <Button 
               onClick={handleLogin} 
-              className="w-full bg-white text-black font-medium hover:bg-zinc-200 h-12 text-base tracking-wide transition-all"
+              className="w-full h-12 bg-zinc-100 hover:bg-white text-zinc-950 font-semibold rounded-xl text-base tracking-wide transition-all shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_-5px_rgba(255,255,255,0.5)]"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -265,9 +276,12 @@ export default function PortalLogin() {
               )}
             </Button>
 
-            <div className="text-center pt-4 border-t border-white/5">
+            <div className="text-center pt-4 border-t border-white/[0.06]">
               <p className="text-zinc-500 text-sm font-light">
-                Primeiro acesso? Use a senha <span className="text-[#D4AF37] font-medium">123456</span>
+                Primeiro acesso? Use seu <span className="text-zinc-300">CPF</span> como senha
+              </p>
+              <p className="text-zinc-600 text-xs mt-1">
+                Sem CPF? Use <span className="text-zinc-400">123456</span>
               </p>
             </div>
           </div>

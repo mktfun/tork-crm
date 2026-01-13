@@ -2229,6 +2229,46 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
       }
+      get_portal_cards_hybrid: {
+        Args: {
+          p_client_id: string
+          p_cpf?: string
+          p_email?: string
+          p_user_id: string
+        }
+        Returns: {
+          expiration_date: string
+          id: string
+          insurance_company: string
+          insured_asset: string
+          policy_number: string
+          start_date: string
+          status: string
+          type: string
+        }[]
+      }
+      get_portal_policies_hybrid: {
+        Args: {
+          p_client_id: string
+          p_cpf?: string
+          p_email?: string
+          p_user_id: string
+        }
+        Returns: {
+          expiration_date: string
+          id: string
+          insurance_company: string
+          insured_asset: string
+          pdf_attached_data: string
+          pdf_attached_name: string
+          pdf_url: string
+          policy_number: string
+          premium_value: number
+          start_date: string
+          status: string
+          type: string
+        }[]
+      }
       get_producao_por_ramo: {
         Args: { end_range: string; p_user_id: string; start_range: string }
         Returns: {

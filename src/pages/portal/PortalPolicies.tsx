@@ -33,26 +33,29 @@ interface PortalConfig {
   canDownloadPdf: boolean;
 }
 
+interface ClientData {
+  id: string;
+  name: string;
+  cpf_cnpj: string | null;
+  email: string | null;
+  user_id: string;
+}
+
 export default function PortalPolicies() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [companies, setCompanies] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
-  const [clientData, setClientData] = useState<{ id: string; name: string; cpf_cnpj: string | null; user_id: string } | null>(null);
+  const [clientData, setClientData] = useState<ClientData | null>(null);
   const [portalConfig, setPortalConfig] = useState<PortalConfig>({ canViewPdf: true, canDownloadPdf: true });
 
   useEffect(() => {
     const storedClient = sessionStorage.getItem('portal_client');
     if (storedClient) {
-      const client = JSON.parse(storedClient);
-      setClientData({
-        id: client.id,
-        name: client.name || '',
-        cpf_cnpj: client.cpf_cnpj || null,
-        user_id: client.user_id,
-      });
-      // Buscar por CPF normalizado para incluir apólices de clientes duplicados
-      fetchDataByCpf(client.cpf_cnpj || '', client.user_id);
+      const client: ClientData = JSON.parse(storedClient);
+      setClientData(client);
+      // Busca híbrida: client_id + CPF + email
+      fetchDataHybrid(client);
       fetchPortalConfig(client.user_id);
     }
   }, []);
@@ -77,25 +80,26 @@ export default function PortalPolicies() {
     }
   };
 
-  // NOVA FUNÇÃO: Busca apólices por CPF normalizado (resolve problema de clientes duplicados)
-  const fetchDataByCpf = async (cpf: string, userId: string) => {
+  // BUSCA HÍBRIDA: client_id + CPF + email (resolve problema de clientes sem CPF)
+  const fetchDataHybrid = async (client: ClientData) => {
     try {
-      // Usar RPC que busca por CPF normalizado - cast necessário pois types ainda não foram regenerados
       const { data: policiesData, error: policiesError } = await supabase
-        .rpc('get_all_portal_policies_by_cpf' as any, {
-          p_user_id: userId,
-          p_cpf: cpf
+        .rpc('get_portal_policies_hybrid' as any, {
+          p_user_id: client.user_id,
+          p_client_id: client.id,
+          p_cpf: client.cpf_cnpj || null,
+          p_email: client.email || null
         });
 
       if (policiesError) {
-        console.error('Error fetching policies by CPF:', policiesError);
+        console.error('Error fetching policies hybrid:', policiesError);
         return;
       }
 
       const { data: companiesData } = await supabase
         .from('companies')
         .select('id, name')
-        .eq('user_id', userId);
+        .eq('user_id', client.user_id);
 
       const companiesMap: Record<string, string> = {};
       companiesData?.forEach((c: Company) => {
@@ -129,7 +133,7 @@ export default function PortalPolicies() {
     if (days < 0) {
       return <Badge className="bg-red-500/10 text-red-400 border-red-500/20">Vencida</Badge>;
     } else if (days <= 30) {
-      return <Badge className="bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20">Vence em {days}d</Badge>;
+      return <Badge className="bg-zinc-400/10 text-zinc-300 border-zinc-400/20">Vence em {days}d</Badge>;
     } else {
       return <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Ativa</Badge>;
     }
@@ -155,10 +159,10 @@ export default function PortalPolicies() {
       <h2 className="text-xl font-light text-white tracking-wide">Meus Seguros</h2>
 
       {policies.length === 0 ? (
-        <Card className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl">
+        <Card className="bg-black/70 border-white/[0.06] backdrop-blur-2xl">
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-            <p className="text-zinc-500">Nenhum seguro encontrado.</p>
+            <p className="text-zinc-500 font-light">Nenhum seguro encontrado.</p>
           </CardContent>
         </Card>
       ) : (
@@ -166,12 +170,12 @@ export default function PortalPolicies() {
           {policies.map((policy) => (
             <Card 
               key={policy.id} 
-              className="bg-[#0A0A0A] border-white/5 backdrop-blur-xl cursor-pointer hover:bg-zinc-900/50 transition-colors"
+              className="bg-black/70 border-white/[0.06] backdrop-blur-2xl cursor-pointer hover:bg-zinc-900/50 transition-colors"
               onClick={() => handlePolicyClick(policy)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-lg flex items-center justify-center text-[#D4AF37] flex-shrink-0 border border-[#D4AF37]/20">
+                  <div className="w-10 h-10 bg-zinc-800/80 rounded-lg flex items-center justify-center text-zinc-400 flex-shrink-0 border border-white/[0.06]">
                     {getTypeIcon(policy.type)}
                   </div>
                   <div className="flex-1 min-w-0">

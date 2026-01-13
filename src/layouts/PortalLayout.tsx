@@ -8,6 +8,7 @@ interface PortalClient {
   id: string;
   name: string;
   cpf_cnpj: string | null;
+  email: string | null;
   portal_password: string | null;
   portal_first_access: boolean;
   user_id: string;
@@ -78,13 +79,14 @@ export function PortalLayout() {
     loadData();
   }, [brokerageSlug]);
 
-  // Loading state
+  // Loading state - Black & Silver
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin" />
-          <p className="text-zinc-500 tracking-wide">Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(39,39,42,0.25)_0%,_transparent_55%)]" />
+        <div className="relative flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 text-zinc-400 animate-spin" />
+          <p className="text-zinc-500 tracking-widest text-sm font-light">CARREGANDO</p>
         </div>
       </div>
     );
@@ -105,12 +107,12 @@ export function PortalLayout() {
   const isActive = (path: string) => location.pathname === `/${brokerageSlug}/portal/${path}`;
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-24">
-      {/* Header */}
-      <header className="bg-[#0A0A0A]/80 backdrop-blur-xl border-b border-white/5 p-4 sticky top-0 z-10">
+    <div className="min-h-screen bg-black pb-24">
+      {/* Header - Black & Silver */}
+      <header className="bg-black/80 backdrop-blur-2xl border-b border-white/[0.06] p-4 sticky top-0 z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Brokerage Logo - Larger */}
+            {/* Brokerage Logo */}
             {brokerage?.logo_url ? (
               <img 
                 src={brokerage.logo_url} 
@@ -118,15 +120,15 @@ export function PortalLayout() {
                 className="h-10 object-contain"
               />
             ) : (
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#C5A028] flex items-center justify-center">
-                <Shield className="w-5 h-5 text-black" />
+              <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-white/[0.06] flex items-center justify-center">
+                <Shield className="w-5 h-5 text-zinc-400" />
               </div>
             )}
             <div>
-              <h1 className="text-zinc-200 font-medium tracking-wide">
+              <h1 className="text-zinc-200 font-light tracking-wide">
                 Olá, {client.name?.split(' ')[0]}
               </h1>
-              <p className="text-zinc-500 text-xs tracking-wide">
+              <p className="text-zinc-600 text-xs tracking-wide">
                 {brokerage?.name || 'Portal do Segurado'}
               </p>
             </div>
@@ -135,7 +137,7 @@ export function PortalLayout() {
             variant="ghost" 
             size="icon" 
             onClick={handleLogout}
-            className="text-zinc-500 hover:text-zinc-200 hover:bg-white/5"
+            className="text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06]"
           >
             <LogOut className="w-5 h-5" />
           </Button>
@@ -147,15 +149,15 @@ export function PortalLayout() {
         <Outlet />
       </main>
       
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#0A0A0A]/95 backdrop-blur-xl border-t border-white/5 safe-area-pb">
+      {/* Bottom Navigation - Black & Silver */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-2xl border-t border-white/[0.06] safe-area-pb">
         <div className="max-w-lg mx-auto flex justify-around py-3">
           <Button 
             variant="ghost" 
             className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
               isActive('home') 
-                ? 'text-[#D4AF37]' 
-                : 'text-zinc-500 hover:text-zinc-200'
+                ? 'text-zinc-100' 
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
             onClick={() => navigate(`/${brokerageSlug}/portal/home`)}
           >
@@ -168,8 +170,8 @@ export function PortalLayout() {
               variant="ghost" 
               className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
                 isActive('policies') 
-                  ? 'text-[#D4AF37]' 
-                  : 'text-zinc-500 hover:text-zinc-200'
+                  ? 'text-zinc-100' 
+                  : 'text-zinc-500 hover:text-zinc-300'
               }`}
               onClick={() => navigate(`/${brokerageSlug}/portal/policies`)}
             >
@@ -183,8 +185,8 @@ export function PortalLayout() {
               variant="ghost" 
               className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
                 isActive('cards') 
-                  ? 'text-[#D4AF37]' 
-                  : 'text-zinc-500 hover:text-zinc-200'
+                  ? 'text-zinc-100' 
+                  : 'text-zinc-500 hover:text-zinc-300'
               }`}
               onClick={() => navigate(`/${brokerageSlug}/portal/cards`)}
             >
@@ -197,8 +199,8 @@ export function PortalLayout() {
             variant="ghost" 
             className={`flex flex-col items-center gap-1 h-auto py-2 px-4 ${
               isActive('profile') 
-                ? 'text-[#D4AF37]' 
-                : 'text-zinc-500 hover:text-zinc-200'
+                ? 'text-zinc-100' 
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
             onClick={() => navigate(`/${brokerageSlug}/portal/profile`)}
           >
