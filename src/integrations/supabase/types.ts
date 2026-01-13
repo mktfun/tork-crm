@@ -960,6 +960,75 @@ export type Database = {
           },
         ]
       }
+      financial_recurring_configs: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          day_of_month: number | null
+          description: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          last_generated_date: string | null
+          name: string
+          nature: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          day_of_month?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          last_generated_date?: string | null
+          name: string
+          nature: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          day_of_month?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          last_generated_date?: string | null
+          name?: string
+          nature?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_recurring_configs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_recurring_configs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           attachments: string[] | null
@@ -2050,6 +2119,19 @@ export type Database = {
       }
       fix_backfill_dates: { Args: never; Returns: Json }
       fix_ledger_descriptions: { Args: never; Returns: Json }
+      generate_recurring_dates: {
+        Args: {
+          p_config_end_date: string
+          p_config_start_date: string
+          p_day_of_month: number
+          p_end_date: string
+          p_frequency: string
+          p_start_date: string
+        }
+        Returns: {
+          occurrence_date: string
+        }[]
+      }
       get_account_balances: {
         Args: never
         Returns: {
@@ -2336,6 +2418,22 @@ export type Database = {
           total_apolices: number
           total_comissao: number
           total_premio: number
+        }[]
+      }
+      get_projected_cashflow: {
+        Args: {
+          p_end_date: string
+          p_granularity?: string
+          p_start_date: string
+        }
+        Returns: {
+          period: string
+          period_date: string
+          projected_expense: number
+          projected_income: number
+          realized_expense: number
+          realized_income: number
+          running_balance: number
         }[]
       }
       get_recent_financial_transactions: {
