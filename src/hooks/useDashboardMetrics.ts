@@ -75,13 +75,19 @@ export function useDashboardMetrics(options: UseDashboardMetricsProps = {}) {
   });
 
   // 🆕 QUERY PARA KPIS FINANCEIROS - VIA LEDGER (FONTE ÚNICA DE VERDADE)
+  // ⚠️ IMPORTANTE: Sempre usa o MÊS ATUAL para comissões, não o período selecionado
   const { data: financialKpis, isLoading: financialKpisLoading } = useQuery({
-    queryKey: ['dashboard-financial-kpis', user?.id, dateRange],
+    queryKey: ['dashboard-financial-kpis', user?.id, 'current-month'],
     queryFn: async () => {
       if (!user) return null;
 
-      const startDate = dateRange?.from?.toISOString().split('T')[0] || null;
-      const endDate = dateRange?.to?.toISOString().split('T')[0] || null;
+      // Sempre usar o mês atual para KPI de comissão
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      const startDate = startOfMonth.toISOString().split('T')[0];
+      const endDate = endOfMonth.toISOString().split('T')[0];
 
       const { data, error } = await supabase.rpc('get_dashboard_financial_kpis', {
         p_start_date: startDate,

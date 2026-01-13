@@ -90,11 +90,11 @@ export function DashboardKpis({ dateRange }: DashboardKpisProps) {
           onClick={handleRenovacoesClick}
         />
 
-        {/* KPI 3: Comissão do Período/Mês - DADOS CORRIGIDOS */}
+        {/* KPI 3: Comissão do Mês Atual - SEMPRE MÊS ATUAL */}
         <KpiCard
-          title={`Comissão (${periodText})`}
+          title="Comissão (Mês)"
           value={formatCurrency(metrics.comissaoMesAtual)}
-          comparison={!dateRange && metrics.comissaoMesAnterior > 0 ? 
+          comparison={metrics.comissaoMesAnterior > 0 ? 
             `${((metrics.comissaoMesAtual - metrics.comissaoMesAnterior) / metrics.comissaoMesAnterior * 100).toFixed(0)}% vs. mês anterior` : 
             undefined
           }
