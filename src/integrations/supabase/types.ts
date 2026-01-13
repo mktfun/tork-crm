@@ -1988,7 +1988,16 @@ export type Database = {
         Returns: boolean
       }
       audit_financial_divergence: { Args: never; Returns: Json }
-      audit_ledger_integrity: { Args: never; Returns: Json }
+      audit_ledger_integrity: {
+        Args: never
+        Returns: {
+          account_id: string
+          amount: number
+          description: string
+          issue_type: string
+          transaction_id: string
+        }[]
+      }
       backfill_legacy_transactions: { Args: never; Returns: Json }
       batch_update_transactions: {
         Args: { p_user_id: string; updates: Json }

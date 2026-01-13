@@ -202,6 +202,7 @@ export interface FinancialSummary {
   pendingIncome: number;
   pendingExpense: number;
   transactionCount: number;
+  cashBalance: number; // Saldo acumulado em contas de ativo (bancos)
 }
 
 // ============ TIPOS PARA DRE (FASE 4) ============
