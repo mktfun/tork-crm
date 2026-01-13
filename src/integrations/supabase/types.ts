@@ -1987,6 +1987,7 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: boolean
       }
+      audit_ledger_integrity: { Args: never; Returns: Json }
       backfill_legacy_transactions: { Args: never; Returns: Json }
       batch_update_transactions: {
         Args: { p_user_id: string; updates: Json }
