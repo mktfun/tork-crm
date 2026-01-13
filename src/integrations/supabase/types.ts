@@ -2060,6 +2060,16 @@ export type Database = {
           type: string
         }[]
       }
+      get_account_balances_from_date: {
+        Args: { p_start_date?: string }
+        Returns: {
+          balance: number
+          code: string
+          id: string
+          name: string
+          type: string
+        }[]
+      }
       get_account_statement: {
         Args: {
           p_account_id: string
@@ -2260,6 +2270,13 @@ export type Database = {
         }[]
       }
       get_orphan_transactions: { Args: { p_user_id: string }; Returns: Json }
+      get_pending_receivables_from_date: {
+        Args: { p_start_date?: string }
+        Returns: {
+          pending_count: number
+          total_amount: number
+        }[]
+      }
       get_pending_this_month: {
         Args: never
         Returns: {
