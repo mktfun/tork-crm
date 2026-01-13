@@ -104,6 +104,8 @@ interface TransactionsTableProps {
     amount: number | null;
     is_confirmed: boolean;
     legacy_status: string | null;
+    related_entity_id?: string | null;
+    related_entity_type?: string | null;
   }>;
   isLoading: boolean;
   selectedIds: Set<string>;
@@ -466,7 +468,14 @@ export function ReceitasTab({ dateRange }: ReceitasTabProps) {
       <SettleTransactionModal
         open={settleModalOpen}
         onClose={() => setSettleModalOpen(false)}
-        transactionIds={Array.from(selectedIds)}
+        transactionIds={
+          // Usar related_entity_id (ID legado) para comissões, pois a RPC busca na tabela transactions
+          Array.from(selectedIds).map(id => {
+            const tx = displayTransactions.find(t => t.id === id);
+            // Se for uma comissão (has related_entity_id), usar o ID legado
+            return tx?.related_entity_id || id;
+          })
+        }
         totalAmount={selectedTotalAmount}
         onSuccess={handleSettleSuccess}
       />

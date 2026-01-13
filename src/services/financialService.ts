@@ -480,6 +480,8 @@ export interface RevenueTransaction {
   legacy_status: string | null;
   client_name: string | null;
   policy_number: string | null;
+  related_entity_id: string | null;
+  related_entity_type: string | null;
 }
 
 /**
@@ -507,7 +509,9 @@ export async function getRevenueTransactions(params: {
     is_confirmed: row.is_confirmed ?? false,
     legacy_status: row.legacy_status || null,
     client_name: row.client_name || null,
-    policy_number: row.policy_number || null
+    policy_number: row.policy_number || null,
+    related_entity_id: row.related_entity_id || null,
+    related_entity_type: row.related_entity_type || null
   }));
 }
 
