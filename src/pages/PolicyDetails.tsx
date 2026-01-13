@@ -182,10 +182,11 @@ export default function PolicyDetails() {
                   <FileText className="w-5 h-5 text-green-400" />
                 )}
                 <h1 className="text-2xl font-bold text-white">
-                  {isBudget ? 'Orçamento' : 'Apólice'} {policy.policyNumber || `ORÇ-${policy.id.slice(-8)}`}
+                  {client?.name?.split(' ')[0] || 'Cliente'} - {policy.ramos?.nome || policy.type || 'Seguro'}
+                  {policy.insuredAsset && ` (${policy.insuredAsset.split(' ').slice(0, 3).join(' ')})`} - {policy.companies?.name?.split(' ')[0] || 'Cia'}
                 </h1>
               </div>
-              <p className="text-slate-400">{policy.companies?.name || 'Seguradora não especificada'} • {policy.ramos?.nome || 'Ramo não especificado'}</p>
+              <p className="text-slate-400">{isBudget ? 'Orçamento' : 'Apólice'} {policy.policyNumber || `ORÇ-${policy.id.slice(-8)}`}</p>
             </div>
           </div>
           
